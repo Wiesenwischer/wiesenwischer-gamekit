@@ -320,6 +320,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
             public bool RotateTowardsMovement { get; set; } = true;
             public float MaxStepHeight { get; set; } = 0.3f;
             public float MinStepDepth { get; set; } = 0.1f;
+            public float SlopeSlideSpeed { get; set; } = 8f;
         }
 
         #endregion
