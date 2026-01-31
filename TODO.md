@@ -136,10 +136,10 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] Gravity Tests
 
 ### Commit 16: Unit Tests - State Machine
-- [ ] State Transition Tests
-- [ ] State Enter/Exit Tests
-- [ ] State Machine Tests
-- [ ] Edge Case Tests
+- [x] State Transition Tests
+- [x] State Enter/Exit Tests
+- [x] State Machine Tests
+- [x] Edge Case Tests
 
 ---
 
