@@ -45,11 +45,11 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] IMovementConfig Interface erweitert
 
 ### Commit 5: Input Provider System
-- [ ] IMovementInputProvider Interface (falls nicht in Commit 3)
-- [ ] PlayerInputProvider.cs mit Unity Input System
-- [ ] Conditional Compilation (#if UNITY_INPUT_SYSTEM_AVAILABLE)
-- [ ] Fallback Input mit Legacy Input
-- [ ] AIInputProvider.cs für Tests
+- [x] IMovementInputProvider Interface (bereits in Commit 3)
+- [x] PlayerInputProvider.cs mit Unity Input System
+- [x] Conditional Compilation (#if UNITY_INPUT_SYSTEM_AVAILABLE)
+- [x] Fallback Input mit Legacy Input
+- [x] AIInputProvider.cs für Tests/KI
 
 ### Commit 6: Ground Detection System
 - [ ] GroundingDetection.cs Klasse
