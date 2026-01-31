@@ -136,7 +136,16 @@ Format: `<type>/<kurze-beschreibung>`
    - Kleine, atomare Commits
    - Regelmäßig pushen
 
-3. **Pull Request erstellen**
+3. **Kompilierung prüfen (PFLICHT)**
+   - Unity Editor Logs auf Compiler-Fehler prüfen
+   - Alle Packages müssen fehlerfrei kompilieren
+   - Auch Test-Projekte beachten (MockConfig-Klassen etc.)
+   ```bash
+   # Unity Editor Log prüfen:
+   powershell -Command "Get-Content 'C:\Users\marcu\AppData\Local\Unity\Editor\Editor.log' -Tail 100 | Select-String -Pattern 'error|CS\d{4}'"
+   ```
+
+4. **Pull Request erstellen**
    ```bash
    git push -u origin feature/<name>
    gh pr create --title "feat: <Beschreibung>" --body "..."
@@ -207,6 +216,7 @@ Labels werden automatisch basierend auf PR-Titel gesetzt:
 - **NIEMALS** `--force` auf `main` pushen
 - **IMMER** Feature-Branch für Änderungen erstellen
 - **IMMER** PR-Titel mit Conventional Commit Prefix
+- **IMMER** Kompilierung prüfen vor PR-Erstellung (inkl. Tests/Mocks)
 - Branch Protection ist aktiviert und erzwingt diese Regeln
 
 ---
