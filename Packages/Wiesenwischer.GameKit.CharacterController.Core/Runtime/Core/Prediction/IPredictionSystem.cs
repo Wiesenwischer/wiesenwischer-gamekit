@@ -75,67 +75,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
         void Cleanup(int oldestTickToKeep);
     }
 
-    /// <summary>
-    /// Struct für den Prediction State.
-    /// Enthält alle Daten, die für Rollback/Reconciliation relevant sind.
-    /// </summary>
-    [System.Serializable]
-    public struct PredictionState
-    {
-        /// <summary>
-        /// Der Tick, zu dem dieser State gehört.
-        /// </summary>
-        public int Tick;
-
-        /// <summary>
-        /// Die Position des Characters.
-        /// </summary>
-        public Vector3 Position;
-
-        /// <summary>
-        /// Die Rotation des Characters (als Quaternion für Präzision).
-        /// </summary>
-        public Quaternion Rotation;
-
-        /// <summary>
-        /// Die aktuelle Geschwindigkeit.
-        /// </summary>
-        public Vector3 Velocity;
-
-        /// <summary>
-        /// Der Name des aktuellen States (z.B. "Grounded", "Airborne").
-        /// </summary>
-        public string StateName;
-
-        /// <summary>
-        /// Ob der Character geerdet ist.
-        /// </summary>
-        public bool IsGrounded;
-
-        /// <summary>
-        /// Vergleicht zwei States auf Gleichheit (mit Toleranz).
-        /// </summary>
-        public bool Equals(PredictionState other, float positionTolerance = 0.01f)
-        {
-            return Vector3.Distance(Position, other.Position) <= positionTolerance
-                   && Quaternion.Angle(Rotation, other.Rotation) <= 1f // 1 Grad Toleranz
-                   && StateName == other.StateName
-                   && IsGrounded == other.IsGrounded;
-        }
-
-        /// <summary>
-        /// Erstellt einen leeren State.
-        /// </summary>
-        public static PredictionState Empty => new PredictionState
-        {
-            Tick = 0,
-            Position = Vector3.zero,
-            Rotation = Quaternion.identity,
-            Velocity = Vector3.zero,
-            StateName = "",
-            IsGrounded = false
-        };
-    }
+    // PredictionState is defined in PredictionBuffer.cs
 
     /// <summary>
     /// Interface für Objekte, die Prediction-fähig sind.

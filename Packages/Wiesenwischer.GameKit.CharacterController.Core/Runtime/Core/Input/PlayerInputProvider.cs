@@ -1,14 +1,11 @@
 using UnityEngine;
-
-#if UNITY_INPUT_SYSTEM_AVAILABLE
 using UnityEngine.InputSystem;
-#endif
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.Input
 {
     /// <summary>
     /// Input Provider für Spieler-Input.
-    /// Unterstützt sowohl Unity Input System als auch Legacy Input.
+    /// Verwendet das Unity Input System.
     /// </summary>
     public class PlayerInputProvider : MonoBehaviour, IMovementInputProvider
     {
@@ -16,7 +13,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         [Tooltip("Ob dieser Input Provider aktiv ist")]
         [SerializeField] private bool _isActive = true;
 
-#if UNITY_INPUT_SYSTEM_AVAILABLE
         [Header("Input System References")]
         [Tooltip("Referenz zum PlayerInput Component (optional - wird automatisch gesucht)")]
         [SerializeField] private PlayerInput _playerInput;
@@ -33,7 +29,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         private InputAction _jumpAction;
         private InputAction _sprintAction;
         private InputAction _dashAction;
-#endif
 
         // Cached Input Values
         private Vector2 _moveInput;
@@ -42,14 +37,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         private bool _jumpHeld;
         private bool _sprintHeld;
         private bool _dashPressed;
-
-        // Legacy Input Axis Names
-        private const string LEGACY_HORIZONTAL = "Horizontal";
-        private const string LEGACY_VERTICAL = "Vertical";
-        private const string LEGACY_MOUSE_X = "Mouse X";
-        private const string LEGACY_MOUSE_Y = "Mouse Y";
-        private const string LEGACY_JUMP = "Jump";
-        private const string LEGACY_SPRINT = "Fire3"; // Usually Left Shift
 
         #region IMovementInputProvider Implementation
 
@@ -69,11 +56,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
                 return;
             }
 
-#if UNITY_INPUT_SYSTEM_AVAILABLE
             UpdateInputSystem();
-#else
-            UpdateLegacyInput();
-#endif
         }
 
         public void ResetInput()
@@ -88,8 +71,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
 
         #endregion
 
-#if UNITY_INPUT_SYSTEM_AVAILABLE
-        #region Unity Input System
+        #region Unity Callbacks
 
         private void Awake()
         {
@@ -105,6 +87,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         {
             DisableInputActions();
         }
+
+        private void LateUpdate()
+        {
+            // Reset "pressed" flags nach dem Frame
+            _jumpPressed = false;
+            _dashPressed = false;
+        }
+
+        #endregion
+
+        #region Input System
 
         private void InitializeInputSystem()
         {
@@ -126,7 +119,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             else
             {
                 Debug.LogWarning("[PlayerInputProvider] Kein PlayerInput Component gefunden. " +
-                               "Bitte füge ein PlayerInput Component hinzu oder verwende Legacy Input.");
+                               "Bitte füge ein PlayerInput Component hinzu.");
             }
         }
 
@@ -192,59 +185,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             {
                 _sprintHeld = _sprintAction.IsPressed();
             }
-
-            // Jump und Dash pressed werden am Ende des Frames zurückgesetzt
-            // (siehe LateUpdate)
-        }
-
-        private void LateUpdate()
-        {
-            // Reset "pressed" flags nach dem Frame
-            _jumpPressed = false;
-            _dashPressed = false;
         }
 
         #endregion
-#else
-        #region Legacy Input
-
-        private void Update()
-        {
-            // Bei Legacy Input wird UpdateInput automatisch aufgerufen
-        }
-
-        private void UpdateLegacyInput()
-        {
-            // Movement
-            _moveInput = new Vector2(
-                UnityEngine.Input.GetAxis(LEGACY_HORIZONTAL),
-                UnityEngine.Input.GetAxis(LEGACY_VERTICAL)
-            );
-
-            // Look (Mouse Delta)
-            _lookInput = new Vector2(
-                UnityEngine.Input.GetAxis(LEGACY_MOUSE_X),
-                UnityEngine.Input.GetAxis(LEGACY_MOUSE_Y)
-            );
-
-            // Jump
-            _jumpPressed = UnityEngine.Input.GetButtonDown(LEGACY_JUMP);
-            _jumpHeld = UnityEngine.Input.GetButton(LEGACY_JUMP);
-
-            // Sprint (Left Shift)
-            _sprintHeld = UnityEngine.Input.GetKey(KeyCode.LeftShift);
-
-            // Dash (nicht standardmäßig verfügbar bei Legacy)
-            _dashPressed = UnityEngine.Input.GetKeyDown(KeyCode.LeftControl);
-        }
-
-        private void LateUpdate()
-        {
-            // Bei Legacy Input nicht nötig, da GetButtonDown automatisch zurückgesetzt wird
-        }
-
-        #endregion
-#endif
 
         #region Public Methods
 

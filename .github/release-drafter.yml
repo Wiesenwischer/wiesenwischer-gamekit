@@ -1,18 +1,96 @@
-name-template: 'v$NEXT_PATCH_VERSION'
-tag-template: 'v$NEXT_PATCH_VERSION'
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
 
 categories:
-  - title: "🚀 Features"
-    labels: ["feature"]
-  - title: "🐛 Fixes"
-    labels: ["bug"]
-  - title: "⚠️ Breaking Changes"
-    labels: ["breaking-change"]
-  - title: "🧹 Refactor"
-    labels: ["refactor"]
-  - title: "📚 Documentation"
-    labels: ["docs"]
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+    collapse-after: 5
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+    collapse-after: 5
+  - title: '🔧 Maintenance'
+    labels:
+      - 'chore'
+      - 'maintenance'
+      - 'refactor'
+  - title: '📚 Documentation'
+    labels:
+      - 'documentation'
+      - 'docs'
+  - title: '🧪 Tests'
+    labels:
+      - 'test'
+      - 'testing'
+  - title: '⬆️ Dependencies'
+    labels:
+      - 'dependencies'
+      - 'deps'
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'chore'
+      - 'documentation'
+      - 'docs'
+      - 'test'
+  default: patch
+
+autolabeler:
+  - label: 'feature'
+    title:
+      - '/^feat(\(.+\))?!?:/'
+  - label: 'fix'
+    title:
+      - '/^fix(\(.+\))?!?:/'
+  - label: 'documentation'
+    title:
+      - '/^docs(\(.+\))?:/'
+  - label: 'chore'
+    title:
+      - '/^chore(\(.+\))?:/'
+  - label: 'refactor'
+    title:
+      - '/^refactor(\(.+\))?:/'
+  - label: 'test'
+    title:
+      - '/^test(\(.+\))?:/'
+  - label: 'breaking'
+    title:
+      - '/^.+!:/'
+
+exclude-labels:
+  - 'skip-changelog'
+  - 'no-release-notes'
 
 template: |
-  ## Changes
+  ## Änderungen
+
   $CHANGES
+
+  ## Mitwirkende
+
+  $CONTRIBUTORS
+
+  ---
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION

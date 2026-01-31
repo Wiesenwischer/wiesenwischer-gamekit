@@ -35,16 +35,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
         public void CalculateTargetVelocity_WithForwardInput_ReturnsCorrectVelocity()
         {
             // Arrange
-            var input = new MovementInput
-            {
-                MoveDirection = Vector3.forward,
-                TargetSpeed = _config.WalkSpeed,
-                IsGrounded = true,
-                DeltaTime = 0.016f
-            };
+            var moveDirection = new Vector2(0f, 1f); // Forward
+            float targetSpeed = _config.WalkSpeed;
 
             // Act
-            var targetVelocity = input.MoveDirection.normalized * input.TargetSpeed;
+            var direction3D = new Vector3(moveDirection.x, 0f, moveDirection.y).normalized;
+            var targetVelocity = direction3D * targetSpeed;
 
             // Assert
             Assert.AreEqual(Vector3.forward * 5f, targetVelocity);
@@ -54,16 +50,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
         public void CalculateTargetVelocity_WithDiagonalInput_IsNormalized()
         {
             // Arrange
-            var input = new MovementInput
-            {
-                MoveDirection = new Vector3(1f, 0f, 1f),
-                TargetSpeed = _config.WalkSpeed,
-                IsGrounded = true,
-                DeltaTime = 0.016f
-            };
+            var moveDirection = new Vector2(1f, 1f); // Diagonal
+            float targetSpeed = _config.WalkSpeed;
 
             // Act
-            var targetVelocity = input.MoveDirection.normalized * input.TargetSpeed;
+            var direction3D = new Vector3(moveDirection.x, 0f, moveDirection.y).normalized;
+            var targetVelocity = direction3D * targetSpeed;
 
             // Assert
             Assert.AreEqual(_config.WalkSpeed, targetVelocity.magnitude, 0.001f);
@@ -73,17 +65,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
         public void CalculateTargetVelocity_WithZeroInput_ReturnsZero()
         {
             // Arrange
-            var input = new MovementInput
-            {
-                MoveDirection = Vector3.zero,
-                TargetSpeed = _config.WalkSpeed,
-                IsGrounded = true,
-                DeltaTime = 0.016f
-            };
+            var moveDirection = Vector2.zero;
+            float targetSpeed = _config.WalkSpeed;
 
             // Act
-            var targetVelocity = input.MoveDirection.sqrMagnitude > 0.01f
-                ? input.MoveDirection.normalized * input.TargetSpeed
+            var direction3D = new Vector3(moveDirection.x, 0f, moveDirection.y);
+            var targetVelocity = direction3D.sqrMagnitude > 0.01f
+                ? direction3D.normalized * targetSpeed
                 : Vector3.zero;
 
             // Assert
@@ -269,6 +257,42 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
 
             // Assert
             Assert.AreEqual(currentVelocity, newVelocity);
+        }
+
+        #endregion
+
+        #region MovementInput Tests
+
+        [Test]
+        public void MovementInput_Empty_HasCorrectDefaults()
+        {
+            // Arrange & Act
+            var input = MovementInput.Empty;
+
+            // Assert
+            Assert.AreEqual(Vector2.zero, input.MoveDirection);
+            Assert.AreEqual(Vector3.forward, input.LookDirection);
+            Assert.IsFalse(input.IsSprinting);
+            Assert.AreEqual(0f, input.VerticalVelocity);
+        }
+
+        [Test]
+        public void MovementInput_WithValues_StoresCorrectly()
+        {
+            // Arrange & Act
+            var input = new MovementInput
+            {
+                MoveDirection = new Vector2(0.5f, 0.5f),
+                LookDirection = Vector3.right,
+                IsSprinting = true,
+                VerticalVelocity = 5f
+            };
+
+            // Assert
+            Assert.AreEqual(new Vector2(0.5f, 0.5f), input.MoveDirection);
+            Assert.AreEqual(Vector3.right, input.LookDirection);
+            Assert.IsTrue(input.IsSprinting);
+            Assert.AreEqual(5f, input.VerticalVelocity);
         }
 
         #endregion

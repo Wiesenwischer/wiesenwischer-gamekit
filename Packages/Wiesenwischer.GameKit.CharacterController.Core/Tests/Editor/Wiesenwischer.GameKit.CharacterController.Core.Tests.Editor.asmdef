@@ -4,8 +4,8 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Wiesenwischer.GameKit.CharacterController.Core.Runtime",
-        "Wiesenwischer.GameKit.CharacterController.Core.Editor"
+        "GUID:fb1401bba1866ab458edb4d50e7942c6",
+        "GUID:b77c5ec2dac90c248b4b9d8438923a22"
     ],
     "includePlatforms": [
         "Editor"
