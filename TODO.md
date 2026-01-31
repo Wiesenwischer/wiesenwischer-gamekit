@@ -80,11 +80,11 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] State-History für Debugging
 
 ### Commit 9: Character States
-- [ ] GroundedState.cs Implementation
-- [ ] AirborneState.cs Implementation
-- [ ] JumpingState.cs Implementation
-- [ ] FallingState.cs Implementation
-- [ ] State Transition Conditions
+- [x] GroundedState.cs Implementation
+- [x] AirborneState.cs Implementation
+- [x] JumpingState.cs Implementation
+- [x] FallingState.cs Implementation
+- [x] State Transition Conditions
 
 ---
 
