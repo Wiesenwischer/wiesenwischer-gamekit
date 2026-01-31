@@ -1,0 +1,27 @@
+{
+  "name": "wiesenwischer.gamekit.charactercontroller.camera",
+  "displayName": "GameKit Character Controller Camera",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Third-Person Kamera-System mit Cinemachine Integration für den GameKit Character Controller.",
+  "keywords": [
+    "camera",
+    "cinemachine",
+    "third-person",
+    "orbit",
+    "follow"
+  ],
+  "author": {
+    "name": "Wiesenwischer",
+    "url": "https://github.com/Wiesenwischer"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wiesenwischer/wiesenwischer-gamekit-charactercontroller.git"
+  },
+  "dependencies": {
+    "wiesenwischer.gamekit.charactercontroller.core": "0.1.0",
+    "com.unity.cinemachine": "2.9.7",
+    "com.unity.inputsystem": "1.7.0"
+  }
+}

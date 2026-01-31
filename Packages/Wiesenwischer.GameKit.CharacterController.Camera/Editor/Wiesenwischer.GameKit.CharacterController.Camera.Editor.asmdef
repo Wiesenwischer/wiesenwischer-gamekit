@@ -1,0 +1,21 @@
+{
+    "name": "Wiesenwischer.GameKit.CharacterController.Camera.Editor",
+    "rootNamespace": "Wiesenwischer.GameKit.CharacterController.Camera.Editor",
+    "references": [
+        "Wiesenwischer.GameKit.CharacterController.Camera.Runtime",
+        "Wiesenwischer.GameKit.CharacterController.Core.Runtime",
+        "Unity.Cinemachine",
+        "Unity.Cinemachine.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
