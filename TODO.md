@@ -98,11 +98,11 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] Update-Loop Struktur
 
 ### Commit 11: CSP Strukturen
-- [ ] ControllerInput.cs Struct (serialisierbar)
-- [ ] InputBuffer.cs generische Klasse
-- [ ] PredictionBuffer.cs Klasse
-- [ ] Tick-Index System
-- [ ] History-Speicherung
+- [x] ControllerInput.cs Struct (serialisierbar)
+- [x] InputBuffer.cs generische Klasse
+- [x] PredictionBuffer.cs Klasse
+- [x] Tick-Index System
+- [x] History-Speicherung
 
 ### Commit 12: Fixed Tick System
 - [ ] Tick-Rate Konfiguration (60Hz)
