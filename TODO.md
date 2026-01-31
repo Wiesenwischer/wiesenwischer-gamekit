@@ -26,10 +26,10 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] manifest.json mit Unity Package Dependencies (Cinemachine hinzugefügt)
 
 ### Commit 3: Core-Interfaces
-- [ ] ICharacterState.cs - State Machine Interface
-- [ ] IMovementController.cs - Movement Interface
-- [ ] IMovementInputProvider.cs - Input Interface
-- [ ] IPredictionSystem.cs - CSP Interface
+- [x] ICharacterState.cs - State Machine Interface
+- [x] IMovementController.cs - Movement Interface
+- [x] IMovementInputProvider.cs - Input Interface
+- [x] IPredictionSystem.cs - CSP Interface
 
 ---
 
