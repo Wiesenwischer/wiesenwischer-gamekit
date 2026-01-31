@@ -61,12 +61,12 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] Debug Gizmos
 
 ### Commit 7: Movement Simulator
-- [ ] MovementSimulator.cs Klasse
-- [ ] Velocity-Berechnungen (Walk/Run)
-- [ ] Acceleration/Deceleration
-- [ ] Gravity Application
-- [ ] Deterministische Physik (Fixed Delta)
-- [ ] CharacterController Integration
+- [x] MovementSimulator.cs Klasse
+- [x] Velocity-Berechnungen (Walk/Run)
+- [x] Acceleration/Deceleration
+- [x] Gravity Application
+- [x] Deterministische Physik (Fixed Delta)
+- [x] CharacterController Integration
 
 ---
 
