@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 {
@@ -180,6 +181,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // PlayerController Component
             player.AddComponent<PlayerController>();
 
+            // PlayerInput Component (Unity Input System)
+            var playerInput = player.AddComponent<PlayerInput>();
+            playerInput.notificationBehavior = PlayerNotifications.InvokeUnityEvents;
+
+            // Versuche Default Input Actions zu finden
+            var inputActions = FindDefaultInputActions();
+            if (inputActions != null)
+            {
+                playerInput.actions = inputActions;
+                Debug.Log("[DemoSceneSetup] Input Actions zugewiesen.");
+            }
+            else
+            {
+                Debug.LogWarning("[DemoSceneSetup] Keine Input Actions gefunden. " +
+                               "Bitte weise manuell ein InputActionAsset dem PlayerInput zu.");
+            }
+
             // Input Provider
             player.AddComponent<Input.PlayerInputProvider>();
 
@@ -215,6 +233,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
             // Components
             player.AddComponent<PlayerController>();
+
+            // PlayerInput Component
+            var playerInput = player.AddComponent<PlayerInput>();
+            playerInput.notificationBehavior = PlayerNotifications.InvokeUnityEvents;
+
+            // Input Actions
+            var inputActions = FindDefaultInputActions();
+            if (inputActions != null)
+            {
+                playerInput.actions = inputActions;
+            }
+
             player.AddComponent<Input.PlayerInputProvider>();
 
             // Ground Check
@@ -306,6 +336,36 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
                     currentPath = nextPath;
                 }
             }
+        }
+
+        private static InputActionAsset FindDefaultInputActions()
+        {
+            // Suche nach Input Actions in bekannten Pfaden
+            string[] searchPaths = new[]
+            {
+                "Assets/InputSystem_Actions.inputactions",
+                "Assets/Settings/InputSystem_Actions.inputactions",
+                "Assets/Input/InputSystem_Actions.inputactions"
+            };
+
+            foreach (var path in searchPaths)
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(path);
+                if (asset != null)
+                {
+                    return asset;
+                }
+            }
+
+            // Fallback: Suche alle InputActionAssets im Projekt
+            var guids = AssetDatabase.FindAssets("t:InputActionAsset");
+            if (guids.Length > 0)
+            {
+                var assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+                return AssetDatabase.LoadAssetAtPath<InputActionAsset>(assetPath);
+            }
+
+            return null;
         }
 
         #endregion
