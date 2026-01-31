@@ -8,21 +8,28 @@ branches:
     prevent-increment-of-merged-branch-version: true
     track-merge-target: false
     is-release-branch: true
+    source-branches: []
   feature:
     regex: ^feature[/-]
     mode: ContinuousDelivery
     tag: alpha
     increment: Minor
+    source-branches:
+      - main
   fix:
     regex: ^fix[/-]
     mode: ContinuousDelivery
     tag: beta
     increment: Patch
+    source-branches:
+      - main
   hotfix:
     regex: ^hotfix[/-]
     mode: ContinuousDelivery
     tag: beta
     increment: Patch
+    source-branches:
+      - main
 ignore:
   sha: []
 merge-message-formats: {}
