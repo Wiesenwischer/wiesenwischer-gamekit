@@ -130,10 +130,10 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] Gizmos für Movement Direction
 
 ### Commit 15: Unit Tests - Movement System
-- [ ] MovementSimulator Tests (Velocity Calculations)
-- [ ] Ground Detection Tests (Raycast, Slope)
-- [ ] Acceleration/Deceleration Tests
-- [ ] Gravity Tests
+- [x] MovementSimulator Tests (Velocity Calculations)
+- [x] Ground Detection Tests (Raycast, Slope)
+- [x] Acceleration/Deceleration Tests
+- [x] Gravity Tests
 
 ### Commit 16: Unit Tests - State Machine
 - [ ] State Transition Tests
