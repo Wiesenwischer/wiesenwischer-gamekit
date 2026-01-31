@@ -57,6 +57,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         bool JumpPressed { get; }
 
         /// <summary>
+        /// Ob der Jump-Button gehalten wird.
+        /// </summary>
+        bool JumpHeld { get; }
+
+        /// <summary>
         /// Ob der Character auf dem Boden steht.
         /// </summary>
         bool IsGrounded { get; }

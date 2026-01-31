@@ -37,8 +37,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnUpdate(IStateMachineContext context, float deltaTime)
         {
-            // Prüfe ob Jump-Button losgelassen wurde
-            if (!context.JumpPressed && !_jumpButtonReleased)
+            // Prüfe ob Jump-Button losgelassen wurde (nutze JumpHeld für Variable Jump)
+            if (!context.JumpHeld && !_jumpButtonReleased)
             {
                 _jumpButtonReleased = true;
 

@@ -48,6 +48,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         // State Machine Context
         private Vector2 _moveInput;
         private bool _jumpPressed;
+        private bool _jumpHeld;
         private float _verticalVelocity;
         private Vector3 _horizontalVelocity;
 
@@ -58,6 +59,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         public Vector2 MoveInput => _moveInput;
         public bool JumpPressed => _jumpPressed;
+        public bool JumpHeld => _jumpHeld;
         public bool IsGrounded => _groundingDetection?.IsGrounded ?? false;
         public float VerticalVelocity { get => _verticalVelocity; set => _verticalVelocity = value; }
         public Vector3 HorizontalVelocity { get => _horizontalVelocity; set => _horizontalVelocity = value; }
@@ -233,6 +235,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             _moveInput = _inputProvider.MoveInput;
             _jumpPressed = _inputProvider.JumpPressed;
+            _jumpHeld = _inputProvider.JumpHeld;
         }
 
         private void OnFixedTick(int tick, float deltaTime)

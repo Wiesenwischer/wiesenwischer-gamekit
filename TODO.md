@@ -112,11 +112,11 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] Delta-Time Berechnung (1/tickRate)
 
 ### Commit 13: Jump Mechanik
-- [ ] Jump-Input Detection
-- [ ] Jump-Velocity Berechnung
-- [ ] Jump-State Activation
-- [ ] Jump-State → Airborne Transition
-- [ ] Airborne → Grounded Transition (Landing)
+- [x] Jump-Input Detection
+- [x] Jump-Velocity Berechnung
+- [x] Jump-State Activation
+- [x] Jump-State → Airborne Transition
+- [x] Airborne → Grounded Transition (Landing)
 
 ---
 
