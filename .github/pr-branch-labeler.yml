@@ -1,0 +1,6 @@
+feature/*: feature
+fix/*: bug
+bugfix/*: bug
+refactor/*: refactor
+breaking/*: breaking-change
+docs/*: docs
