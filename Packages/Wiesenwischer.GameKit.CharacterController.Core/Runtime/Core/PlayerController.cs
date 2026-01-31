@@ -258,7 +258,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             var input = new MovementInput
             {
                 MoveDirection = _moveInput,
-                LookDirection = transform.forward,
+                LookDirection = GetCameraForward(),
                 IsSprinting = _inputProvider?.SprintHeld ?? false,
                 VerticalVelocity = _verticalVelocity
             };
@@ -269,6 +269,26 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             // Update velocities from simulator
             _verticalVelocity = _movementSimulator.VerticalVelocity;
             _horizontalVelocity = _movementSimulator.HorizontalVelocity;
+        }
+
+        /// <summary>
+        /// Ermittelt die Forward-Richtung der Kamera für kamera-relative Bewegung.
+        /// Fällt auf Character-Forward zurück, wenn keine Kamera verfügbar ist.
+        /// </summary>
+        private Vector3 GetCameraForward()
+        {
+            var mainCamera = UnityEngine.Camera.main;
+            if (mainCamera != null)
+            {
+                // Nutze nur die horizontale Komponente der Kamera-Forward
+                Vector3 cameraForward = mainCamera.transform.forward;
+                cameraForward.y = 0f;
+                if (cameraForward.sqrMagnitude > 0.01f)
+                {
+                    return cameraForward.normalized;
+                }
+            }
+            return transform.forward;
         }
 
         #endregion
