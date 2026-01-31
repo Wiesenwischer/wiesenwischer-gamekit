@@ -47,6 +47,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             _targetYaw = _currentYaw;
         }
 
+        /// <summary>
+        /// Erstellt einen neuen MovementSimulator mit externer GroundingDetection.
+        /// </summary>
+        public MovementSimulator(
+            Transform transform,
+            UnityEngine.CharacterController characterController,
+            IMovementConfig config,
+            GroundingDetection groundingDetection)
+        {
+            _characterController = characterController;
+            _transform = transform;
+            _config = config;
+            _groundingDetection = groundingDetection;
+
+            _currentYaw = _transform.eulerAngles.y;
+            _targetYaw = _currentYaw;
+        }
+
         #region IMovementController Implementation
 
         public Vector3 Position => _transform.position;
@@ -301,6 +319,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         /// Gibt die aktuelle vertikale Geschwindigkeit zurück.
         /// </summary>
         public float GetVerticalVelocity() => _verticalVelocity;
+
+        /// <summary>
+        /// Aktuelle horizontale Geschwindigkeit (Property).
+        /// </summary>
+        public Vector3 HorizontalVelocity => _horizontalVelocity;
+
+        /// <summary>
+        /// Aktuelle vertikale Geschwindigkeit (Property).
+        /// </summary>
+        public float VerticalVelocity => _verticalVelocity;
 
         /// <summary>
         /// Setzt die vertikale Geschwindigkeit (z.B. für Jump).

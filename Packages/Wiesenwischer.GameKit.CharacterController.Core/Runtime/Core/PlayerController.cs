@@ -257,11 +257,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             // Create movement input
             var input = new MovementInput
             {
-                MoveDirection = new Vector3(_moveInput.x, 0, _moveInput.y),
-                TargetSpeed = _inputProvider?.SprintHeld == true ? _config.RunSpeed : _config.WalkSpeed,
-                VerticalVelocity = _verticalVelocity,
-                IsGrounded = IsGrounded,
-                DeltaTime = deltaTime
+                MoveDirection = _moveInput,
+                LookDirection = transform.forward,
+                IsSprinting = _inputProvider?.SprintHeld ?? false,
+                VerticalVelocity = _verticalVelocity
             };
 
             // Simulate movement
@@ -318,7 +317,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             GUILayout.Label($"Velocity: {Velocity:F2}");
             GUILayout.Label($"H-Velocity: {_horizontalVelocity.magnitude:F2}");
             GUILayout.Label($"V-Velocity: {_verticalVelocity:F2}");
-            GUILayout.Label($"Tick: {_currentTick}");
+            GUILayout.Label($"Tick: {CurrentTick}");
 
             if (_groundingDetection != null)
             {
