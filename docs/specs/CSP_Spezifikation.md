@@ -22,7 +22,7 @@ Ein Movement-System, das:
 ```
 PlayerController (MonoBehaviour)
 ├── InputCollector (tickbasiert)
-├── MovementSimulator (lokale Vorhersage)
+├── MovementMotor (lokale Vorhersage)
 ├── StateMachine (Grounded, Jumping, etc.)
 ├── AnimationBridge (optional)
 ├── PredictionBuffer (Vergangenheitsspeicher)
@@ -80,7 +80,7 @@ class PredictionBuffer
 
 ---
 
-## 🛠 Anforderungen an MovementSimulator
+## 🛠 Anforderungen an MovementMotor
 
 - Muss **deterministisch** sein
 - Keine Nutzung von `Time.deltaTime`, sondern `fixedTickDelta`

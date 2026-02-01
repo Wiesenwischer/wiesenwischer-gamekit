@@ -323,6 +323,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
             public float MaxStepHeight { get; set; } = 0.3f;
             public float MinStepDepth { get; set; } = 0.1f;
             public float SlopeSlideSpeed { get; set; } = 8f;
+            public bool UseSlopeDependentSlideSpeed { get; set; } = true;
         }
 
         #endregion

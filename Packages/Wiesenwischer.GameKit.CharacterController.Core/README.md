@@ -59,7 +59,7 @@ WASD zum Bewegen, Leertaste zum Springen, Shift zum Sprinten.
 | `PlayerController` | Hauptkomponente, integriert alle Systeme |
 | `MovementConfig` | ScriptableObject mit allen Parametern |
 | `CharacterStateMachine` | State Machine für Character States |
-| `MovementSimulator` | Deterministische Movement-Berechnung |
+| `MovementMotor` | Deterministische Movement-Berechnung |
 | `GroundingDetection` | Bodenerkennung mit Slope Support |
 
 ### Input Provider
@@ -119,7 +119,7 @@ PlayerController (MonoBehaviour)
 ├── TickSystem (60 Hz Fixed Updates)
 ├── IMovementInputProvider (Input Abstraktion)
 ├── GroundingDetection (Ground Checks)
-├── MovementSimulator (Velocity Calculation)
+├── MovementMotor (Velocity Calculation)
 └── CharacterStateMachine
     ├── GroundedState
     ├── JumpingState
@@ -141,7 +141,7 @@ Core/
 │       └── FallingState.cs
 ├── Movement/               # Movement System
 │   ├── IMovementController.cs
-│   ├── MovementSimulator.cs
+│   ├── MovementMotor.cs
 │   ├── GroundingDetection.cs
 │   └── MovementConfig.cs
 ├── Input/                  # Input Abstraktion

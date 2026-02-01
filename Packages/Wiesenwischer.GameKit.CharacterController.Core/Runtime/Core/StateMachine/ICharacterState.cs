@@ -126,5 +126,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
 
         // Slope Sliding
         float SlopeSlideSpeed { get; }
+
+        /// <summary>
+        /// Wenn true, skaliert die Sliding-Geschwindigkeit mit der Steilheit des Hangs.
+        /// Wenn false, wird immer SlopeSlideSpeed als feste Geschwindigkeit verwendet.
+        /// </summary>
+        bool UseSlopeDependentSlideSpeed { get; }
     }
 }

@@ -60,8 +60,8 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] Step Detection für Treppen
 - [x] Debug Gizmos
 
-### Commit 7: Movement Simulator
-- [x] MovementSimulator.cs Klasse
+### Commit 7: Movement Motor
+- [x] MovementMotor.cs Klasse
 - [x] Velocity-Berechnungen (Walk/Run)
 - [x] Acceleration/Deceleration
 - [x] Gravity Application
@@ -130,7 +130,7 @@ Implementierungs-Checkliste basierend auf [IMPLEMENTATION_PLAN.md](IMPLEMENTATIO
 - [x] Gizmos für Movement Direction
 
 ### Commit 15: Unit Tests - Movement System
-- [x] MovementSimulator Tests (Velocity Calculations)
+- [x] MovementMotor Tests (Velocity Calculations)
 - [x] Ground Detection Tests (Raycast, Slope)
 - [x] Acceleration/Deceleration Tests
 - [x] Gravity Tests

@@ -37,7 +37,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         // Systems
         private GroundingDetection _groundingDetection;
-        private MovementSimulator _movementSimulator;
+        private MovementMotor _movementSimulator;
         private CharacterStateMachine _stateMachine;
 
         // States
@@ -54,6 +54,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         // Tick System
         private TickSystem _tickSystem;
+
+        // Ground collision tracking (from OnControllerColliderHit)
+        private Vector3 _lastGroundNormal = Vector3.up;
+        private bool _hasGroundCollision;
+        private float _groundCollisionAngle;
 
         #region IStateMachineContext Implementation
 
@@ -146,6 +151,43 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             DrawDebugGUI();
         }
 
+        /// <summary>
+        /// Wird vom CharacterController bei jeder Kollision aufgerufen.
+        /// Liefert die exakte Kollisions-Normal vom Physics-System.
+        /// </summary>
+        private void OnControllerColliderHit(ControllerColliderHit hit)
+        {
+            // Prüfe ob dies eine Boden-Kollision ist (Normal zeigt nach oben)
+            float angle = Vector3.Angle(hit.normal, Vector3.up);
+
+            // Nur Kollisionen berücksichtigen, die "Boden-artig" sind (< 85°)
+            // Wände (>85°) ignorieren
+            if (angle < 85f)
+            {
+                // Dies ist eine potenzielle Boden-Kollision
+                // Prüfe ob der Kontaktpunkt unter dem Character ist
+                if (hit.point.y < transform.position.y + 0.1f)
+                {
+                    _hasGroundCollision = true;
+                    _lastGroundNormal = hit.normal;
+                    _groundCollisionAngle = angle;
+
+                    // Aktualisiere GroundingDetection mit der echten Kollisions-Normal
+                    if (_groundingDetection != null)
+                    {
+                        _groundingDetection.SetGroundNormalFromCollision(hit.normal, angle);
+                    }
+                }
+            }
+        }
+
+        private void LateUpdate()
+        {
+            // Reset ground collision flag am Ende des Frames
+            // Wird im nächsten Frame durch OnControllerColliderHit wieder gesetzt
+            _hasGroundCollision = false;
+        }
+
         #endregion
 
         #region Initialization
@@ -160,11 +202,39 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         {
             // Get CharacterController
             _characterController = GetComponent<UnityEngine.CharacterController>();
+            if (_characterController == null)
+            {
+                Debug.LogError($"[PlayerController] FEHLER auf '{gameObject.name}': " +
+                    "CharacterController-Komponente fehlt! " +
+                    "Füge eine CharacterController-Komponente zum GameObject hinzu. " +
+                    "(Menü: Component > Physics > Character Controller)");
+                enabled = false;
+                return;
+            }
+
+            // Validate CharacterController settings
+            if (_characterController.radius <= 0f)
+            {
+                Debug.LogError($"[PlayerController] FEHLER auf '{gameObject.name}': " +
+                    $"CharacterController.radius ist {_characterController.radius}, muss aber > 0 sein.");
+            }
+
+            if (_characterController.height <= 0f)
+            {
+                Debug.LogError($"[PlayerController] FEHLER auf '{gameObject.name}': " +
+                    $"CharacterController.height ist {_characterController.height}, muss aber > 0 sein.");
+            }
 
             // Find Input Provider
             if (_inputProviderComponent != null)
             {
                 _inputProvider = _inputProviderComponent as IMovementInputProvider;
+                if (_inputProvider == null)
+                {
+                    Debug.LogWarning($"[PlayerController] WARNUNG auf '{gameObject.name}': " +
+                        $"Das zugewiesene Input Provider Component '{_inputProviderComponent.GetType().Name}' " +
+                        "implementiert nicht IMovementInputProvider.");
+                }
             }
 
             if (_inputProvider == null)
@@ -174,14 +244,55 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             if (_inputProvider == null)
             {
-                Debug.LogWarning("[PlayerController] Kein Input Provider gefunden. " +
-                               "Bitte füge einen PlayerInputProvider oder AIInputProvider hinzu.");
+                Debug.LogWarning($"[PlayerController] WARNUNG auf '{gameObject.name}': " +
+                    "Kein Input Provider gefunden. Der Character wird sich nicht bewegen können. " +
+                    "Lösungen: " +
+                    "(1) Füge PlayerInputProvider für Spieler-Steuerung hinzu, oder " +
+                    "(2) Füge AIInputProvider für KI-Steuerung hinzu, oder " +
+                    "(3) Weise einen Input Provider im Inspector zu.");
             }
 
             // Validate config
             if (_config == null)
             {
-                Debug.LogError("[PlayerController] Keine MovementConfig zugewiesen!");
+                Debug.LogError($"[PlayerController] FEHLER auf '{gameObject.name}': " +
+                    "Keine MovementConfig zugewiesen! " +
+                    "Erstelle ein MovementConfig ScriptableObject (Create > Wiesenwischer > Movement Config) " +
+                    "und weise es im Inspector zu.");
+                enabled = false;
+                return;
+            }
+
+            // Validate config values
+            ValidateMovementConfig();
+        }
+
+        private void ValidateMovementConfig()
+        {
+            if (_config.WalkSpeed <= 0f)
+            {
+                Debug.LogWarning($"[PlayerController] WARNUNG: MovementConfig.WalkSpeed ist {_config.WalkSpeed}, sollte > 0 sein.");
+            }
+
+            if (_config.Gravity <= 0f)
+            {
+                Debug.LogWarning($"[PlayerController] WARNUNG: MovementConfig.Gravity ist {_config.Gravity}, sollte > 0 sein.");
+            }
+
+            if (_config.MaxSlopeAngle < 0f || _config.MaxSlopeAngle > 90f)
+            {
+                Debug.LogWarning($"[PlayerController] WARNUNG: MovementConfig.MaxSlopeAngle ist {_config.MaxSlopeAngle}, sollte zwischen 0 und 90 liegen.");
+            }
+
+            if (_config.GroundCheckDistance <= 0f)
+            {
+                Debug.LogWarning($"[PlayerController] WARNUNG: MovementConfig.GroundCheckDistance ist {_config.GroundCheckDistance}, sollte > 0 sein.");
+            }
+
+            if (_config.GroundLayers == 0)
+            {
+                Debug.LogWarning("[PlayerController] WARNUNG: MovementConfig.GroundLayers ist leer. " +
+                    "Der Character wird keinen Boden erkennen können.");
             }
         }
 
@@ -198,7 +309,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             );
 
             // Initialize Movement Simulator
-            _movementSimulator = new MovementSimulator(
+            _movementSimulator = new MovementMotor(
                 transform,
                 _characterController,
                 _config,
@@ -240,13 +351,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void OnFixedTick(int tick, float deltaTime)
         {
-            // 1. Update Ground Detection
-            _groundingDetection?.UpdateGroundCheck();
+            // Ground Detection wird in MovementMotor.Simulate() aufgerufen
+            // um sicherzustellen dass Kollisionsdaten nicht verloren gehen
 
-            // 2. Update State Machine
+            // 1. Update State Machine
             _stateMachine?.Update(deltaTime);
 
-            // 3. Apply Movement
+            // 2. Apply Movement
             ApplyMovement(deltaTime);
         }
 

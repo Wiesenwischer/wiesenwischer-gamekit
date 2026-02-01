@@ -6,10 +6,10 @@ using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
 {
     /// <summary>
-    /// Unit Tests für MovementSimulator.
+    /// Unit Tests für MovementMotor.
     /// </summary>
     [TestFixture]
-    public class MovementSimulatorTests
+    public class MovementMotorTests
     {
         private MockMovementConfig _config;
 
@@ -297,6 +297,176 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
 
         #endregion
 
+        #region Slope Sliding Tests
+
+        [Test]
+        public void SlopeSliding_CalculateSlideDirection_OnSteepSlope()
+        {
+            // Arrange - 60° Hang (steiler als MaxSlopeAngle von 45°)
+            float slopeAngle = 60f;
+            Vector3 slopeNormal = Quaternion.Euler(-slopeAngle, 0f, 0f) * Vector3.up;
+
+            // Act - Berechne Rutschrichtung
+            Vector3 slideDirection = Vector3.ProjectOnPlane(Vector3.down, slopeNormal).normalized;
+
+            // Assert
+            Assert.Greater(slideDirection.z, 0f, "Sollte nach vorne/unten rutschen");
+            Assert.Less(slideDirection.y, 0f, "Sollte nach unten gerichtet sein");
+        }
+
+        [Test]
+        public void SlopeSliding_SlideIntensity_ScalesWithAngle()
+        {
+            // Arrange
+            float maxSlopeAngle = _config.MaxSlopeAngle; // 45°
+
+            // Act - Teste verschiedene Winkel
+            float intensity45 = Mathf.InverseLerp(maxSlopeAngle, 90f, 45f);
+            float intensity60 = Mathf.InverseLerp(maxSlopeAngle, 90f, 60f);
+            float intensity75 = Mathf.InverseLerp(maxSlopeAngle, 90f, 75f);
+            float intensity90 = Mathf.InverseLerp(maxSlopeAngle, 90f, 90f);
+
+            // Assert
+            Assert.AreEqual(0f, intensity45, 0.001f, "45° sollte keine Rutschintensität haben");
+            Assert.AreEqual(1f / 3f, intensity60, 0.001f, "60° sollte 1/3 Intensität haben");
+            Assert.AreEqual(2f / 3f, intensity75, 0.001f, "75° sollte 2/3 Intensität haben");
+            Assert.AreEqual(1f, intensity90, 0.001f, "90° sollte volle Intensität haben");
+        }
+
+        [Test]
+        public void SlopeSliding_CalculateSlideSpeed_WithConfig()
+        {
+            // Arrange
+            float slopeSlideSpeed = _config.SlopeSlideSpeed; // 8f default
+            float slopeAngle = 60f;
+            float slideIntensity = Mathf.InverseLerp(_config.MaxSlopeAngle, 90f, slopeAngle);
+
+            // Act
+            float calculatedSpeed = slopeSlideSpeed * slideIntensity;
+
+            // Assert
+            Assert.AreEqual(8f * (1f / 3f), calculatedSpeed, 0.01f);
+        }
+
+        [Test]
+        public void SlopeSliding_ProjectOnPlane_PreservesHorizontalDirection()
+        {
+            // Arrange - Hang geneigt nach Norden (Z+)
+            Vector3 slopeNormal = new Vector3(0f, 0.866f, 0.5f).normalized; // ~30° nach Norden geneigt
+
+            // Act
+            Vector3 slideDir = Vector3.ProjectOnPlane(Vector3.down, slopeNormal).normalized;
+
+            // Assert - Sollte primär in Z+ Richtung rutschen
+            Assert.Greater(slideDir.z, 0f, "Sollte in Z+ Richtung rutschen");
+            Assert.AreEqual(0f, slideDir.x, 0.001f, "Sollte keine X-Komponente haben");
+        }
+
+        #endregion
+
+        #region Camera-Relative Movement Tests
+
+        [Test]
+        public void CameraRelativeMovement_ForwardInput_UsesLookDirection()
+        {
+            // Arrange
+            Vector2 moveInput = Vector2.up; // W-Taste = Vorwärts
+            Vector3 lookDirection = new Vector3(1f, 0f, 0f).normalized; // Kamera schaut nach rechts (X+)
+
+            // Act - Transformiere Input relativ zur Look-Direction
+            Quaternion lookRotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+            Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y);
+            Vector3 worldDirection = lookRotation * inputDirection;
+
+            // Assert - Vorwärts-Input sollte in X+ Richtung gehen (wo Kamera hinschaut)
+            Assert.AreEqual(1f, worldDirection.x, 0.001f, "Sollte in X+ Richtung gehen");
+            Assert.AreEqual(0f, worldDirection.z, 0.001f, "Sollte keine Z-Komponente haben");
+        }
+
+        [Test]
+        public void CameraRelativeMovement_RightInput_IsPerpendicular()
+        {
+            // Arrange
+            Vector2 moveInput = Vector2.right; // D-Taste = Rechts
+            Vector3 lookDirection = Vector3.forward; // Kamera schaut nach vorne (Z+)
+
+            // Act
+            Quaternion lookRotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+            Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y);
+            Vector3 worldDirection = lookRotation * inputDirection;
+
+            // Assert - Rechts-Input sollte in X+ Richtung gehen
+            Assert.AreEqual(1f, worldDirection.x, 0.001f, "Sollte in X+ Richtung gehen");
+            Assert.AreEqual(0f, worldDirection.z, 0.001f, "Sollte keine Z-Komponente haben");
+        }
+
+        [Test]
+        public void CameraRelativeMovement_DiagonalInput_MaintainsMagnitude()
+        {
+            // Arrange
+            Vector2 moveInput = new Vector2(0.707f, 0.707f).normalized; // Diagonal
+            Vector3 lookDirection = new Vector3(1f, 0f, 1f).normalized; // Kamera schaut diagonal
+
+            // Act
+            Quaternion lookRotation = Quaternion.LookRotation(lookDirection, Vector3.up);
+            Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y).normalized;
+            Vector3 worldDirection = lookRotation * inputDirection;
+
+            // Assert - Magnitude sollte 1 sein (normalisiert)
+            Assert.AreEqual(1f, worldDirection.magnitude, 0.001f, "Magnitude sollte 1 sein");
+            Assert.AreEqual(0f, worldDirection.y, 0.001f, "Sollte keine Y-Komponente haben");
+        }
+
+        [Test]
+        public void CameraRelativeMovement_ZeroLookDirection_FallsBackToForward()
+        {
+            // Arrange
+            Vector2 moveInput = Vector2.up;
+            Vector3 lookDirection = Vector3.zero; // Ungültige Look-Direction
+
+            // Act - Simuliere Fallback-Logik
+            Vector3 effectiveLookDir = lookDirection.sqrMagnitude > 0.01f
+                ? lookDirection.normalized
+                : Vector3.forward; // Fallback
+
+            Quaternion lookRotation = Quaternion.LookRotation(effectiveLookDir, Vector3.up);
+            Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y);
+            Vector3 worldDirection = lookRotation * inputDirection;
+
+            // Assert - Sollte Standard-Forward verwenden
+            Assert.AreEqual(0f, worldDirection.x, 0.001f);
+            Assert.AreEqual(1f, worldDirection.z, 0.001f);
+        }
+
+        [Test]
+        public void CameraRelativeMovement_VerticalLookDirection_UsesHorizontalComponent()
+        {
+            // Arrange - Kamera schaut nach unten mit leichtem Forward
+            Vector3 lookDirection = new Vector3(0f, -0.9f, 0.436f); // Fast vertikal nach unten
+            Vector2 moveInput = Vector2.up;
+
+            // Act - Extrahiere horizontale Komponente
+            Vector3 horizontalLook = new Vector3(lookDirection.x, 0f, lookDirection.z);
+
+            Vector3 worldDirection;
+            if (horizontalLook.sqrMagnitude > 0.01f)
+            {
+                Quaternion lookRotation = Quaternion.LookRotation(horizontalLook.normalized, Vector3.up);
+                Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y);
+                worldDirection = lookRotation * inputDirection;
+            }
+            else
+            {
+                worldDirection = Vector3.forward;
+            }
+
+            // Assert - Sollte in Z+ Richtung gehen (horizontale Komponente der Look-Direction)
+            Assert.AreEqual(0f, worldDirection.x, 0.001f);
+            Assert.Greater(worldDirection.z, 0.5f, "Sollte primär in Z+ Richtung gehen");
+        }
+
+        #endregion
+
         #region Mock Config
 
         private class MockMovementConfig : IMovementConfig
@@ -321,6 +491,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
             public float MaxStepHeight { get; set; } = 0.3f;
             public float MinStepDepth { get; set; } = 0.1f;
             public float SlopeSlideSpeed { get; set; } = 8f;
+            public bool UseSlopeDependentSlideSpeed { get; set; } = true;
         }
 
         #endregion

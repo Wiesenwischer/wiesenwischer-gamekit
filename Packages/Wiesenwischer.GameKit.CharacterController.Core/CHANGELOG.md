@@ -22,7 +22,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - State Transition Reasons für Debugging und Netzwerk
 
 #### Movement System
-- `MovementSimulator` mit deterministischer Velocity-Berechnung
+- `MovementMotor` mit deterministischer Velocity-Berechnung
 - `GroundingDetection` mit SphereCast und Multi-Raycast
 - Slope Handling mit konfigurierbarem Max-Angle
 - Step Detection für automatisches Treppen-Steigen
@@ -53,7 +53,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - `DemoSceneSetup` Wizard für automatisches Scene/Prefab Setup
 
 #### Tests
-- Unit Tests für MovementSimulator
+- Unit Tests für MovementMotor
 - Unit Tests für GroundInfo
 - Unit Tests für CharacterStateMachine
 - Unit Tests für State Transitions

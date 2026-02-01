@@ -79,6 +79,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         [Tooltip("Geschwindigkeit beim Rutschen auf zu steilen Oberflächen (m/s)")]
         [SerializeField] private float _slopeSlideSpeed = 8.0f;
 
+        [Tooltip("Wenn aktiviert, skaliert die Rutsch-Geschwindigkeit mit der Steilheit des Hangs (steilere Hänge = schneller). Wenn deaktiviert, wird immer die feste SlopeSlideSpeed verwendet.")]
+        [SerializeField] private bool _useSlopeDependentSlideSpeed = true;
+
         // Interface Implementation
         public float WalkSpeed => _walkSpeed;
         public float RunSpeed => _runSpeed;
@@ -100,6 +103,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         public float MaxStepHeight => _maxStepHeight;
         public float MinStepDepth => _minStepDepth;
         public float SlopeSlideSpeed => _slopeSlideSpeed;
+        public bool UseSlopeDependentSlideSpeed => _useSlopeDependentSlideSpeed;
 
         /// <summary>
         /// Berechnet die initiale Sprunggeschwindigkeit basierend auf Sprunghöhe und -dauer.

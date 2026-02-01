@@ -8,7 +8,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
     /// Berechnet Bewegung basierend auf Input und Config.
     /// Verwendet festes Delta für CSP-Kompatibilität.
     /// </summary>
-    public class MovementSimulator : IMovementController
+    public class MovementMotor : IMovementController
     {
         private readonly UnityEngine.CharacterController _characterController;
         private readonly Transform _transform;
@@ -21,17 +21,39 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         private float _verticalVelocity;
         private bool _isGrounded;
 
+        // Sliding State (persistent über Frames)
+        private bool _isSliding;
+        private float _slidingTime;
+        private Vector3 _currentSlideDirection;
+        private float _noSlopeContactTime;
+        private const float SLIDE_EXIT_DELAY = 0.15f; // Zeit ohne Slope-Kontakt bevor Sliding endet
+
         // Rotation
         private float _targetYaw;
         private float _currentYaw;
 
         /// <summary>
-        /// Erstellt einen neuen MovementSimulator.
+        /// Erstellt einen neuen MovementMotor.
         /// </summary>
-        public MovementSimulator(
+        /// <exception cref="System.ArgumentNullException">Wenn characterController oder config null ist.</exception>
+        public MovementMotor(
             UnityEngine.CharacterController characterController,
             IMovementConfig config)
         {
+            if (characterController == null)
+            {
+                throw new System.ArgumentNullException(nameof(characterController),
+                    "[MovementMotor] CharacterController darf nicht null sein. " +
+                    "Füge eine CharacterController-Komponente zum GameObject hinzu.");
+            }
+
+            if (config == null)
+            {
+                throw new System.ArgumentNullException(nameof(config),
+                    "[MovementMotor] IMovementConfig darf nicht null sein. " +
+                    "Weise eine MovementConfig im Inspector zu.");
+            }
+
             _characterController = characterController;
             _transform = characterController.transform;
             _config = config;
@@ -48,14 +70,42 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         }
 
         /// <summary>
-        /// Erstellt einen neuen MovementSimulator mit externer GroundingDetection.
+        /// Erstellt einen neuen MovementMotor mit externer GroundingDetection.
         /// </summary>
-        public MovementSimulator(
+        /// <exception cref="System.ArgumentNullException">Wenn eine Abhängigkeit null ist.</exception>
+        public MovementMotor(
             Transform transform,
             UnityEngine.CharacterController characterController,
             IMovementConfig config,
             GroundingDetection groundingDetection)
         {
+            if (transform == null)
+            {
+                throw new System.ArgumentNullException(nameof(transform),
+                    "[MovementMotor] Transform darf nicht null sein.");
+            }
+
+            if (characterController == null)
+            {
+                throw new System.ArgumentNullException(nameof(characterController),
+                    "[MovementMotor] CharacterController darf nicht null sein. " +
+                    "Füge eine CharacterController-Komponente zum GameObject hinzu.");
+            }
+
+            if (config == null)
+            {
+                throw new System.ArgumentNullException(nameof(config),
+                    "[MovementMotor] IMovementConfig darf nicht null sein. " +
+                    "Weise eine MovementConfig im Inspector zu.");
+            }
+
+            if (groundingDetection == null)
+            {
+                throw new System.ArgumentNullException(nameof(groundingDetection),
+                    "[MovementMotor] GroundingDetection darf nicht null sein. " +
+                    "Erstelle eine GroundingDetection-Instanz oder verwende den anderen Konstruktor.");
+            }
+
             _characterController = characterController;
             _transform = transform;
             _config = config;
@@ -73,6 +123,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         public bool IsGrounded => _groundingDetection.IsGrounded;
         public GroundInfo GroundInfo => _groundingDetection.GroundInfo;
 
+        /// <summary>
+        /// Ob der Character gerade auf einem steilen Hang rutscht.
+        /// </summary>
+        public bool IsSliding => _isSliding;
+
+        /// <summary>
+        /// Wie lange der Character bereits rutscht (in Sekunden).
+        /// </summary>
+        public float SlidingTime => _slidingTime;
+
         public void Simulate(MovementInput input, float deltaTime)
         {
             // 1. Ground Check
@@ -86,60 +146,134 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             // 3. Vertikale Bewegung (Gravity + Jump)
             _verticalVelocity = CalculateVerticalVelocity(input.VerticalVelocity, deltaTime);
 
-            // 4. Slope Handling
+            // 4. Step Detection ZUERST (vor Slope Handling)
             Vector3 moveDirection = _horizontalVelocity;
-            if (_isGrounded && _groundingDetection.GroundInfo.IsWalkable)
+            bool isClimbingStep = false;
+
+            if (_isGrounded && _horizontalVelocity.sqrMagnitude > 0.01f)
             {
-                moveDirection = _groundingDetection.GetSlopeDirection(_horizontalVelocity);
-                // Behalte die Magnitude
-                moveDirection = moveDirection.normalized * _horizontalVelocity.magnitude;
-            }
-            // Slope Sliding: Rutschen wenn auf zu steilem Hang
-            else if (_isGrounded && !_groundingDetection.GroundInfo.IsWalkable)
-            {
-                // Berechne Rutschrichtung entlang des Hangs nach unten
-                Vector3 slopeNormal = _groundingDetection.GroundInfo.Normal;
-                Vector3 slideDirection = Vector3.ProjectOnPlane(Vector3.down, slopeNormal).normalized;
-
-                // Rutschgeschwindigkeit skaliert mit Hangwinkel
-                float slopeAngle = _groundingDetection.GroundInfo.SlopeAngle;
-                float slideIntensity = Mathf.InverseLerp(_config.MaxSlopeAngle, 90f, slopeAngle);
-                float slideSpeed = _config.SlopeSlideSpeed * slideIntensity;
-
-                // Setze horizontale Geschwindigkeit auf Rutschrichtung
-                moveDirection = slideDirection * slideSpeed;
-                _horizontalVelocity = moveDirection;
-
-                // Spieler kann leicht in Querrichtung steuern, aber nicht bergauf
-                if (input.MoveDirection.sqrMagnitude > 0.01f)
+                if (_groundingDetection.CheckForStep(_horizontalVelocity, out float stepHeight))
                 {
-                    Vector3 inputDir = new Vector3(input.MoveDirection.x, 0, input.MoveDirection.y);
-                    if (input.LookDirection.sqrMagnitude > 0.01f)
-                    {
-                        Quaternion lookRotation = Quaternion.LookRotation(
-                            new Vector3(input.LookDirection.x, 0, input.LookDirection.z).normalized,
-                            Vector3.up
-                        );
-                        inputDir = lookRotation * inputDir;
-                    }
-
-                    // Erlaube nur Bewegung, die nicht bergauf geht
-                    float upwardComponent = Vector3.Dot(inputDir.normalized, -slideDirection);
-                    if (upwardComponent < 0.5f)
-                    {
-                        moveDirection += inputDir * _config.AirControl;
-                    }
+                    // Stufe erkannt - überspringe Slope Sliding und erlaube normale Bewegung
+                    isClimbingStep = true;
+                    Debug.Log($"[Step] Stufe erkannt! Höhe: {stepHeight:F2}m");
+                    // CharacterController.stepOffset handhabt das Step-Up automatisch
                 }
             }
 
-            // 5. Step Detection und Handling
-            if (_isGrounded && moveDirection.sqrMagnitude > 0.01f)
+            // 5. Slope Handling mit persistenter Sliding-State
+            float slopeAngleBelow = _groundingDetection.SlopeAngleDirectlyBelow;
+            bool isWalkableBelow = _groundingDetection.IsWalkableDirectlyBelow;
+            Vector3 slopeNormal = _groundingDetection.SlopeNormalDirectlyBelow;
+
+            // Prüfe ob wir auf einem steilen Slope sind
+            bool onSteepSlope = !isWalkableBelow && slopeAngleBelow > _config.MaxSlopeAngle && slopeAngleBelow < 85f;
+
+            // Sliding State Management (persistent über Frames)
+            if (onSteepSlope)
             {
-                if (_groundingDetection.CheckForStep(moveDirection, out float stepHeight))
+                // Steiler Slope erkannt - starte oder setze Sliding fort
+                _noSlopeContactTime = 0f;
+
+                if (!_isSliding)
                 {
-                    // Füge vertikale Komponente für Step-Up hinzu
-                    _verticalVelocity = Mathf.Max(_verticalVelocity, stepHeight / deltaTime * 0.5f);
+                    // Sliding startet
+                    _isSliding = true;
+                    _slidingTime = 0f;
+                    Debug.Log($"[Sliding-START] Angle: {slopeAngleBelow:F1}°");
                 }
+
+                // Berechne Slide-Richtung
+                _currentSlideDirection = CalculateSlideDirection(slopeNormal);
+                _slidingTime += deltaTime;
+            }
+            else if (_isSliding)
+            {
+                // Kein Slope erkannt, aber wir waren am Sliden
+                _noSlopeContactTime += deltaTime;
+
+                // Prüfe ob wir auf begehbarem Boden gelandet sind
+                if (_isGrounded && isWalkableBelow)
+                {
+                    // Auf flachem Boden gelandet - Sliding sofort beenden
+                    _isSliding = false;
+                    _slidingTime = 0f;
+                    _noSlopeContactTime = 0f;
+                    Debug.Log($"[Sliding-END] Landed on walkable ground");
+                }
+                else if (_noSlopeContactTime > SLIDE_EXIT_DELAY)
+                {
+                    // Zu lange ohne Slope-Kontakt - Sliding beenden
+                    _isSliding = false;
+                    _slidingTime = 0f;
+                    _noSlopeContactTime = 0f;
+                    Debug.Log($"[Sliding-END] No slope contact timeout");
+                }
+            }
+
+            // Bewegung berechnen
+            if (!isClimbingStep)
+            {
+                if (_isSliding)
+                {
+                    // SLIDING-MODUS: Rutschen am Hang
+                    float slideSpeed;
+                    float slideIntensity;
+
+                    if (_config.UseSlopeDependentSlideSpeed)
+                    {
+                        slideIntensity = Mathf.InverseLerp(_config.MaxSlopeAngle, 90f, slopeAngleBelow);
+                        slideIntensity = Mathf.Max(slideIntensity, 0.3f);
+                        slideSpeed = _config.SlopeSlideSpeed * slideIntensity;
+                    }
+                    else
+                    {
+                        slideIntensity = 1f;
+                        slideSpeed = _config.SlopeSlideSpeed;
+                    }
+
+                    // Zusätzliche Beschleunigung über Zeit (wie echtes Rutschen)
+                    float timeAcceleration = Mathf.Min(_slidingTime * 0.5f, 1f); // Max +100% nach 2 Sekunden
+                    slideSpeed *= (1f + timeAcceleration);
+
+                    Debug.Log($"[Sliding] Angle: {slopeAngleBelow:F1}°, Speed: {slideSpeed:F2}, Time: {_slidingTime:F2}s");
+
+                    // Slide-Velocity berechnen
+                    Vector3 slideVelocity = _currentSlideDirection * slideSpeed;
+
+                    // Horizontale und vertikale Komponenten trennen
+                    moveDirection = new Vector3(slideVelocity.x, 0, slideVelocity.z);
+                    _horizontalVelocity = moveDirection;
+                    _verticalVelocity = slideVelocity.y;
+
+                    // Spieler-Input für leichte Quersteuerung
+                    if (input.MoveDirection.sqrMagnitude > 0.01f)
+                    {
+                        Vector3 inputDir = new Vector3(input.MoveDirection.x, 0, input.MoveDirection.y);
+                        if (input.LookDirection.sqrMagnitude > 0.01f)
+                        {
+                            Quaternion lookRotation = Quaternion.LookRotation(
+                                new Vector3(input.LookDirection.x, 0, input.LookDirection.z).normalized,
+                                Vector3.up
+                            );
+                            inputDir = lookRotation * inputDir;
+                        }
+
+                        // Nur Bewegung erlauben, die nicht bergauf geht
+                        float upwardComponent = Vector3.Dot(inputDir.normalized, -_currentSlideDirection);
+                        if (upwardComponent < 0.5f)
+                        {
+                            moveDirection += inputDir * _config.AirControl;
+                        }
+                    }
+                }
+                else if (_isGrounded && isWalkableBelow)
+                {
+                    // NORMAL-MODUS: Begehbarer Boden
+                    moveDirection = _groundingDetection.GetSlopeDirection(_horizontalVelocity);
+                    moveDirection = moveDirection.normalized * _horizontalVelocity.magnitude;
+                }
+                // Sonst: In der Luft oder an Wand - normale Bewegung mit Gravity
             }
 
             // 6. Finale Velocity zusammensetzen
@@ -154,11 +288,36 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 UpdateRotation(input.LookDirection, deltaTime);
             }
 
-            // 9. Snap to Ground wenn geerdet
-            if (_isGrounded && _verticalVelocity <= 0)
+            // 9. Snap to Ground wenn geerdet (NICHT beim Sliding!)
+            if (_isGrounded && _verticalVelocity <= 0 && !_isSliding)
             {
                 SnapToGround();
             }
+        }
+
+        /// <summary>
+        /// Berechnet die Rutschrichtung entlang eines Hangs.
+        /// </summary>
+        private Vector3 CalculateSlideDirection(Vector3 slopeNormal)
+        {
+            // Cross-Produkt für Querrichtung, dann nochmal Cross für Abwärtsrichtung
+            Vector3 slopeRight = Vector3.Cross(slopeNormal, Vector3.up).normalized;
+
+            if (slopeRight.sqrMagnitude > 0.001f)
+            {
+                // Hangabwärts = Cross von Normal und Querrichtung
+                Vector3 slideDir = Vector3.Cross(slopeRight, slopeNormal).normalized;
+
+                // Stelle sicher dass wir nach unten zeigen
+                if (slideDir.y > 0)
+                {
+                    slideDir = -slideDir;
+                }
+                return slideDir;
+            }
+
+            // Fallback wenn Normal fast vertikal
+            return Vector3.ProjectOnPlane(Vector3.down, slopeNormal).normalized;
         }
 
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation)

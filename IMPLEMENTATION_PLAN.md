@@ -72,8 +72,8 @@ Wiesenwischer.GameKit.CharacterController/
 - Slope-Handling
 - Layer-basierte Filterung
 
-#### 2.5 Movement Simulator
-- `MovementSimulator` Klasse
+#### 2.5 Movement Motor
+- `MovementMotor` Klasse
 - Deterministische Velocity-Berechnungen
 - Gravity Application
 - Walk/Run Movement
@@ -119,7 +119,7 @@ Wiesenwischer.GameKit.CharacterController/
 ### Phase 5: Testing & Demo
 
 #### 2.11 Unit Tests
-- Movement Simulator Tests
+- Movement Motor Tests
 - Ground Detection Tests
 - State Machine Tests
 - State Transition Tests
@@ -184,7 +184,7 @@ Wiesenwischer.GameKit.CharacterController/
 4. **feat: Implementiere MovementConfig ScriptableObject** - Konfiguration
 5. **feat: Implementiere Input Provider System** - IMovementInputProvider, PlayerInputProvider
 6. **feat: Implementiere Ground Detection System** - GroundingDetection
-7. **feat: Implementiere Movement Simulator** - Deterministische Movement-Logik
+7. **feat: Implementiere Movement Motor** - Deterministische Movement-Logik
 8. **feat: Implementiere State Machine Framework** - CharacterStateMachine Basis
 9. **feat: Implementiere Character States** - Grounded, Airborne, Jumping, Falling
 10. **feat: Implementiere PlayerController MonoBehaviour** - Integration aller Systeme
@@ -205,7 +205,7 @@ Die 5 wichtigsten Dateien für die Implementierung:
 
 1. **PlayerController.cs** - Zentrale Koordination aller Systeme
 2. **CharacterStateMachine.cs** - State Management und Transitions
-3. **MovementSimulator.cs** - Deterministisches Movement, CSP-Kern
+3. **MovementMotor.cs** - Deterministisches Movement, CSP-Kern
 4. **IMovementInputProvider.cs** - Input-Abstraktion, Testbarkeit
 5. **MovementConfig.cs** - ScriptableObject, Designer-Interface
 
@@ -244,7 +244,7 @@ Die 5 wichtigsten Dateien für die Implementierung:
 
 ### Unit Tests
 
-- [ ] MovementSimulator Tests bestehen
+- [ ] MovementMotor Tests bestehen
 - [ ] Ground Detection Tests bestehen
 - [ ] State Machine Tests bestehen
 - [ ] State Transition Tests bestehen
