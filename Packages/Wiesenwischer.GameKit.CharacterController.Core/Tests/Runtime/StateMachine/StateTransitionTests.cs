@@ -12,7 +12,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
     public class StateTransitionTests
     {
         private MockStateMachineContext _context;
-        private MockMovementConfig _config;
+        private MockLocomotionConfig _config;
 
         private GroundedState _groundedState;
         private JumpingState _jumpingState;
@@ -21,7 +21,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
         [SetUp]
         public void SetUp()
         {
-            _config = new MockMovementConfig();
+            _config = new MockLocomotionConfig();
             _context = new MockStateMachineContext { Config = _config };
 
             // Create states
@@ -297,11 +297,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
             public bool IsGrounded { get; set; }
             public float VerticalVelocity { get; set; }
             public Vector3 HorizontalVelocity { get; set; }
-            public IMovementConfig Config { get; set; }
+            public ILocomotionConfig Config { get; set; }
             public int CurrentTick { get; set; }
         }
 
-        private class MockMovementConfig : IMovementConfig
+        private class MockLocomotionConfig : ILocomotionConfig
         {
             public float WalkSpeed { get; set; } = 5f;
             public float RunSpeed { get; set; } = 10f;

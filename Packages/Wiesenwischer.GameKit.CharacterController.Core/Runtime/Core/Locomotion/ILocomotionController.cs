@@ -1,12 +1,13 @@
 using UnityEngine;
 
-namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
+namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 {
     /// <summary>
-    /// Interface für den Movement Controller.
+    /// Interface für Locomotion Controller.
     /// Definiert die Schnittstelle für deterministische Charakterbewegung.
+    /// Wird von verschiedenen Locomotion-Typen implementiert (Character, Riding, Gliding).
     /// </summary>
-    public interface IMovementController
+    public interface ILocomotionController
     {
         /// <summary>
         /// Die aktuelle Position des Characters.
@@ -39,7 +40,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         /// </summary>
         /// <param name="input">Der Input für diesen Tick.</param>
         /// <param name="deltaTime">Die feste Zeit pro Tick.</param>
-        void Simulate(MovementInput input, float deltaTime);
+        void Simulate(LocomotionInput input, float deltaTime);
 
         /// <summary>
         /// Setzt den Character auf eine bestimmte Position und Rotation.
@@ -57,10 +58,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
     }
 
     /// <summary>
-    /// Struct für Movement Input.
+    /// Struct für Locomotion Input.
     /// Enthält alle Eingaben, die für die Bewegung relevant sind.
     /// </summary>
-    public struct MovementInput
+    public struct LocomotionInput
     {
         /// <summary>
         /// Bewegungsrichtung (X = horizontal, Y = vertikal/forward).
@@ -85,9 +86,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         public float VerticalVelocity;
 
         /// <summary>
-        /// Erstellt einen leeren Movement Input.
+        /// Erstellt einen leeren Locomotion Input.
         /// </summary>
-        public static MovementInput Empty => new MovementInput
+        public static LocomotionInput Empty => new LocomotionInput
         {
             MoveDirection = Vector2.zero,
             LookDirection = Vector3.forward,

@@ -1,8 +1,8 @@
 using NUnit.Framework;
 using UnityEngine;
-using Wiesenwischer.GameKit.CharacterController.Core.Movement;
+using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 
-namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
+namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Locomotion
 {
     /// <summary>
     /// Unit Tests für GroundInfo Struktur.

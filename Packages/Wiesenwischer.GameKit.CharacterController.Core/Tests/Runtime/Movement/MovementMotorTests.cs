@@ -1,22 +1,22 @@
 using NUnit.Framework;
 using UnityEngine;
-using Wiesenwischer.GameKit.CharacterController.Core.Movement;
+using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
-namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
+namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Locomotion
 {
     /// <summary>
     /// Unit Tests für MovementMotor.
     /// </summary>
     [TestFixture]
-    public class MovementMotorTests
+    public class LocomotionTests
     {
-        private MockMovementConfig _config;
+        private MockLocomotionConfig _config;
 
         [SetUp]
         public void SetUp()
         {
-            _config = new MockMovementConfig
+            _config = new MockLocomotionConfig
             {
                 WalkSpeed = 5f,
                 RunSpeed = 10f,
@@ -261,13 +261,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
 
         #endregion
 
-        #region MovementInput Tests
+        #region LocomotionInput Tests
 
         [Test]
-        public void MovementInput_Empty_HasCorrectDefaults()
+        public void LocomotionInput_Empty_HasCorrectDefaults()
         {
             // Arrange & Act
-            var input = MovementInput.Empty;
+            var input = LocomotionInput.Empty;
 
             // Assert
             Assert.AreEqual(Vector2.zero, input.MoveDirection);
@@ -277,10 +277,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
         }
 
         [Test]
-        public void MovementInput_WithValues_StoresCorrectly()
+        public void LocomotionInput_WithValues_StoresCorrectly()
         {
             // Arrange & Act
-            var input = new MovementInput
+            var input = new LocomotionInput
             {
                 MoveDirection = new Vector2(0.5f, 0.5f),
                 LookDirection = Vector3.right,
@@ -469,7 +469,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Movement
 
         #region Mock Config
 
-        private class MockMovementConfig : IMovementConfig
+        private class MockLocomotionConfig : ILocomotionConfig
         {
             public float WalkSpeed { get; set; } = 5f;
             public float RunSpeed { get; set; } = 10f;

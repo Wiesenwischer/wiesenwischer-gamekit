@@ -77,9 +77,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         Vector3 HorizontalVelocity { get; set; }
 
         /// <summary>
-        /// Zugriff auf die Movement-Konfiguration.
+        /// Zugriff auf die Locomotion-Konfiguration.
         /// </summary>
-        IMovementConfig Config { get; }
+        ILocomotionConfig Config { get; }
 
         /// <summary>
         /// Der aktuelle Tick-Index (für CSP).
@@ -88,10 +88,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
     }
 
     /// <summary>
-    /// Interface für Movement-Konfiguration.
-    /// Ermöglicht den Zugriff auf Movement-Parameter ohne direkte Abhängigkeit von ScriptableObject.
+    /// Interface für Locomotion-Konfiguration.
+    /// Ermöglicht den Zugriff auf Locomotion-Parameter ohne direkte Abhängigkeit von ScriptableObject.
+    /// Wird von CharacterLocomotion und anderen Locomotion-Typen verwendet.
     /// </summary>
-    public interface IMovementConfig
+    public interface ILocomotionConfig
     {
         // Ground Movement
         float WalkSpeed { get; }

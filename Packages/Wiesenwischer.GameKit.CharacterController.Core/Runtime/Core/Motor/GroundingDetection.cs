@@ -1,16 +1,18 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
-namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
+namespace Wiesenwischer.GameKit.CharacterController.Core.Motor
 {
     /// <summary>
     /// System für Boden-Erkennung.
     /// Verwendet Raycast und SphereCast für zuverlässige Ground Detection.
+    /// Teil der gemeinsamen Motor-Schicht für alle Locomotion-Typen.
     /// </summary>
     public class GroundingDetection
     {
         private readonly Transform _transform;
-        private readonly IMovementConfig _config;
+        private readonly ILocomotionConfig _config;
         private readonly float _characterRadius;
         private readonly float _characterHeight;
 
@@ -26,39 +28,33 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         /// Erstellt eine neue GroundingDetection Instanz.
         /// </summary>
         /// <param name="transform">Transform des Characters.</param>
-        /// <param name="config">Movement-Konfiguration.</param>
-        /// <param name="characterRadius">Radius des CharacterControllers.</param>
-        /// <param name="characterHeight">Höhe des CharacterControllers.</param>
-        /// <exception cref="System.ArgumentNullException">Wenn transform oder config null ist.</exception>
-        /// <exception cref="System.ArgumentOutOfRangeException">Wenn characterRadius oder characterHeight ungültig ist.</exception>
-        public GroundingDetection(Transform transform, IMovementConfig config, float characterRadius, float characterHeight)
+        /// <param name="config">Locomotion-Konfiguration.</param>
+        /// <param name="characterRadius">Radius des CapsuleColliders.</param>
+        /// <param name="characterHeight">Höhe des CapsuleColliders.</param>
+        public GroundingDetection(Transform transform, ILocomotionConfig config, float characterRadius, float characterHeight)
         {
             if (transform == null)
             {
                 throw new System.ArgumentNullException(nameof(transform),
-                    "[GroundingDetection] Transform darf nicht null sein. " +
-                    "Stelle sicher, dass das GameObject ein gültiges Transform hat.");
+                    "[GroundingDetection] Transform darf nicht null sein.");
             }
 
             if (config == null)
             {
                 throw new System.ArgumentNullException(nameof(config),
-                    "[GroundingDetection] IMovementConfig darf nicht null sein. " +
-                    "Weise eine MovementConfig im Inspector zu oder übergebe eine gültige Konfiguration.");
+                    "[GroundingDetection] ILocomotionConfig darf nicht null sein.");
             }
 
             if (characterRadius <= 0f)
             {
                 throw new System.ArgumentOutOfRangeException(nameof(characterRadius),
-                    $"[GroundingDetection] characterRadius muss größer als 0 sein, ist aber {characterRadius}. " +
-                    "Prüfe die CharacterController-Einstellungen.");
+                    $"[GroundingDetection] characterRadius muss größer als 0 sein, ist aber {characterRadius}.");
             }
 
             if (characterHeight <= 0f)
             {
                 throw new System.ArgumentOutOfRangeException(nameof(characterHeight),
-                    $"[GroundingDetection] characterHeight muss größer als 0 sein, ist aber {characterHeight}. " +
-                    "Prüfe die CharacterController-Einstellungen.");
+                    $"[GroundingDetection] characterHeight muss größer als 0 sein, ist aber {characterHeight}.");
             }
 
             _transform = transform;
@@ -68,52 +64,32 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             _groundInfo = GroundInfo.Empty;
         }
 
-        /// <summary>
-        /// Aktuelle Ground-Informationen.
-        /// </summary>
+        /// <summary>Aktuelle Ground-Informationen.</summary>
         public GroundInfo GroundInfo => _groundInfo;
 
-        /// <summary>
-        /// Ob der Character auf dem Boden steht.
-        /// </summary>
+        /// <summary>Ob der Character auf dem Boden steht.</summary>
         public bool IsGrounded => _groundInfo.IsGrounded;
 
-        /// <summary>
-        /// Ob der Character gerade gelandet ist (war in der Luft, jetzt auf dem Boden).
-        /// </summary>
+        /// <summary>Ob der Character gerade gelandet ist.</summary>
         public bool JustLanded => _groundInfo.IsGrounded && !_wasGroundedLastFrame;
 
-        /// <summary>
-        /// Ob der Character gerade den Boden verlassen hat.
-        /// </summary>
+        /// <summary>Ob der Character gerade den Boden verlassen hat.</summary>
         public bool JustLeftGround => !_groundInfo.IsGrounded && _wasGroundedLastFrame;
 
-        /// <summary>
-        /// Slope-Winkel direkt unter dem Character (via Raycast, nicht SphereCast).
-        /// Verwendet für Slope Sliding, um Stufen-Kanten auszuschließen.
-        /// </summary>
+        /// <summary>Slope-Winkel direkt unter dem Character.</summary>
         public float SlopeAngleDirectlyBelow { get; private set; }
 
-        /// <summary>
-        /// Normal des Bodens direkt unter dem Character.
-        /// </summary>
+        /// <summary>Normal des Bodens direkt unter dem Character.</summary>
         public Vector3 SlopeNormalDirectlyBelow { get; private set; } = Vector3.up;
 
-        /// <summary>
-        /// Ob der Boden direkt unter dem Character begehbar ist.
-        /// </summary>
+        /// <summary>Ob der Boden direkt unter dem Character begehbar ist.</summary>
         public bool IsWalkableDirectlyBelow { get; private set; } = true;
 
-        // Collision-basierte Ground Detection (von OnControllerColliderHit)
-        private bool _hasCollisionData;
-        private Vector3 _collisionGroundNormal = Vector3.up;
-        private float _collisionGroundAngle;
-
-        // Persistente Slope-Daten (bleiben über mehrere Frames erhalten)
+        // Persistente Slope-Daten
         private float _lastValidSlopeAngle;
         private Vector3 _lastValidSlopeNormal = Vector3.up;
         private float _slopePersistenceTimer;
-        private const float SLOPE_PERSISTENCE_DURATION = 0.3f; // Wie lange Slope-Daten ohne neue Detektion erhalten bleiben
+        private const float SLOPE_PERSISTENCE_DURATION = 0.3f;
 
         /// <summary>
         /// Führt die Ground Detection aus.
@@ -139,140 +115,91 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             }
 
             // Separater Raycast DIREKT nach unten für Slope Sliding
-            // (SphereCast kann Stufen-Kanten VOR dem Character treffen)
             UpdateSlopeDirectlyBelow();
         }
 
         /// <summary>
-        /// Setzt die Ground-Normal von OnControllerColliderHit.
-        /// Dies ist die zuverlässigste Quelle für die Boden-Normal.
-        /// </summary>
-        public void SetGroundNormalFromCollision(Vector3 normal, float angle)
-        {
-            _hasCollisionData = true;
-            _collisionGroundNormal = normal;
-            _collisionGroundAngle = angle;
-        }
-
-        /// <summary>
         /// Prüft den Slope-Winkel direkt unter dem Character.
-        /// Verwendet mehrere Detektionsmethoden für zuverlässige Erkennung.
+        /// Verwendet Raycast vom Capsule-Zentrum für zuverlässige Erkennung.
         /// </summary>
         private void UpdateSlopeDirectlyBelow()
         {
-            bool foundValidSlope = false;
             float detectedAngle = 0f;
             Vector3 detectedNormal = Vector3.up;
+            bool foundGround = false;
 
-            // METHODE 1: Kollisionsdaten vom CharacterController (OnControllerColliderHit)
-            // Höchste Priorität - diese zeigen die echte Kontaktfläche
-            if (_hasCollisionData)
+            // PRIMÄRE METHODE: Raycast vom Capsule-Zentrum nach unten
+            Vector3 capsuleCenter = _transform.position + Vector3.up * (_characterHeight * 0.5f);
+            float rayDistance = _characterHeight * 0.5f + 1f;
+
+            if (Physics.Raycast(
+                capsuleCenter,
+                Vector3.down,
+                out RaycastHit centerHit,
+                rayDistance,
+                _config.GroundLayers,
+                QueryTriggerInteraction.Ignore))
             {
-                detectedAngle = _collisionGroundAngle;
-                detectedNormal = _collisionGroundNormal;
-                foundValidSlope = true;
-                _hasCollisionData = false;
+                detectedAngle = Vector3.Angle(centerHit.normal, Vector3.up);
+                detectedNormal = centerHit.normal;
+                foundGround = true;
 
-                if (detectedAngle > 10f)
-                {
-                    Debug.Log($"[SlopeBelow-Collision] Angle: {detectedAngle:F1}°");
-                }
+                Debug.Log($"[SlopeBelow-CenterRay] Angle: {detectedAngle:F1}°, MaxSlope: {_config.MaxSlopeAngle}°, Distance: {centerHit.distance:F2}");
             }
 
-            // METHODE 2: SphereCast für breitere Detektion
-            if (!foundValidSlope)
+            // FALLBACK: SphereCast für breitere Detektion
+            if (!foundGround)
             {
                 Vector3 sphereOrigin = _transform.position + Vector3.up * (_characterRadius + 0.05f);
-                float sphereCheckDistance = 2f; // Längere Distanz für Slope-Detektion
+                float sphereCheckDistance = 2f;
 
                 if (Physics.SphereCast(
                     sphereOrigin,
-                    _characterRadius * 0.5f, // Kleinerer Radius für präzisere Slope-Detektion
+                    _characterRadius * 0.5f,
                     Vector3.down,
                     out RaycastHit sphereHit,
                     sphereCheckDistance,
                     _config.GroundLayers,
                     QueryTriggerInteraction.Ignore))
                 {
-                    float angle = Vector3.Angle(sphereHit.normal, Vector3.up);
-                    if (angle > _config.MaxSlopeAngle && angle < 85f)
-                    {
-                        detectedAngle = angle;
-                        detectedNormal = sphereHit.normal;
-                        foundValidSlope = true;
-
-                        Debug.Log($"[SlopeBelow-SphereCast] Angle: {angle:F1}°, Distance: {sphereHit.distance:F2}");
-                    }
+                    detectedAngle = Vector3.Angle(sphereHit.normal, Vector3.up);
+                    detectedNormal = sphereHit.normal;
+                    foundGround = true;
+                    Debug.Log($"[SlopeBelow-SphereCast] Angle: {detectedAngle:F1}°");
                 }
             }
 
-            // METHODE 3: Multi-Raycast für präzise Detektion
-            if (!foundValidSlope)
-            {
-                float rayCheckDistance = 3f; // Noch längere Distanz für Fallsituationen
-
-                // Mehrere Raycasts: Center, Forward, und an den Seiten
-                Vector3[] rayOrigins = new Vector3[]
-                {
-                    _transform.position + Vector3.up * 0.1f,
-                    _transform.position + Vector3.up * 0.1f + _transform.forward * _characterRadius * 0.5f,
-                    _transform.position + Vector3.up * 0.1f - _transform.forward * _characterRadius * 0.5f,
-                };
-
-                foreach (var origin in rayOrigins)
-                {
-                    if (Physics.Raycast(
-                        origin,
-                        Vector3.down,
-                        out RaycastHit hit,
-                        rayCheckDistance,
-                        _config.GroundLayers,
-                        QueryTriggerInteraction.Ignore))
-                    {
-                        float angle = Vector3.Angle(hit.normal, Vector3.up);
-
-                        // Nur steile Slopes (> MaxSlopeAngle) aber keine Wände (< 85°)
-                        if (angle > _config.MaxSlopeAngle && angle < 85f)
-                        {
-                            detectedAngle = angle;
-                            detectedNormal = hit.normal;
-                            foundValidSlope = true;
-
-                            Debug.Log($"[SlopeBelow-Raycast] Angle: {angle:F1}°, Distance: {hit.distance:F2}");
-                            break;
-                        }
-                    }
-                }
-            }
+            // Bestimme ob dieser Winkel als "steep slope" gilt
+            bool isSteepSlope = foundGround && detectedAngle >= _config.MaxSlopeAngle && detectedAngle < 85f;
 
             // Aktualisiere Slope-Daten
-            if (foundValidSlope)
+            if (foundGround)
             {
-                // Neue valide Slope-Daten gefunden
                 SlopeAngleDirectlyBelow = detectedAngle;
                 SlopeNormalDirectlyBelow = detectedNormal;
-                IsWalkableDirectlyBelow = detectedAngle <= _config.MaxSlopeAngle;
+                IsWalkableDirectlyBelow = detectedAngle < _config.MaxSlopeAngle;
 
-                // Speichere als letzte valide Daten
+                if (isSteepSlope)
+                {
+                    Debug.Log($"[SlopeBelow-STEEP] Angle: {detectedAngle:F1}° >= MaxSlope: {_config.MaxSlopeAngle}° -> SLIDING!");
+                }
+
                 _lastValidSlopeAngle = detectedAngle;
                 _lastValidSlopeNormal = detectedNormal;
                 _slopePersistenceTimer = SLOPE_PERSISTENCE_DURATION;
             }
             else if (_slopePersistenceTimer > 0f)
             {
-                // Keine neue Detektion, aber vorherige Daten noch gültig
-                // (Character könnte kurzzeitig den Kontakt verloren haben)
                 _slopePersistenceTimer -= Time.deltaTime;
 
                 SlopeAngleDirectlyBelow = _lastValidSlopeAngle;
                 SlopeNormalDirectlyBelow = _lastValidSlopeNormal;
-                IsWalkableDirectlyBelow = _lastValidSlopeAngle <= _config.MaxSlopeAngle;
+                IsWalkableDirectlyBelow = _lastValidSlopeAngle < _config.MaxSlopeAngle;
 
                 Debug.Log($"[SlopeBelow-Persisted] Angle: {_lastValidSlopeAngle:F1}°, Timer: {_slopePersistenceTimer:F2}s");
             }
             else
             {
-                // Keine Slope-Daten und Persistence abgelaufen - flacher Boden
                 SlopeAngleDirectlyBelow = 0f;
                 SlopeNormalDirectlyBelow = Vector3.up;
                 IsWalkableDirectlyBelow = true;
@@ -285,7 +212,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         /// </summary>
         public GroundInfo CheckGroundAtPosition(Vector3 position)
         {
-            // SphereCast von der gegebenen Position
             Vector3 origin = position + Vector3.up * (_characterRadius + 0.01f);
             float checkDistance = _config.GroundCheckDistance + _characterRadius;
 
@@ -308,7 +234,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
 
         private bool PerformSphereCast(out GroundInfo result)
         {
-            // Origin: Leicht über dem Boden, in der Mitte des Characters
             Vector3 origin = _transform.position + Vector3.up * (_characterRadius + 0.01f);
             float checkDistance = _config.GroundCheckDistance + _characterRadius;
 
@@ -334,7 +259,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
 
         private bool PerformRaycast(out GroundInfo result)
         {
-            // Mehrere Raycasts für bessere Coverage
             Vector3 center = _transform.position + Vector3.up * 0.1f;
             float checkDistance = _config.GroundCheckDistance + 0.1f;
 
@@ -351,7 +275,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 return true;
             }
 
-            // Offset Raycasts (vorne, hinten, links, rechts)
+            // Offset Raycasts
             float offset = _characterRadius * 0.5f;
             Vector3[] offsets = new Vector3[]
             {
@@ -383,14 +307,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
 
         private GroundInfo CreateGroundInfo(RaycastHit hit, Vector3 origin)
         {
-            // Berechne Slope Angle
             float slopeAngle = Vector3.Angle(hit.normal, Vector3.up);
-
-            // Berechne Distanz zum Boden
             float distance = hit.distance;
-
-            // Prüfe ob begehbar
-            bool isWalkable = slopeAngle <= _config.MaxSlopeAngle;
+            bool isWalkable = slopeAngle < _config.MaxSlopeAngle;
 
             return new GroundInfo
             {
@@ -409,7 +328,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
 
         /// <summary>
         /// Berechnet die Bewegungsrichtung auf einer Slope.
-        /// Projiziert die Bewegungsrichtung auf die Oberfläche.
         /// </summary>
         public Vector3 GetSlopeDirection(Vector3 moveDirection)
         {
@@ -418,13 +336,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 return moveDirection;
             }
 
-            // Projiziere Bewegungsrichtung auf die Slope
             Vector3 slopeDirection = Vector3.ProjectOnPlane(moveDirection, _groundInfo.Normal).normalized;
 
-            // Wenn wir bergauf gehen und der Slope zu steil ist, stoppe
             if (!_groundInfo.IsWalkable && Vector3.Dot(slopeDirection, Vector3.up) > 0)
             {
-                // Entferne die aufwärts-Komponente
                 slopeDirection = Vector3.ProjectOnPlane(slopeDirection, Vector3.up).normalized;
             }
 
@@ -432,7 +347,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         }
 
         /// <summary>
-        /// Prüft ob eine Stufe vor dem Character ist und gibt die Höhe zurück.
+        /// Prüft ob eine Stufe vor dem Character ist.
         /// </summary>
         public bool CheckForStep(Vector3 moveDirection, out float stepHeight)
         {
@@ -446,7 +361,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             Vector3 checkOrigin = _transform.position + Vector3.up * 0.05f;
             Vector3 checkDirection = moveDirection.normalized;
 
-            // Erster Raycast: Prüfe ob ein Hindernis vor uns ist
             if (!Physics.Raycast(
                 checkOrigin,
                 checkDirection,
@@ -455,10 +369,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 _config.GroundLayers,
                 QueryTriggerInteraction.Ignore))
             {
-                return false; // Kein Hindernis
+                return false;
             }
 
-            // Zweiter Raycast: Prüfe von oben, wie hoch die Stufe ist
             Vector3 topOrigin = checkOrigin + Vector3.up * _config.MaxStepHeight + checkDirection * (_characterRadius + 0.1f);
 
             if (Physics.Raycast(
@@ -470,8 +383,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 QueryTriggerInteraction.Ignore))
             {
                 stepHeight = topHit.point.y - _transform.position.y;
-
-                // Prüfe ob die Stufe begehbar ist
                 float topSlopeAngle = Vector3.Angle(topHit.normal, Vector3.up);
 
                 return stepHeight > 0.01f &&
@@ -510,37 +421,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
 
         /// <summary>
         /// Zeichnet Debug-Gizmos für die Ground Detection.
-        /// Sollte in OnDrawGizmos aufgerufen werden.
         /// </summary>
         public void DrawDebugGizmos()
         {
 #if UNITY_EDITOR
             if (_transform == null) return;
 
-            // Ground Check Sphere
             Vector3 origin = _transform.position + Vector3.up * (_characterRadius + 0.01f);
             float checkDistance = _config.GroundCheckDistance + _characterRadius;
             Vector3 endPoint = origin + Vector3.down * checkDistance;
 
-            // Farbe basierend auf Ground Status
             Gizmos.color = _groundInfo.IsGrounded
                 ? (_groundInfo.IsWalkable ? Color.green : Color.yellow)
                 : Color.red;
 
-            // Zeichne Sphere am Start und Ende
             Gizmos.DrawWireSphere(origin, _config.GroundCheckRadius);
             Gizmos.DrawWireSphere(endPoint, _config.GroundCheckRadius);
-
-            // Zeichne Linie zwischen den Spheres
             Gizmos.DrawLine(origin, endPoint);
 
-            // Zeichne Hit Point
             if (_groundInfo.IsGrounded)
             {
                 Gizmos.color = Color.blue;
                 Gizmos.DrawSphere(_groundInfo.Point, 0.05f);
 
-                // Zeichne Normal
                 Gizmos.color = Color.cyan;
                 Gizmos.DrawLine(_groundInfo.Point, _groundInfo.Point + _groundInfo.Normal * 0.5f);
             }

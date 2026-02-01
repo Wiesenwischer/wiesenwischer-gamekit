@@ -448,7 +448,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
             public bool IsGrounded { get; set; }
             public float VerticalVelocity { get; set; }
             public Vector3 HorizontalVelocity { get; set; }
-            public IMovementConfig Config { get; set; }
+            public ILocomotionConfig Config { get; set; }
             public int CurrentTick { get; set; }
         }
 

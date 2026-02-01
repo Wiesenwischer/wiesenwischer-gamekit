@@ -35,6 +35,118 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             Debug.Log($"[DemoSceneSetup] Demo-Szene erstellt: {DemoScenePath}");
         }
 
+        [MenuItem("Wiesenwischer/GameKit/Create Terrain Demo Scene", false, 103)]
+        public static void CreateTerrainDemoScene()
+        {
+            // Erstelle neue Szene
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+
+            // Erstelle Terrain mit Hügeln und Hängen
+            CreateTestTerrain();
+
+            // Erstelle Player
+            CreatePlayer();
+
+            // Positioniere Player auf dem Terrain
+            var player = GameObject.Find("Player");
+            if (player != null)
+            {
+                player.transform.position = new Vector3(50f, 10f, 50f);
+            }
+
+            // Speichere Szene
+            EnsureDirectoryExists("Assets/Scenes");
+            string terrainScenePath = "Assets/Scenes/TerrainMovementTest.unity";
+            EditorSceneManager.SaveScene(scene, terrainScenePath);
+
+            Debug.Log($"[DemoSceneSetup] Terrain-Demo-Szene erstellt: {terrainScenePath}");
+        }
+
+        private static void CreateTestTerrain()
+        {
+            // Terrain Data erstellen
+            TerrainData terrainData = new TerrainData();
+            terrainData.heightmapResolution = 129; // Muss 2^n + 1 sein
+            terrainData.size = new Vector3(100f, 20f, 100f);
+
+            // Heightmap generieren mit verschiedenen Slopes
+            int resolution = terrainData.heightmapResolution;
+            float[,] heights = new float[resolution, resolution];
+
+            // Generiere verschiedene Test-Bereiche
+            for (int z = 0; z < resolution; z++)
+            {
+                for (int x = 0; x < resolution; x++)
+                {
+                    float normalizedX = (float)x / (resolution - 1);
+                    float normalizedZ = (float)z / (resolution - 1);
+
+                    float height = 0f;
+
+                    // Bereich 1: Flacher Bereich (links)
+                    if (normalizedX < 0.25f)
+                    {
+                        height = 0.1f;
+                    }
+                    // Bereich 2: Sanfter Hang ~20° (links-mitte)
+                    else if (normalizedX < 0.4f)
+                    {
+                        float t = (normalizedX - 0.25f) / 0.15f;
+                        height = 0.1f + t * 0.15f; // ~20° Steigung
+                    }
+                    // Bereich 3: Plateau
+                    else if (normalizedX < 0.5f)
+                    {
+                        height = 0.25f;
+                    }
+                    // Bereich 4: Steiler Hang ~45° (mitte)
+                    else if (normalizedX < 0.65f)
+                    {
+                        float t = (normalizedX - 0.5f) / 0.15f;
+                        height = 0.25f + t * 0.3f; // ~45° Steigung
+                    }
+                    // Bereich 5: Hohes Plateau
+                    else if (normalizedX < 0.75f)
+                    {
+                        height = 0.55f;
+                    }
+                    // Bereich 6: Sehr steiler Hang ~60° (rechts)
+                    else if (normalizedX < 0.85f)
+                    {
+                        float t = (normalizedX - 0.75f) / 0.1f;
+                        height = 0.55f + t * 0.35f; // ~60° Steigung
+                    }
+                    // Bereich 7: Höchstes Plateau
+                    else
+                    {
+                        height = 0.9f;
+                    }
+
+                    // Füge leichte Variation hinzu
+                    height += Mathf.PerlinNoise(x * 0.1f, z * 0.1f) * 0.02f;
+
+                    heights[z, x] = height;
+                }
+            }
+
+            terrainData.SetHeights(0, 0, heights);
+
+            // Terrain Data speichern
+            EnsureDirectoryExists("Assets/Terrain");
+            string terrainDataPath = "Assets/Terrain/TestTerrainData.asset";
+            AssetDatabase.CreateAsset(terrainData, terrainDataPath);
+
+            // Terrain GameObject erstellen
+            GameObject terrainGO = Terrain.CreateTerrainGameObject(terrainData);
+            terrainGO.name = "TestTerrain";
+            terrainGO.transform.position = Vector3.zero;
+
+            // Terrain Layer für Ground Detection setzen
+            terrainGO.layer = LayerMask.NameToLayer("Default");
+
+            Debug.Log("[DemoSceneSetup] Test-Terrain erstellt mit verschiedenen Hangwinkeln: ~20°, ~45°, ~60°");
+        }
+
         [MenuItem("Wiesenwischer/GameKit/Create Core Prefabs", false, 101)]
         public static void CreateCorePrefabs()
         {
@@ -107,11 +219,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         private static void CreateSlope(string name, Vector3 position, float angle)
         {
+            // Dünne Rampe - funktioniert jetzt dank RaycastAll-Filter in GroundingDetection
             var slope = GameObject.CreatePrimitive(PrimitiveType.Cube);
             slope.name = name;
-            slope.transform.position = position + Vector3.up * 0.5f;
+
+            // Dünne Rampe (0.1 Einheiten)
             slope.transform.localScale = new Vector3(3f, 0.1f, 4f);
             slope.transform.rotation = Quaternion.Euler(angle, 0f, 0f);
+            slope.transform.position = position + Vector3.up * 0.5f;
 
             var renderer = slope.GetComponent<Renderer>();
             if (renderer != null)
@@ -153,11 +268,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             var player = new GameObject("Player");
             player.transform.position = new Vector3(0f, 1f, 0f);
 
-            // CharacterController
-            var cc = player.AddComponent<UnityEngine.CharacterController>();
-            cc.height = 2f;
-            cc.radius = 0.5f;
-            cc.center = Vector3.up;
+            // CapsuleCollider (kinematische Physik - kein CharacterController)
+            var capsule = player.AddComponent<CapsuleCollider>();
+            capsule.height = 2f;
+            capsule.radius = 0.5f;
+            capsule.center = Vector3.up;
 
             // Visual (Capsule)
             var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -206,8 +321,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             groundCheck.transform.parent = player.transform;
             groundCheck.transform.localPosition = Vector3.zero;
 
-            // Hinweis für MovementConfig
-            Debug.Log("[DemoSceneSetup] Player erstellt. Bitte eine MovementConfig im PlayerController zuweisen!");
+            // Hinweis für LocomotionConfig
+            Debug.Log("[DemoSceneSetup] Player erstellt. Bitte eine LocomotionConfig im PlayerController zuweisen!");
         }
 
         #endregion
@@ -218,11 +333,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         {
             var player = new GameObject("BasicPlayer");
 
-            // CharacterController
-            var cc = player.AddComponent<UnityEngine.CharacterController>();
-            cc.height = 2f;
-            cc.radius = 0.5f;
-            cc.center = Vector3.up;
+            // CapsuleCollider (kinematische Physik - kein CharacterController)
+            var capsule = player.AddComponent<CapsuleCollider>();
+            capsule.height = 2f;
+            capsule.radius = 0.5f;
+            capsule.center = Vector3.up;
 
             // Visual
             var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -285,6 +400,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         {
             var slope = GameObject.CreatePrimitive(PrimitiveType.Cube);
             slope.name = name;
+
+            // Dünne Rampe
             slope.transform.localScale = new Vector3(3f, 0.1f, 4f);
             slope.transform.rotation = Quaternion.Euler(angle, 0f, 0f);
 
@@ -372,20 +489,27 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         #region Default Config
 
-        [MenuItem("Wiesenwischer/GameKit/Create Default MovementConfig", false, 102)]
-        public static void CreateDefaultMovementConfig()
+        [MenuItem("Wiesenwischer/GameKit/Create Default LocomotionConfig", false, 102)]
+        public static void CreateDefaultLocomotionConfig()
         {
             EnsureDirectoryExists("Assets/Config");
 
-            var config = ScriptableObject.CreateInstance<Movement.MovementConfig>();
+            var config = ScriptableObject.CreateInstance<Locomotion.LocomotionConfig>();
 
-            AssetDatabase.CreateAsset(config, "Assets/Config/DefaultMovementConfig.asset");
+            AssetDatabase.CreateAsset(config, "Assets/Config/DefaultLocomotionConfig.asset");
             AssetDatabase.SaveAssets();
 
             Selection.activeObject = config;
             EditorGUIUtility.PingObject(config);
 
-            Debug.Log("[DemoSceneSetup] DefaultMovementConfig erstellt: Assets/Config/DefaultMovementConfig.asset");
+            Debug.Log("[DemoSceneSetup] DefaultLocomotionConfig erstellt: Assets/Config/DefaultLocomotionConfig.asset");
+        }
+
+        // Backwards compatibility alias
+        [MenuItem("Wiesenwischer/GameKit/Create Default MovementConfig", false, 999)]
+        public static void CreateDefaultMovementConfig()
+        {
+            CreateDefaultLocomotionConfig();
         }
 
         #endregion

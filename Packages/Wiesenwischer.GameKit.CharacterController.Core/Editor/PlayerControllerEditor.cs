@@ -103,8 +103,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Velocities", _headerStyle);
 
-            DrawVelocityBar("Horizontal", _controller.HorizontalVelocity.magnitude, _controller.MovementConfig?.RunSpeed ?? 10f);
-            DrawVelocityBar("Vertical", _controller.VerticalVelocity, _controller.MovementConfig?.MaxFallSpeed ?? 20f, true);
+            DrawVelocityBar("Horizontal", _controller.HorizontalVelocity.magnitude, _controller.LocomotionConfig?.RunSpeed ?? 10f);
+            DrawVelocityBar("Vertical", _controller.VerticalVelocity, _controller.LocomotionConfig?.MaxFallSpeed ?? 20f, true);
             DrawVector3Field("Total Velocity", _controller.Velocity);
 
             // Tick System

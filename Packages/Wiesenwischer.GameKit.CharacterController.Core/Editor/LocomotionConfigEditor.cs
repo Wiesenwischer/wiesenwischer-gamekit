@@ -1,15 +1,15 @@
 using UnityEditor;
 using UnityEngine;
-using Wiesenwischer.GameKit.CharacterController.Core.Movement;
+using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 {
     /// <summary>
-    /// Custom Editor für MovementConfig ScriptableObject.
+    /// Custom Editor für LocomotionConfig ScriptableObject.
     /// Zeigt Parameter übersichtlich gruppiert an.
     /// </summary>
-    [CustomEditor(typeof(MovementConfig))]
-    public class MovementConfigEditor : UnityEditor.Editor
+    [CustomEditor(typeof(LocomotionConfig))]
+    public class LocomotionConfigEditor : UnityEditor.Editor
     {
         // Foldout States
         private bool _groundMovementFoldout = true;
@@ -18,6 +18,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private bool _groundDetectionFoldout = true;
         private bool _rotationFoldout = true;
         private bool _stepDetectionFoldout = false;
+        private bool _slopeSlidingFoldout = false;
 
         // Serialized Properties
         private SerializedProperty _walkSpeed;
@@ -44,6 +45,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         private SerializedProperty _maxStepHeight;
         private SerializedProperty _minStepDepth;
+
+        private SerializedProperty _slopeSlideSpeed;
+        private SerializedProperty _useSlopeDependentSlideSpeed;
 
         private void OnEnable()
         {
@@ -77,6 +81,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Step Detection
             _maxStepHeight = serializedObject.FindProperty("_maxStepHeight");
             _minStepDepth = serializedObject.FindProperty("_minStepDepth");
+
+            // Slope Sliding
+            _slopeSlideSpeed = serializedObject.FindProperty("_slopeSlideSpeed");
+            _useSlopeDependentSlideSpeed = serializedObject.FindProperty("_useSlopeDependentSlideSpeed");
         }
 
         public override void OnInspectorGUI()
@@ -168,13 +176,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
 
+            // Slope Sliding Section
+            _slopeSlidingFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_slopeSlidingFoldout, "Slope Sliding");
+            if (_slopeSlidingFoldout)
+            {
+                EditorGUI.indentLevel++;
+                DrawPropertyWithTooltip(_slopeSlideSpeed, "Slide Speed", "Base speed when sliding on steep slopes (m/s)");
+                EditorGUILayout.PropertyField(_useSlopeDependentSlideSpeed, new GUIContent("Dynamic Speed", "Scale speed with slope steepness"));
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
             serializedObject.ApplyModifiedProperties();
         }
 
         private void DrawHeader()
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Movement Configuration", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Locomotion Configuration", EditorStyles.boldLabel);
 
             if (GUILayout.Button("Reset to Defaults", GUILayout.Width(120)))
             {
@@ -244,10 +263,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private void ResetToDefaults()
         {
             // Ground Movement
-            _walkSpeed.floatValue = 5f;
-            _runSpeed.floatValue = 10f;
+            _walkSpeed.floatValue = 3f;
+            _runSpeed.floatValue = 6f;
             _acceleration.floatValue = 10f;
-            _deceleration.floatValue = 10f;
+            _deceleration.floatValue = 15f;
 
             // Air Movement
             _airControl.floatValue = 0.3f;
@@ -272,6 +291,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Step Detection
             _maxStepHeight.floatValue = 0.3f;
             _minStepDepth.floatValue = 0.1f;
+
+            // Slope Sliding
+            _slopeSlideSpeed.floatValue = 8f;
+            _useSlopeDependentSlideSpeed.boolValue = true;
 
             serializedObject.ApplyModifiedProperties();
         }

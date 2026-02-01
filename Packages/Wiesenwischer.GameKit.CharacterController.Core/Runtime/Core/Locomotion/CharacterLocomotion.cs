@@ -1,18 +1,28 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Motor;
 using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
-namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
+namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 {
     /// <summary>
-    /// Deterministischer Movement Simulator.
+    /// Character Locomotion - Bewegungsverhalten für humanoid Characters.
     /// Berechnet Bewegung basierend auf Input und Config.
-    /// Verwendet festes Delta für CSP-Kompatibilität.
+    /// Verwendet KinematicMotor für die physikalische Kollisionserkennung.
+    /// Deterministisch für CSP (Client-Side Prediction) Kompatibilität.
+    ///
+    /// Dies ist die Standard-Locomotion für:
+    /// - Walking, Running
+    /// - Jumping, Falling
+    /// - Slope Sliding
+    ///
+    /// Für andere Bewegungsarten (Reiten, Gleiten) werden separate
+    /// Locomotion-Klassen erstellt, die denselben KinematicMotor verwenden.
     /// </summary>
-    public class MovementMotor : IMovementController
+    public class CharacterLocomotion : ILocomotionController
     {
-        private readonly UnityEngine.CharacterController _characterController;
+        private readonly KinematicMotor _motor;
         private readonly Transform _transform;
-        private readonly IMovementConfig _config;
+        private readonly ILocomotionConfig _config;
         private readonly GroundingDetection _groundingDetection;
 
         // State
@@ -26,96 +36,68 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         private float _slidingTime;
         private Vector3 _currentSlideDirection;
         private float _noSlopeContactTime;
-        private const float SLIDE_EXIT_DELAY = 0.15f; // Zeit ohne Slope-Kontakt bevor Sliding endet
+        private const float SLIDE_EXIT_DELAY = 0.15f;
 
         // Rotation
         private float _targetYaw;
         private float _currentYaw;
 
         /// <summary>
-        /// Erstellt einen neuen MovementMotor.
+        /// Erstellt eine neue CharacterLocomotion mit eigenem KinematicMotor.
         /// </summary>
-        /// <exception cref="System.ArgumentNullException">Wenn characterController oder config null ist.</exception>
-        public MovementMotor(
-            UnityEngine.CharacterController characterController,
-            IMovementConfig config)
+        public CharacterLocomotion(
+            Transform transform,
+            CapsuleCollider capsule,
+            ILocomotionConfig config,
+            float skinWidth = 0.02f)
         {
-            if (characterController == null)
-            {
-                throw new System.ArgumentNullException(nameof(characterController),
-                    "[MovementMotor] CharacterController darf nicht null sein. " +
-                    "Füge eine CharacterController-Komponente zum GameObject hinzu.");
-            }
-
+            if (transform == null)
+                throw new System.ArgumentNullException(nameof(transform));
+            if (capsule == null)
+                throw new System.ArgumentNullException(nameof(capsule));
             if (config == null)
-            {
-                throw new System.ArgumentNullException(nameof(config),
-                    "[MovementMotor] IMovementConfig darf nicht null sein. " +
-                    "Weise eine MovementConfig im Inspector zu.");
-            }
+                throw new System.ArgumentNullException(nameof(config));
 
-            _characterController = characterController;
-            _transform = characterController.transform;
+            _transform = transform;
             _config = config;
 
-            _groundingDetection = new GroundingDetection(
-                _transform,
-                config,
-                characterController.radius,
-                characterController.height
-            );
+            _motor = new KinematicMotor(transform, capsule, config, skinWidth);
+            _groundingDetection = new GroundingDetection(transform, config, capsule.radius, capsule.height);
 
-            _currentYaw = _transform.eulerAngles.y;
+            _currentYaw = transform.eulerAngles.y;
             _targetYaw = _currentYaw;
         }
 
         /// <summary>
-        /// Erstellt einen neuen MovementMotor mit externer GroundingDetection.
+        /// Erstellt eine CharacterLocomotion mit externer GroundingDetection.
         /// </summary>
-        /// <exception cref="System.ArgumentNullException">Wenn eine Abhängigkeit null ist.</exception>
-        public MovementMotor(
+        public CharacterLocomotion(
             Transform transform,
-            UnityEngine.CharacterController characterController,
-            IMovementConfig config,
-            GroundingDetection groundingDetection)
+            CapsuleCollider capsule,
+            ILocomotionConfig config,
+            GroundingDetection groundingDetection,
+            float skinWidth = 0.02f)
         {
             if (transform == null)
-            {
-                throw new System.ArgumentNullException(nameof(transform),
-                    "[MovementMotor] Transform darf nicht null sein.");
-            }
-
-            if (characterController == null)
-            {
-                throw new System.ArgumentNullException(nameof(characterController),
-                    "[MovementMotor] CharacterController darf nicht null sein. " +
-                    "Füge eine CharacterController-Komponente zum GameObject hinzu.");
-            }
-
+                throw new System.ArgumentNullException(nameof(transform));
+            if (capsule == null)
+                throw new System.ArgumentNullException(nameof(capsule));
             if (config == null)
-            {
-                throw new System.ArgumentNullException(nameof(config),
-                    "[MovementMotor] IMovementConfig darf nicht null sein. " +
-                    "Weise eine MovementConfig im Inspector zu.");
-            }
-
+                throw new System.ArgumentNullException(nameof(config));
             if (groundingDetection == null)
-            {
-                throw new System.ArgumentNullException(nameof(groundingDetection),
-                    "[MovementMotor] GroundingDetection darf nicht null sein. " +
-                    "Erstelle eine GroundingDetection-Instanz oder verwende den anderen Konstruktor.");
-            }
+                throw new System.ArgumentNullException(nameof(groundingDetection));
 
-            _characterController = characterController;
             _transform = transform;
             _config = config;
             _groundingDetection = groundingDetection;
 
-            _currentYaw = _transform.eulerAngles.y;
+            _motor = new KinematicMotor(transform, capsule, config, skinWidth);
+
+            _currentYaw = transform.eulerAngles.y;
             _targetYaw = _currentYaw;
         }
 
-        #region IMovementController Implementation
+        #region ILocomotionController Implementation
 
         public Vector3 Position => _transform.position;
         public Quaternion Rotation => _transform.rotation;
@@ -123,17 +105,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         public bool IsGrounded => _groundingDetection.IsGrounded;
         public GroundInfo GroundInfo => _groundingDetection.GroundInfo;
 
-        /// <summary>
-        /// Ob der Character gerade auf einem steilen Hang rutscht.
-        /// </summary>
+        /// <summary>Ob der Character gerade auf einem steilen Hang rutscht.</summary>
         public bool IsSliding => _isSliding;
 
-        /// <summary>
-        /// Wie lange der Character bereits rutscht (in Sekunden).
-        /// </summary>
+        /// <summary>Wie lange der Character bereits rutscht (in Sekunden).</summary>
         public float SlidingTime => _slidingTime;
 
-        public void Simulate(MovementInput input, float deltaTime)
+        /// <summary>Der zugrundeliegende KinematicMotor.</summary>
+        public KinematicMotor Motor => _motor;
+
+        public void Simulate(LocomotionInput input, float deltaTime)
         {
             // 1. Ground Check
             _groundingDetection.UpdateGroundCheck();
@@ -146,56 +127,53 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             // 3. Vertikale Bewegung (Gravity + Jump)
             _verticalVelocity = CalculateVerticalVelocity(input.VerticalVelocity, deltaTime);
 
-            // 4. Step Detection ZUERST (vor Slope Handling)
+            // 4. Step Detection
             Vector3 moveDirection = _horizontalVelocity;
             bool isClimbingStep = false;
 
             if (_isGrounded && _horizontalVelocity.sqrMagnitude > 0.01f)
             {
-                if (_groundingDetection.CheckForStep(_horizontalVelocity, out float stepHeight))
+                if (_motor.TryStepUp(_horizontalVelocity, out Vector3 stepUpPos))
                 {
-                    // Stufe erkannt - überspringe Slope Sliding und erlaube normale Bewegung
                     isClimbingStep = true;
-                    Debug.Log($"[Step] Stufe erkannt! Höhe: {stepHeight:F2}m");
-                    // CharacterController.stepOffset handhabt das Step-Up automatisch
+                    _motor.SetPosition(stepUpPos);
+                    Debug.Log($"[Step] Step-Up ausgeführt!");
                 }
             }
 
-            // 5. Slope Handling mit persistenter Sliding-State
+            // 5. Slope Handling
             float slopeAngleBelow = _groundingDetection.SlopeAngleDirectlyBelow;
             bool isWalkableBelow = _groundingDetection.IsWalkableDirectlyBelow;
             Vector3 slopeNormal = _groundingDetection.SlopeNormalDirectlyBelow;
 
-            // Prüfe ob wir auf einem steilen Slope sind
-            bool onSteepSlope = !isWalkableBelow && slopeAngleBelow > _config.MaxSlopeAngle && slopeAngleBelow < 85f;
+            if (slopeAngleBelow > 5f)
+            {
+                Debug.Log($"[Slope-Status] Angle: {slopeAngleBelow:F1}°, Walkable: {isWalkableBelow}, MaxSlope: {_config.MaxSlopeAngle}°, Grounded: {_isGrounded}");
+            }
 
-            // Sliding State Management (persistent über Frames)
+            bool onSteepSlope = !isWalkableBelow && slopeAngleBelow >= _config.MaxSlopeAngle && slopeAngleBelow < 85f;
+
+            // Sliding State Management
             if (onSteepSlope)
             {
-                // Steiler Slope erkannt - starte oder setze Sliding fort
                 _noSlopeContactTime = 0f;
 
                 if (!_isSliding)
                 {
-                    // Sliding startet
                     _isSliding = true;
                     _slidingTime = 0f;
                     Debug.Log($"[Sliding-START] Angle: {slopeAngleBelow:F1}°");
                 }
 
-                // Berechne Slide-Richtung
                 _currentSlideDirection = CalculateSlideDirection(slopeNormal);
                 _slidingTime += deltaTime;
             }
             else if (_isSliding)
             {
-                // Kein Slope erkannt, aber wir waren am Sliden
                 _noSlopeContactTime += deltaTime;
 
-                // Prüfe ob wir auf begehbarem Boden gelandet sind
                 if (_isGrounded && isWalkableBelow)
                 {
-                    // Auf flachem Boden gelandet - Sliding sofort beenden
                     _isSliding = false;
                     _slidingTime = 0f;
                     _noSlopeContactTime = 0f;
@@ -203,7 +181,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 }
                 else if (_noSlopeContactTime > SLIDE_EXIT_DELAY)
                 {
-                    // Zu lange ohne Slope-Kontakt - Sliding beenden
                     _isSliding = false;
                     _slidingTime = 0f;
                     _noSlopeContactTime = 0f;
@@ -211,12 +188,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 }
             }
 
-            // Bewegung berechnen
+            // 6. Bewegung berechnen
             if (!isClimbingStep)
             {
                 if (_isSliding)
                 {
-                    // SLIDING-MODUS: Rutschen am Hang
+                    // SLIDING-MODUS
                     float slideSpeed;
                     float slideIntensity;
 
@@ -232,21 +209,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                         slideSpeed = _config.SlopeSlideSpeed;
                     }
 
-                    // Zusätzliche Beschleunigung über Zeit (wie echtes Rutschen)
-                    float timeAcceleration = Mathf.Min(_slidingTime * 0.5f, 1f); // Max +100% nach 2 Sekunden
+                    float timeAcceleration = Mathf.Min(_slidingTime * 0.5f, 1f);
                     slideSpeed *= (1f + timeAcceleration);
 
                     Debug.Log($"[Sliding] Angle: {slopeAngleBelow:F1}°, Speed: {slideSpeed:F2}, Time: {_slidingTime:F2}s");
 
-                    // Slide-Velocity berechnen
                     Vector3 slideVelocity = _currentSlideDirection * slideSpeed;
-
-                    // Horizontale und vertikale Komponenten trennen
                     moveDirection = new Vector3(slideVelocity.x, 0, slideVelocity.z);
                     _horizontalVelocity = moveDirection;
                     _verticalVelocity = slideVelocity.y;
 
-                    // Spieler-Input für leichte Quersteuerung
+                    // Quersteuerung beim Sliden
                     if (input.MoveDirection.sqrMagnitude > 0.01f)
                     {
                         Vector3 inputDir = new Vector3(input.MoveDirection.x, 0, input.MoveDirection.y);
@@ -259,7 +232,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                             inputDir = lookRotation * inputDir;
                         }
 
-                        // Nur Bewegung erlauben, die nicht bergauf geht
                         float upwardComponent = Vector3.Dot(inputDir.normalized, -_currentSlideDirection);
                         if (upwardComponent < 0.5f)
                         {
@@ -269,46 +241,38 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 }
                 else if (_isGrounded && isWalkableBelow)
                 {
-                    // NORMAL-MODUS: Begehbarer Boden
+                    // NORMAL-MODUS
                     moveDirection = _groundingDetection.GetSlopeDirection(_horizontalVelocity);
                     moveDirection = moveDirection.normalized * _horizontalVelocity.magnitude;
                 }
-                // Sonst: In der Luft oder an Wand - normale Bewegung mit Gravity
             }
 
-            // 6. Finale Velocity zusammensetzen
+            // 7. Finale Velocity
             _velocity = moveDirection + Vector3.up * _verticalVelocity;
 
-            // 7. Character bewegen
-            _characterController.Move(_velocity * deltaTime);
+            // 8. Character bewegen via KinematicMotor
+            _motor.Move(_velocity * deltaTime);
 
-            // 8. Rotation
+            // 9. Rotation
             if (_config.RotateTowardsMovement && input.MoveDirection.sqrMagnitude > 0.01f)
             {
                 UpdateRotation(input.LookDirection, deltaTime);
             }
 
-            // 9. Snap to Ground wenn geerdet (NICHT beim Sliding!)
+            // 10. Snap to Ground (nicht beim Sliding)
             if (_isGrounded && _verticalVelocity <= 0 && !_isSliding)
             {
                 SnapToGround();
             }
         }
 
-        /// <summary>
-        /// Berechnet die Rutschrichtung entlang eines Hangs.
-        /// </summary>
         private Vector3 CalculateSlideDirection(Vector3 slopeNormal)
         {
-            // Cross-Produkt für Querrichtung, dann nochmal Cross für Abwärtsrichtung
             Vector3 slopeRight = Vector3.Cross(slopeNormal, Vector3.up).normalized;
 
             if (slopeRight.sqrMagnitude > 0.001f)
             {
-                // Hangabwärts = Cross von Normal und Querrichtung
                 Vector3 slideDir = Vector3.Cross(slopeRight, slopeNormal).normalized;
-
-                // Stelle sicher dass wir nach unten zeigen
                 if (slideDir.y > 0)
                 {
                     slideDir = -slideDir;
@@ -316,18 +280,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
                 return slideDir;
             }
 
-            // Fallback wenn Normal fast vertikal
             return Vector3.ProjectOnPlane(Vector3.down, slopeNormal).normalized;
         }
 
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
         {
-            // Deaktiviere CharacterController temporär für Teleport
-            _characterController.enabled = false;
-            _transform.position = position;
-            _transform.rotation = rotation;
-            _characterController.enabled = true;
-
+            _motor.SetPositionAndRotation(position, rotation);
             _currentYaw = rotation.eulerAngles.y;
             _targetYaw = _currentYaw;
         }
@@ -343,15 +301,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
 
         #region Movement Calculations
 
-        private Vector3 CalculateTargetHorizontalVelocity(MovementInput input)
+        private Vector3 CalculateTargetHorizontalVelocity(LocomotionInput input)
         {
-            // Konvertiere Input zu Weltrichtung
             Vector3 inputDirection = new Vector3(input.MoveDirection.x, 0, input.MoveDirection.y);
 
-            // Transformiere relativ zur Kamera/Character-Ausrichtung
             if (input.LookDirection.sqrMagnitude > 0.01f)
             {
-                // Rotiere Input relativ zur Look-Direction
                 Quaternion lookRotation = Quaternion.LookRotation(
                     new Vector3(input.LookDirection.x, 0, input.LookDirection.z).normalized,
                     Vector3.up
@@ -360,14 +315,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             }
             else
             {
-                // Fallback: Relativ zum Character
                 inputDirection = _transform.TransformDirection(inputDirection);
             }
 
-            // Bestimme Geschwindigkeit (Walk/Run)
             float targetSpeed = input.IsSprinting ? _config.RunSpeed : _config.WalkSpeed;
 
-            // In der Luft: Reduzierte Kontrolle
             if (!_isGrounded)
             {
                 targetSpeed *= _config.AirControl;
@@ -378,29 +330,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
 
         private Vector3 ApplyAcceleration(Vector3 currentVelocity, Vector3 targetVelocity, float deltaTime)
         {
-            // Bestimme ob wir beschleunigen oder bremsen
             float currentSpeed = currentVelocity.magnitude;
             float targetSpeed = targetVelocity.magnitude;
 
             float acceleration;
             if (targetSpeed > currentSpeed || targetVelocity.sqrMagnitude > 0.01f)
             {
-                // Beschleunigen
                 acceleration = _config.Acceleration;
             }
             else
             {
-                // Bremsen
                 acceleration = _config.Deceleration;
             }
 
-            // In der Luft: Reduzierte Beschleunigung
             if (!_isGrounded)
             {
                 acceleration *= _config.AirControl;
             }
 
-            // Interpoliere zur Zielgeschwindigkeit
             return Vector3.MoveTowards(currentVelocity, targetVelocity, acceleration * deltaTime);
         }
 
@@ -408,17 +355,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         {
             float velocity = inputVerticalVelocity;
 
-            // Wenn geerdet und nicht springend, setze vertikale Velocity auf kleinen negativen Wert
-            // (um am Boden zu bleiben)
             if (_isGrounded && velocity <= 0)
             {
-                return -2f; // Kleine Kraft nach unten
+                return -2f;
             }
 
-            // Gravity anwenden
             velocity -= _config.Gravity * deltaTime;
-
-            // Max Fall Speed begrenzen
             velocity = Mathf.Max(velocity, -_config.MaxFallSpeed);
 
             return velocity;
@@ -432,11 +374,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
         {
             if (_horizontalVelocity.sqrMagnitude < 0.01f) return;
 
-            // Zielrichtung basierend auf Bewegung
             Vector3 targetDirection = _horizontalVelocity.normalized;
             _targetYaw = Mathf.Atan2(targetDirection.x, targetDirection.z) * Mathf.Rad2Deg;
 
-            // Smooth Rotation
             _currentYaw = Mathf.MoveTowardsAngle(
                 _currentYaw,
                 _targetYaw,
@@ -446,9 +386,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             _transform.rotation = Quaternion.Euler(0, _currentYaw, 0);
         }
 
-        /// <summary>
-        /// Setzt die Rotation direkt (z.B. für Kamera-basierte Rotation).
-        /// </summary>
         public void SetRotation(float yaw)
         {
             _currentYaw = yaw;
@@ -456,9 +393,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             _transform.rotation = Quaternion.Euler(0, yaw, 0);
         }
 
-        /// <summary>
-        /// Rotiert den Character zur angegebenen Richtung.
-        /// </summary>
         public void RotateTowards(Vector3 direction, float deltaTime)
         {
             if (direction.sqrMagnitude < 0.01f) return;
@@ -478,65 +412,35 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
 
         private void SnapToGround()
         {
-            // Nur wenn wir leicht über dem Boden schweben
             if (_groundingDetection.GroundInfo.Distance > 0.01f &&
                 _groundingDetection.GroundInfo.Distance < _config.GroundCheckDistance)
             {
                 Vector3 snapPosition = _transform.position;
                 snapPosition.y = _groundingDetection.GroundInfo.Point.y;
-
-                _characterController.enabled = false;
-                _transform.position = snapPosition;
-                _characterController.enabled = true;
+                _motor.SetPosition(snapPosition);
             }
         }
 
-        /// <summary>
-        /// Berechnet die Jump-Velocity basierend auf der Config.
-        /// </summary>
         public float GetJumpVelocity()
         {
-            // v = sqrt(2 * g * h) oder aus Config berechnet
-            if (_config is MovementConfig movementConfig)
+            if (_config is LocomotionConfig locomotionConfig)
             {
-                return movementConfig.CalculateJumpVelocity();
+                return locomotionConfig.CalculateJumpVelocity();
             }
-
-            // Fallback: Standard-Formel
             return Mathf.Sqrt(2f * _config.Gravity * _config.JumpHeight);
         }
 
-        /// <summary>
-        /// Gibt die aktuelle horizontale Geschwindigkeit zurück.
-        /// </summary>
         public Vector3 GetHorizontalVelocity() => _horizontalVelocity;
-
-        /// <summary>
-        /// Gibt die aktuelle vertikale Geschwindigkeit zurück.
-        /// </summary>
         public float GetVerticalVelocity() => _verticalVelocity;
 
-        /// <summary>
-        /// Aktuelle horizontale Geschwindigkeit (Property).
-        /// </summary>
         public Vector3 HorizontalVelocity => _horizontalVelocity;
-
-        /// <summary>
-        /// Aktuelle vertikale Geschwindigkeit (Property).
-        /// </summary>
         public float VerticalVelocity => _verticalVelocity;
 
-        /// <summary>
-        /// Setzt die vertikale Geschwindigkeit (z.B. für Jump).
-        /// </summary>
         public void SetVerticalVelocity(float velocity)
         {
             _verticalVelocity = velocity;
         }
 
-        /// <summary>
-        /// Stoppt alle Bewegung sofort.
-        /// </summary>
         public void StopMovement()
         {
             _velocity = Vector3.zero;
@@ -544,30 +448,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             _verticalVelocity = 0f;
         }
 
-        /// <summary>
-        /// Gibt die GroundingDetection für Debug-Zwecke zurück.
-        /// </summary>
         public GroundingDetection GetGroundingDetection() => _groundingDetection;
 
         #endregion
 
         #region Debug
 
-        /// <summary>
-        /// Zeichnet Debug-Gizmos.
-        /// </summary>
         public void DrawDebugGizmos()
         {
 #if UNITY_EDITOR
             _groundingDetection?.DrawDebugGizmos();
+            _motor?.DrawDebugGizmos();
 
             if (_transform == null) return;
 
-            // Velocity Vector
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(_transform.position, _transform.position + _velocity);
 
-            // Horizontal Velocity
             Gizmos.color = Color.green;
             Gizmos.DrawLine(
                 _transform.position + Vector3.up * 0.1f,

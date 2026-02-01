@@ -1,14 +1,15 @@
 using UnityEngine;
 using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
-namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
+namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 {
     /// <summary>
-    /// ScriptableObject für Movement-Konfiguration.
+    /// ScriptableObject für Locomotion-Konfiguration.
     /// Enthält alle Parameter für Charakterbewegung, Springen und Ground Detection.
+    /// Wird von CharacterLocomotion und anderen Locomotion-Typen verwendet.
     /// </summary>
-    [CreateAssetMenu(fileName = "MovementConfig", menuName = "GameKit/Movement Config", order = 0)]
-    public class MovementConfig : ScriptableObject, IMovementConfig
+    [CreateAssetMenu(fileName = "LocomotionConfig", menuName = "Wiesenwischer/GameKit/Locomotion Config", order = 0)]
+    public class LocomotionConfig : ScriptableObject, ILocomotionConfig
     {
         [Header("Ground Movement")]
         [Tooltip("Geschwindigkeit beim Gehen (m/s)")]
@@ -133,20 +134,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Movement
             // Stelle sicher, dass Walk Speed <= Run Speed
             if (_walkSpeed > _runSpeed)
             {
-                Debug.LogWarning($"[MovementConfig] Walk Speed ({_walkSpeed}) sollte nicht größer als Run Speed ({_runSpeed}) sein.");
+                Debug.LogWarning($"[LocomotionConfig] Walk Speed ({_walkSpeed}) sollte nicht größer als Run Speed ({_runSpeed}) sein.");
             }
 
             // Stelle sicher, dass Ground Check Distance positiv ist
             if (_groundCheckDistance <= 0)
             {
                 _groundCheckDistance = 0.1f;
-                Debug.LogWarning("[MovementConfig] Ground Check Distance muss positiv sein. Auf 0.1 gesetzt.");
+                Debug.LogWarning("[LocomotionConfig] Ground Check Distance muss positiv sein. Auf 0.1 gesetzt.");
             }
 
             // Stelle sicher, dass Jump Height und Duration positiv sind
             if (_jumpHeight <= 0 || _jumpDuration <= 0)
             {
-                Debug.LogWarning("[MovementConfig] Jump Height und Jump Duration müssen positiv sein.");
+                Debug.LogWarning("[LocomotionConfig] Jump Height und Jump Duration müssen positiv sein.");
             }
         }
     }

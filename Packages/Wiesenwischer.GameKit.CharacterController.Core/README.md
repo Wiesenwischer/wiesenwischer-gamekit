@@ -5,10 +5,12 @@ Ein modulares, MMO-fähiges Character Controller System für Unity 2022.3 LTS.
 ## Features
 
 - **State Machine basiertes Movement**: Grounded, Jumping, Falling States mit konfigurierbaren Transitions
-- **Deterministische Physik**: Fixed Tick System (60 Hz) für Client-Side Prediction
+- **Kinematische Physik**: Eigene Kollisionserkennung mit CapsuleCollider (kein Unity CharacterController)
+- **Deterministische Bewegung**: Fixed Tick System (60 Hz) für Client-Side Prediction (CSP)
 - **Flexible Input Abstraktion**: Support für Unity Input System und Legacy Input
 - **Umfangreiche Ground Detection**: SphereCast + Multi-Raycast, Slope Handling, Step Detection
-- **CSP-Ready**: InputBuffer, PredictionBuffer, Tick-basierte Strukturen
+- **Slope Sliding**: Automatisches Rutschen auf zu steilen Hängen
+- **CSP-Ready**: InputBuffer, PredictionBuffer, Tick-basierte Strukturen für MMO-Integration
 - **Editor Tools**: Custom Inspectors, Debug Gizmos, Setup Wizards
 
 ## Installation
@@ -27,24 +29,26 @@ Ein modulares, MMO-fähiges Character Controller System für Unity 2022.3 LTS.
 
 ## Schnellstart
 
-### 1. MovementConfig erstellen
+### 1. LocomotionConfig erstellen
 
 ```
 Rechtsklick im Project Window
-→ Create > Wiesenwischer > GameKit > Movement Config
+→ Create > Wiesenwischer > GameKit > Locomotion Config
 ```
 
-Oder via Menü: **Wiesenwischer > GameKit > Create Default MovementConfig**
+Oder via Menü: **Wiesenwischer > GameKit > Create Default LocomotionConfig**
 
 ### 2. Player Setup
 
 1. Erstelle ein leeres GameObject
-2. Füge `CharacterController` hinzu (Unity Built-in)
+2. Füge `CapsuleCollider` hinzu (wird automatisch durch PlayerController hinzugefügt)
 3. Füge `PlayerController` hinzu
 4. Füge `PlayerInputProvider` hinzu
-5. Weise die MovementConfig zu
+5. Weise die LocomotionConfig zu
 
 Oder via Menü: **Wiesenwischer > GameKit > Create Demo Scene**
+
+> **Hinweis**: Dieses System verwendet **kinematische Physik** mit CapsuleCollider anstelle von Unity's CharacterController. Dies ermöglicht deterministische Bewegung für Client-Side Prediction (CSP) in MMO-Szenarien.
 
 ### 3. Fertig!
 
@@ -57,9 +61,10 @@ WASD zum Bewegen, Leertaste zum Springen, Shift zum Sprinten.
 | Klasse | Beschreibung |
 |--------|--------------|
 | `PlayerController` | Hauptkomponente, integriert alle Systeme |
-| `MovementConfig` | ScriptableObject mit allen Parametern |
+| `LocomotionConfig` | ScriptableObject mit allen Parametern |
 | `CharacterStateMachine` | State Machine für Character States |
-| `MovementMotor` | Deterministische Movement-Berechnung |
+| `CharacterLocomotion` | High-Level Locomotion-Verhalten |
+| `KinematicMotor` | Kinematische Physik (Kollision, Depenetration) |
 | `GroundingDetection` | Bodenerkennung mit Slope Support |
 
 ### Input Provider
@@ -88,7 +93,7 @@ WASD zum Bewegen, Leertaste zum Springen, Shift zum Sprinten.
 
 ## Konfiguration
 
-### MovementConfig Parameter
+### LocomotionConfig Parameter
 
 #### Ground Movement
 - `WalkSpeed` (float): Normale Geschwindigkeit (m/s)
@@ -112,6 +117,10 @@ WASD zum Bewegen, Leertaste zum Springen, Shift zum Sprinten.
 - `GroundLayers` (LayerMask): Boden-Layer
 - `MaxSlopeAngle` (float): Max. begehbarer Winkel
 
+#### Slope Sliding
+- `SlopeSlideSpeed` (float): Rutsch-Geschwindigkeit
+- `UseSlopeDependentSlideSpeed` (bool): Dynamische Geschwindigkeit je nach Steilheit
+
 ## Architektur
 
 ```
@@ -119,7 +128,8 @@ PlayerController (MonoBehaviour)
 ├── TickSystem (60 Hz Fixed Updates)
 ├── IMovementInputProvider (Input Abstraktion)
 ├── GroundingDetection (Ground Checks)
-├── MovementMotor (Velocity Calculation)
+├── CharacterLocomotion (High-Level Locomotion)
+│   └── KinematicMotor (Low-Level Physics)
 └── CharacterStateMachine
     ├── GroundedState
     ├── JumpingState
@@ -130,6 +140,13 @@ PlayerController (MonoBehaviour)
 
 ```
 Core/
+├── Motor/                  # Physik-Schicht (für alle Locomotion-Typen)
+│   ├── KinematicMotor.cs   # Kinematische Kollisionserkennung
+│   └── GroundingDetection.cs
+├── Locomotion/             # Verhaltens-Schicht
+│   ├── ILocomotionController.cs
+│   ├── CharacterLocomotion.cs  # Walking, Running, Jumping
+│   └── LocomotionConfig.cs
 ├── StateMachine/           # State Machine System
 │   ├── ICharacterState.cs
 │   ├── CharacterStateMachine.cs
@@ -139,11 +156,6 @@ Core/
 │       ├── AirborneState.cs
 │       ├── JumpingState.cs
 │       └── FallingState.cs
-├── Movement/               # Movement System
-│   ├── IMovementController.cs
-│   ├── MovementMotor.cs
-│   ├── GroundingDetection.cs
-│   └── MovementConfig.cs
 ├── Input/                  # Input Abstraktion
 │   ├── IMovementInputProvider.cs
 │   ├── PlayerInputProvider.cs
@@ -156,6 +168,21 @@ Core/
 ├── TickSystem.cs           # Fixed Tick System
 └── PlayerController.cs     # Haupt-Controller
 ```
+
+### Architektur-Konzept
+
+Das System ist in zwei Schichten aufgeteilt:
+
+**Motor-Schicht** (`Core/Motor/`):
+- Gemeinsame Physik-Implementierung
+- Wird von allen Locomotion-Typen verwendet
+- `KinematicMotor`: CapsuleCast, Depenetration, Step-Up
+- `GroundingDetection`: Boden-Erkennung, Slope-Analyse
+
+**Locomotion-Schicht** (`Core/Locomotion/`):
+- High-Level Bewegungsverhalten
+- `CharacterLocomotion`: Gehen, Rennen, Springen, Slope Sliding
+- Zukünftig: `RidingLocomotion`, `GlidingLocomotion`, etc.
 
 ## Erweiterung
 
@@ -195,6 +222,26 @@ public class NetworkInputProvider : MonoBehaviour, IMovementInputProvider
 }
 ```
 
+### Custom Locomotion (zukünftig)
+
+```csharp
+public class GlidingLocomotion : ILocomotionController
+{
+    private readonly KinematicMotor _motor;
+
+    // Verwendet denselben KinematicMotor wie CharacterLocomotion
+    public GlidingLocomotion(Transform transform, CapsuleCollider capsule, ILocomotionConfig config)
+    {
+        _motor = new KinematicMotor(transform, capsule, config);
+    }
+
+    public void Simulate(LocomotionInput input, float deltaTime)
+    {
+        // Gliding-spezifische Logik
+    }
+}
+```
+
 ## Abhängigkeiten
 
 - Unity 2022.3 LTS oder höher
@@ -215,6 +262,12 @@ Zukünftige Packages (nicht Teil des Core):
 - **Network Package**: FishNet Integration, CSP Implementation
 - **IK Package**: Animation Rigging
 - **Abilities Package**: Skills, Combat
+
+Zukünftige Locomotion-Typen:
+- **RidingLocomotion**: Reiten (Pferde, Mounts)
+- **GlidingLocomotion**: Gleiten
+- **SwimmingLocomotion**: Schwimmen
+- **ClimbingLocomotion**: Klettern
 
 ## Support
 
