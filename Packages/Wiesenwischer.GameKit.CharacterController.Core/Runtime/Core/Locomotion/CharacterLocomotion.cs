@@ -239,19 +239,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
             const float GroundingVelocity = -2f;
 
-            // Wenn die Input-Velocity die Grounding-Velocity ist, beibehalten
-            if (Mathf.Approximately(velocity, GroundingVelocity))
-            {
-                return GroundingVelocity;
-            }
-
-            // Wenn grounded und velocity <= 0, Grounding-Velocity
+            // Wenn grounded und velocity <= 0, Grounding-Velocity (hält Character am Boden)
             if (_motor.GroundingStatus.IsStableOnGround && velocity <= 0)
             {
                 return GroundingVelocity;
             }
 
-            // Gravity anwenden
+            // Nicht grounded → Gravity anwenden
             velocity -= _config.Gravity * deltaTime;
             velocity = Mathf.Max(velocity, -_config.MaxFallSpeed);
 
