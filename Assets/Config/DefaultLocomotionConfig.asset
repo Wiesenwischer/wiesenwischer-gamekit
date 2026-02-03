@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b191daf56dfd28547a427febd7548bf3, type: 3}
+  m_Name: DefaultLocomotionConfig
+  m_EditorClassIdentifier: 
+  _walkSpeed: 3
+  _runSpeed: 6
+  _acceleration: 10
+  _deceleration: 15
+  _airControl: 0.3
+  _gravity: 50
+  _maxFallSpeed: 70
+  _jumpHeight: 2
+  _jumpDuration: 0.4
+  _coyoteTime: 0.15
+  _jumpBufferTime: 0.1
+  _useVariableJump: 1
+  _groundCheckDistance: 0.2
+  _groundCheckRadius: 0.3
+  _groundLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  _maxSlopeAngle: 32.8
+  _rotationSpeed: 720
+  _rotateTowardsMovement: 1
+  _maxStepHeight: 0.35
+  _minStepDepth: 0.1
+  _ledgeDetectionEnabled: 1
+  _maxStableDistanceFromLedge: 0.5
+  _maxStableDenivelationAngle: 60
+  _maxVelocityForLedgeSnap: 0
+  _slopeSlideSpeed: 8
+  _useSlopeDependentSlideSpeed: 1
+  _softLandingThreshold: 5
+  _hardLandingThreshold: 15
+  _softLandingDuration: 0.1
+  _hardLandingDuration: 0.4
