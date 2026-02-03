@@ -13,109 +13,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
     [TestFixture]
     public class DependencyValidationTests
     {
-        #region GroundingDetection Tests
-
-        [Test]
-        public void GroundingDetection_NullTransform_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var config = new MockLocomotionConfig();
-
-            // Act & Assert
-            var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                new GroundingDetection(null, config, 0.5f, 2f));
-
-            Assert.That(ex.ParamName, Is.EqualTo("transform"));
-            Assert.That(ex.Message, Does.Contain("Transform"));
-        }
-
-        [Test]
-        public void GroundingDetection_NullConfig_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-
-            try
-            {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                    new GroundingDetection(go.transform, null, 0.5f, 2f));
-
-                Assert.That(ex.ParamName, Is.EqualTo("config"));
-                Assert.That(ex.Message, Does.Contain("ILocomotionConfig"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        [Test]
-        public void GroundingDetection_InvalidRadius_ThrowsArgumentOutOfRangeException()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-            var config = new MockLocomotionConfig();
-
-            try
-            {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentOutOfRangeException>(() =>
-                    new GroundingDetection(go.transform, config, -0.5f, 2f));
-
-                Assert.That(ex.ParamName, Is.EqualTo("characterRadius"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        [Test]
-        public void GroundingDetection_InvalidHeight_ThrowsArgumentOutOfRangeException()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-            var config = new MockLocomotionConfig();
-
-            try
-            {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentOutOfRangeException>(() =>
-                    new GroundingDetection(go.transform, config, 0.5f, 0f));
-
-                Assert.That(ex.ParamName, Is.EqualTo("characterHeight"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        [Test]
-        public void GroundingDetection_ValidParameters_CreatesInstance()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-            var config = new MockLocomotionConfig();
-
-            try
-            {
-                // Act
-                var detection = new GroundingDetection(go.transform, config, 0.5f, 2f);
-
-                // Assert
-                Assert.IsNotNull(detection);
-                Assert.IsFalse(detection.IsGrounded);
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        #endregion
-
         #region LocomotionConfig Validation Tests
 
         [Test]
@@ -163,8 +60,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
             // Assert
             Assert.AreEqual(Vector2.zero, input.MoveDirection);
             Assert.AreEqual(Vector3.forward, input.LookDirection);
-            Assert.IsFalse(input.IsSprinting);
             Assert.AreEqual(0f, input.VerticalVelocity);
+            Assert.AreEqual(1f, input.SpeedModifier);
         }
 
         [Test]
@@ -189,24 +86,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
         #region CharacterLocomotion Tests
 
         [Test]
-        public void CharacterLocomotion_NullCapsuleCollider_ThrowsArgumentNullException()
+        public void CharacterLocomotion_NullMotor_ThrowsArgumentNullException()
         {
             // Arrange
-            var go = new GameObject("TestCharacter");
             var config = new MockLocomotionConfig();
 
-            try
-            {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                    new CharacterLocomotion(go.transform, null, config));
+            // Act & Assert
+            var ex = Assert.Throws<System.ArgumentNullException>(() =>
+                new CharacterLocomotion(null, config));
 
-                Assert.That(ex.ParamName, Is.EqualTo("capsule"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
+            Assert.That(ex.ParamName, Is.EqualTo("motor"));
         }
 
         [Test]
@@ -214,65 +103,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
         {
             // Arrange
             var go = new GameObject("TestCharacter");
-            var capsule = go.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.5f;
-            capsule.height = 2f;
+            go.AddComponent<CapsuleCollider>();
+            var motor = go.AddComponent<CharacterMotor>();
 
             try
             {
                 // Act & Assert
                 var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                    new CharacterLocomotion(go.transform, capsule, null));
+                    new CharacterLocomotion(motor, null));
 
                 Assert.That(ex.ParamName, Is.EqualTo("config"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        [Test]
-        public void CharacterLocomotion_NullTransform_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-            var capsule = go.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.5f;
-            capsule.height = 2f;
-            var config = new MockLocomotionConfig();
-
-            try
-            {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                    new CharacterLocomotion(null, capsule, config));
-
-                Assert.That(ex.ParamName, Is.EqualTo("transform"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        [Test]
-        public void CharacterLocomotion_ExternalConstructor_NullGroundingDetection_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-            var capsule = go.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.5f;
-            capsule.height = 2f;
-            var config = new MockLocomotionConfig();
-
-            try
-            {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                    new CharacterLocomotion(go.transform, capsule, config, null));
-
-                Assert.That(ex.ParamName, Is.EqualTo("groundingDetection"));
             }
             finally
             {
@@ -288,17 +128,44 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
             var capsule = go.AddComponent<CapsuleCollider>();
             capsule.radius = 0.5f;
             capsule.height = 2f;
+            var motor = go.AddComponent<CharacterMotor>();
             var config = new MockLocomotionConfig();
 
             try
             {
                 // Act
-                var locomotion = new CharacterLocomotion(go.transform, capsule, config);
+                var locomotion = new CharacterLocomotion(motor, config);
 
                 // Assert
                 Assert.IsNotNull(locomotion);
-                Assert.AreEqual(go.transform.position, locomotion.Position);
                 Assert.IsNotNull(locomotion.Motor);
+                Assert.AreEqual(motor, locomotion.Motor);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void CharacterLocomotion_MotorGroundState_IsAccessible()
+        {
+            // Arrange
+            var go = new GameObject("TestCharacter");
+            var capsule = go.AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 2f;
+            var motor = go.AddComponent<CharacterMotor>();
+            var config = new MockLocomotionConfig();
+
+            try
+            {
+                // Act
+                var locomotion = new CharacterLocomotion(motor, config);
+
+                // Assert - Ground State kommt direkt vom Motor
+                Assert.AreEqual(locomotion.Motor.GroundingStatus.FoundAnyGround, locomotion.IsGrounded);
+                Assert.AreEqual(locomotion.Motor.IsStableOnGround, locomotion.IsStableOnGround);
             }
             finally
             {
@@ -308,94 +175,44 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
 
         #endregion
 
-        #region KinematicMotor Tests
+        #region CharacterMotor Tests
 
         [Test]
-        public void KinematicMotor_NullTransform_ThrowsArgumentNullException()
+        public void CharacterMotor_RequiresCapsuleCollider()
         {
-            // Arrange
+            // CharacterMotor ist ein MonoBehaviour mit [RequireComponent(typeof(CapsuleCollider))]
+            // Das wird von Unity automatisch erzwungen
             var go = new GameObject("TestCharacter");
-            var capsule = go.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.5f;
-            capsule.height = 2f;
-            var config = new MockLocomotionConfig();
 
             try
             {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                    new KinematicMotor(null, capsule, config));
-
-                Assert.That(ex.ParamName, Is.EqualTo("transform"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        [Test]
-        public void KinematicMotor_NullCapsule_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-            var config = new MockLocomotionConfig();
-
-            try
-            {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                    new KinematicMotor(go.transform, null, config));
-
-                Assert.That(ex.ParamName, Is.EqualTo("capsule"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        [Test]
-        public void KinematicMotor_NullConfig_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-            var capsule = go.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.5f;
-            capsule.height = 2f;
-
-            try
-            {
-                // Act & Assert
-                var ex = Assert.Throws<System.ArgumentNullException>(() =>
-                    new KinematicMotor(go.transform, capsule, null));
-
-                Assert.That(ex.ParamName, Is.EqualTo("config"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        [Test]
-        public void KinematicMotor_ValidParameters_CreatesInstance()
-        {
-            // Arrange
-            var go = new GameObject("TestCharacter");
-            var capsule = go.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.5f;
-            capsule.height = 2f;
-            var config = new MockLocomotionConfig();
-
-            try
-            {
-                // Act
-                var motor = new KinematicMotor(go.transform, capsule, config);
+                // Wenn wir CharacterMotor hinzufügen, wird CapsuleCollider automatisch erstellt
+                var motor = go.AddComponent<CharacterMotor>();
 
                 // Assert
+                Assert.IsNotNull(go.GetComponent<CapsuleCollider>());
                 Assert.IsNotNull(motor);
-                Assert.AreEqual(go.transform.position, motor.Position);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void CharacterMotor_ValidSetup_HasCorrectDimensions()
+        {
+            // Arrange
+            var go = new GameObject("TestCharacter");
+            var capsule = go.AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 2f;
+            var motor = go.AddComponent<CharacterMotor>();
+
+            try
+            {
+                // Assert
+                Assert.IsNotNull(motor);
                 Assert.AreEqual(0.5f, motor.Radius);
                 Assert.AreEqual(2f, motor.Height);
             }
@@ -405,18 +222,55 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
             }
         }
 
-        #endregion
-
-        #region State Machine Context Validation Tests
-
         [Test]
-        public void StateMachineContext_RequiresConfig()
+        public void CharacterMotor_GroundingStatus_IsAccessible()
         {
             // Arrange
-            var context = new MockStateMachineContext { Config = null };
+            var go = new GameObject("TestCharacter");
+            var capsule = go.AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 2f;
+            var motor = go.AddComponent<CharacterMotor>();
 
-            // Assert
-            Assert.IsNull(context.Config, "Context ohne Config sollte null sein");
+            try
+            {
+                // Assert - Motor ist die einzige Quelle für Ground State
+                Assert.IsFalse(motor.GroundingStatus.FoundAnyGround); // Initial nicht grounded
+                Assert.IsFalse(motor.IsStableOnGround);
+                Assert.IsFalse(motor.JustLanded);
+                Assert.IsFalse(motor.JustLeftGround);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void CharacterMotor_ConvenienceProperties_WorkCorrectly()
+        {
+            // Arrange
+            var go = new GameObject("TestCharacter");
+            var capsule = go.AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 2f;
+            var motor = go.AddComponent<CharacterMotor>();
+
+            try
+            {
+                // Assert - Convenience properties
+                Assert.AreEqual(motor.GroundingStatus.IsStableOnGround, motor.IsStableOnGround);
+                // JustLanded = IsStableOnGround && !LastGroundingStatus.IsStableOnGround
+                // Initial: false && !false = false
+                Assert.IsFalse(motor.JustLanded);
+                // JustLeftGround = !IsStableOnGround && LastGroundingStatus.IsStableOnGround
+                // Initial: !false && false = false
+                Assert.IsFalse(motor.JustLeftGround);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
         }
 
         #endregion
@@ -436,6 +290,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
             public float JumpDuration { get; set; } = 0.4f;
             public float CoyoteTime { get; set; } = 0.15f;
             public float JumpBufferTime { get; set; } = 0.1f;
+            public bool UseVariableJump { get; set; } = true;
             public float GroundCheckDistance { get; set; } = 0.2f;
             public float GroundCheckRadius { get; set; } = 0.3f;
             public LayerMask GroundLayers { get; set; } = ~0;
@@ -444,20 +299,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
             public bool RotateTowardsMovement { get; set; } = true;
             public float MaxStepHeight { get; set; } = 0.3f;
             public float MinStepDepth { get; set; } = 0.1f;
+            public bool LedgeDetectionEnabled { get; set; } = true;
+            public float MaxStableDistanceFromLedge { get; set; } = 0.5f;
+            public float MaxStableDenivelationAngle { get; set; } = 60f;
+            public float MaxVelocityForLedgeSnap { get; set; } = 0f;
             public float SlopeSlideSpeed { get; set; } = 8f;
             public bool UseSlopeDependentSlideSpeed { get; set; } = true;
-        }
-
-        private class MockStateMachineContext : IStateMachineContext
-        {
-            public Vector2 MoveInput { get; set; }
-            public bool JumpPressed { get; set; }
-            public bool JumpHeld { get; set; }
-            public bool IsGrounded { get; set; }
-            public float VerticalVelocity { get; set; }
-            public Vector3 HorizontalVelocity { get; set; }
-            public ILocomotionConfig Config { get; set; }
-            public int CurrentTick { get; set; }
+            public float SoftLandingThreshold { get; set; } = 5f;
+            public float HardLandingThreshold { get; set; } = 15f;
+            public float SoftLandingDuration { get; set; } = 0.1f;
+            public float HardLandingDuration { get; set; } = 0.4f;
         }
 
         #endregion

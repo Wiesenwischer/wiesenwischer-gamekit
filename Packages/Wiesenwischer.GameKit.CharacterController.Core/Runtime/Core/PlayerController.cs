@@ -13,8 +13,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
     /// - Zentraler Zugriffspunkt für alle Komponenten
     /// - Verwendet PlayerMovementStateMachine mit ReusableData
     /// - CSP (Client-Side Prediction) kompatibel für MMO-Nutzung
+    /// Ground-State kommt direkt vom Motor (keine Events, direkte Abfrage).
     /// </summary>
-    [RequireComponent(typeof(CapsuleCollider))]
+    [RequireComponent(typeof(CharacterMotor))]
     public class PlayerController : MonoBehaviour
     {
         #region Inspector Fields
@@ -22,10 +23,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         [Header("Configuration")]
         [Tooltip("Locomotion-Konfiguration")]
         [SerializeField] private LocomotionConfig _config;
-
-        [Header("Capsule Settings")]
-        [Tooltip("Skin Width für Kollisionserkennung")]
-        [SerializeField] private float _skinWidth = 0.02f;
 
         [Header("Input")]
         [Tooltip("Input Provider (optional - wird automatisch gesucht)")]
@@ -41,23 +38,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         #region Components (Genshin Pattern - Read-Only Properties)
 
-        /// <summary>Der CapsuleCollider für Kollisionserkennung.</summary>
-        public CapsuleCollider CapsuleCollider { get; private set; }
+        /// <summary>Der Character Motor (exakte KCC-Kopie).</summary>
+        public CharacterMotor CharacterMotor { get; private set; }
+
+        /// <summary>Der CapsuleCollider (vom Motor).</summary>
+        public CapsuleCollider CapsuleCollider => CharacterMotor?.Capsule;
 
         /// <summary>Der Input Provider.</summary>
         public IMovementInputProvider InputProvider { get; private set; }
-
-        /// <summary>Ground Detection System.</summary>
-        public GroundingDetection GroundingDetection { get; private set; }
 
         /// <summary>Character Locomotion System.</summary>
         public CharacterLocomotion Locomotion { get; private set; }
 
         /// <summary>Die Locomotion-Konfiguration.</summary>
         public LocomotionConfig LocomotionConfig => _config;
-
-        /// <summary>Der kinematische Motor.</summary>
-        public KinematicMotor KinematicMotor => Locomotion?.Motor;
 
         #endregion
 
@@ -87,8 +81,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Der aktuelle State-Name.</summary>
         public string CurrentStateName => _movementStateMachine?.CurrentStateName ?? "None";
 
-        /// <summary>Ob der Character auf dem Boden steht.</summary>
-        public bool IsGrounded => GroundingDetection?.IsGrounded ?? false;
+        /// <summary>Ob der Character auf dem Boden steht (basierend auf Motor's Ground-Probing).</summary>
+        public bool IsGrounded => Locomotion?.Motor?.IsStableOnGround ?? false;
+
+        /// <summary>Ob der Character gerade gelandet ist.</summary>
+        public bool JustLanded => Locomotion?.Motor?.JustLanded ?? false;
+
+        /// <summary>Ob der Character gerade den Boden verlassen hat.</summary>
+        public bool JustLeftGround => Locomotion?.Motor?.JustLeftGround ?? false;
 
         /// <summary>Ob der Character gerade rutscht.</summary>
         public bool IsSliding => Locomotion?.IsSliding ?? false;
@@ -98,6 +98,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         /// <summary>Aktueller Tick.</summary>
         public int CurrentTick => _tickSystem?.CurrentTick ?? 0;
+
+        /// <summary>Ground-Informationen vom Motor.</summary>
+        public GroundInfo GroundInfo => Locomotion?.GroundInfo ?? GroundInfo.Empty;
 
         #endregion
 
@@ -134,7 +137,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         private void OnDrawGizmos()
         {
             if (!_drawGizmos) return;
-            GroundingDetection?.DrawDebugGizmos();
             Locomotion?.DrawDebugGizmos();
         }
 
@@ -150,21 +152,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void InitializeComponents()
         {
-            // Get CapsuleCollider
-            CapsuleCollider = GetComponent<CapsuleCollider>();
-            if (CapsuleCollider == null)
+            // Get CharacterMotor (exakte KCC-Kopie als MonoBehaviour)
+            CharacterMotor = GetComponent<CharacterMotor>();
+            if (CharacterMotor == null)
             {
                 Debug.LogError($"[PlayerController] FEHLER auf '{gameObject.name}': " +
-                    "CapsuleCollider-Komponente fehlt!");
+                    "CharacterMotor-Komponente fehlt!");
                 enabled = false;
                 return;
-            }
-
-            // Validate CapsuleCollider
-            if (CapsuleCollider.radius <= 0f || CapsuleCollider.height <= 0f)
-            {
-                Debug.LogError($"[PlayerController] FEHLER auf '{gameObject.name}': " +
-                    "CapsuleCollider hat ungültige Dimensionen.");
             }
 
             // Find Input Provider
@@ -210,24 +205,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void InitializeSystems()
         {
-            if (_config == null) return;
-
-            // Initialize Ground Detection
-            GroundingDetection = new GroundingDetection(
-                transform,
-                _config,
-                CapsuleCollider.radius,
-                CapsuleCollider.height
-            );
+            if (_config == null || CharacterMotor == null) return;
 
             // Initialize Character Locomotion
-            Locomotion = new CharacterLocomotion(
-                transform,
-                CapsuleCollider,
-                _config,
-                GroundingDetection,
-                _skinWidth
-            );
+            // Motor ist die EINZIGE Quelle für Ground-State
+            // CharacterLocomotion implementiert ICharacterController für den Motor
+            Locomotion = new CharacterLocomotion(CharacterMotor, _config);
         }
 
         private void InitializeStateMachine()
@@ -264,15 +247,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             // Update Tick in ReusableData
             ReusableData.CurrentTick = tick;
 
-            // Update IsGrounded in ReusableData
-            ReusableData.IsGrounded = GroundingDetection?.IsGrounded ?? false;
+            // === PHASE 1: Ground Status vom LETZTEN Frame ===
+            // Für State Machine (Coyote Time, Transition-Entscheidungen etc.)
+            // WICHTIG: Der Motor hat den korrekten State erst NACH Move()
+            // Hier verwenden wir Motor.IsStableOnGround (vom vorherigen Move())
+            ReusableData.IsGrounded = Locomotion?.Motor?.IsStableOnGround ?? false;
             ReusableData.IsSliding = Locomotion?.IsSliding ?? false;
 
-            // State Machine Physics Update
+            // State Machine Physics Update (verwendet Ground-Status vom letzten Frame)
             _movementStateMachine?.PhysicsUpdate(deltaTime);
 
-            // Apply Movement
+            // === PHASE 2: Movement ===
             ApplyMovement(deltaTime);
+
+            // === PHASE 3: Sync Motor State zurück ===
+            // Nach ApplyMovement() hat der Motor den aktuellen Ground-State
+            // Diesen für den NÄCHSTEN Frame verfügbar machen
+            // (Wird am Anfang des nächsten Ticks gelesen)
         }
 
         /// <summary>
@@ -283,13 +274,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             if (Locomotion == null || ReusableData == null) return;
 
             // Create locomotion input from ReusableData
+            // SpeedModifier wird vom State gesetzt (0=Idle, 1=Walk, 2=Run, AirControl=Airborne)
             var input = new LocomotionInput
             {
                 MoveDirection = ReusableData.MoveInput,
                 LookDirection = GetCameraForward(),
-                IsSprinting = ReusableData.SprintHeld,
                 VerticalVelocity = ReusableData.VerticalVelocity,
-                StepDetectionEnabled = ReusableData.StepDetectionEnabled
+                StepDetectionEnabled = ReusableData.StepDetectionEnabled,
+                SpeedModifier = ReusableData.MovementSpeedModifier
             };
 
             // Simulate locomotion
@@ -362,10 +354,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             GUILayout.Label($"Tick: {CurrentTick}");
 
-            if (GroundingDetection != null)
+            var gi = GroundInfo;
+            GUILayout.Label($"Slope: {gi.SlopeAngle:F1}° ({(gi.IsWalkable ? "walkable" : "too steep")})");
+            GUILayout.Label($"Stable: {gi.StabilityReport.IsStable} (Ledge: {gi.StabilityReport.LedgeDetected})");
+            if (gi.StabilityReport.LedgeDetected)
             {
-                var gi = GroundingDetection.GroundInfo;
-                GUILayout.Label($"Slope: {gi.SlopeAngle:F1}° ({(gi.IsWalkable ? "walkable" : "too steep")})");
+                GUILayout.Label($"  Distance: {gi.StabilityReport.DistanceFromLedge:F2}m");
             }
 
             GUILayout.Label($"<i>CSP-Ready</i>");

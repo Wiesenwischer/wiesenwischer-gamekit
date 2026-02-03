@@ -48,6 +48,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Tooltip("Jump Buffer - Zeit, in der ein Jump-Input gespeichert wird (Sekunden)")]
         [SerializeField] private float _jumpBufferTime = 0.1f;
 
+        [Tooltip("Wenn aktiviert, kann der Sprung durch frühes Loslassen abgebrochen werden (niedrigerer Sprung). Wenn deaktiviert, springt der Character immer die volle Höhe.")]
+        [SerializeField] private bool _useVariableJump = true;
+
         [Header("Ground Detection")]
         [Tooltip("Distanz für Ground Check Raycast (m)")]
         [SerializeField] private float _groundCheckDistance = 0.2f;
@@ -76,12 +79,39 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Tooltip("Minimale Stufentiefe für Step-Up (m)")]
         [SerializeField] private float _minStepDepth = 0.1f;
 
+        [Header("Ledge & Ground Snapping")]
+        [Tooltip("Ob Ledge Detection aktiviert ist (zusätzliche Raycasts für Kanten-Erkennung)")]
+        [SerializeField] private bool _ledgeDetectionEnabled = true;
+
+        [Tooltip("Maximale Distanz zur Kante, bei der der Character noch stabil steht (m). Typisch: Capsule Radius")]
+        [SerializeField] private float _maxStableDistanceFromLedge = 0.5f;
+
+        [Tooltip("Maximaler Winkelunterschied zwischen Oberflächen für Ground Snapping (Grad). Verhindert Kleben an steilen Kanten")]
+        [Range(1f, 180f)]
+        [SerializeField] private float _maxStableDenivelationAngle = 60f;
+
+        [Tooltip("Geschwindigkeit ab der Ground Snapping an Kanten deaktiviert wird (m/s). 0 = immer snappen")]
+        [SerializeField] private float _maxVelocityForLedgeSnap = 0f;
+
         [Header("Slope Sliding")]
         [Tooltip("Geschwindigkeit beim Rutschen auf zu steilen Oberflächen (m/s)")]
         [SerializeField] private float _slopeSlideSpeed = 8.0f;
 
         [Tooltip("Wenn aktiviert, skaliert die Rutsch-Geschwindigkeit mit der Steilheit des Hangs (steilere Hänge = schneller). Wenn deaktiviert, wird immer die feste SlopeSlideSpeed verwendet.")]
         [SerializeField] private bool _useSlopeDependentSlideSpeed = true;
+
+        [Header("Landing")]
+        [Tooltip("Fallgeschwindigkeit unter der sofort weitergelaufen werden kann (m/s)")]
+        [SerializeField] private float _softLandingThreshold = 5.0f;
+
+        [Tooltip("Fallgeschwindigkeit ab der maximale Recovery-Zeit gilt (m/s)")]
+        [SerializeField] private float _hardLandingThreshold = 15.0f;
+
+        [Tooltip("Recovery-Zeit bei weicher Landung (Sekunden)")]
+        [SerializeField] private float _softLandingDuration = 0.1f;
+
+        [Tooltip("Recovery-Zeit bei harter Landung (Sekunden)")]
+        [SerializeField] private float _hardLandingDuration = 0.4f;
 
         // Interface Implementation
         public float WalkSpeed => _walkSpeed;
@@ -95,6 +125,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float JumpDuration => _jumpDuration;
         public float CoyoteTime => _coyoteTime;
         public float JumpBufferTime => _jumpBufferTime;
+        public bool UseVariableJump => _useVariableJump;
         public float GroundCheckDistance => _groundCheckDistance;
         public float GroundCheckRadius => _groundCheckRadius;
         public LayerMask GroundLayers => _groundLayers;
@@ -103,8 +134,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool RotateTowardsMovement => _rotateTowardsMovement;
         public float MaxStepHeight => _maxStepHeight;
         public float MinStepDepth => _minStepDepth;
+        public bool LedgeDetectionEnabled => _ledgeDetectionEnabled;
+        public float MaxStableDistanceFromLedge => _maxStableDistanceFromLedge;
+        public float MaxStableDenivelationAngle => _maxStableDenivelationAngle;
+        public float MaxVelocityForLedgeSnap => _maxVelocityForLedgeSnap;
         public float SlopeSlideSpeed => _slopeSlideSpeed;
         public bool UseSlopeDependentSlideSpeed => _useSlopeDependentSlideSpeed;
+        public float SoftLandingThreshold => _softLandingThreshold;
+        public float HardLandingThreshold => _hardLandingThreshold;
+        public float SoftLandingDuration => _softLandingDuration;
+        public float HardLandingDuration => _hardLandingDuration;
 
         /// <summary>
         /// Berechnet die initiale Sprunggeschwindigkeit basierend auf Sprunghöhe und -dauer.

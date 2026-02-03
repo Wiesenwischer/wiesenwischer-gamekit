@@ -190,7 +190,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             serializedObject.ApplyModifiedProperties();
         }
 
-        private void DrawHeader()
+        private new void DrawHeader()
         {
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Locomotion Configuration", EditorStyles.boldLabel);

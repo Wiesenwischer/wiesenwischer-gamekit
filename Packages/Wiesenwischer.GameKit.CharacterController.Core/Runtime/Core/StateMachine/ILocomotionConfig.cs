@@ -46,6 +46,38 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         float MaxStepHeight { get; }
         float MinStepDepth { get; }
 
+        #region Ledge & Ground Snapping
+
+        /// <summary>
+        /// Maximale Distanz von der Capsule-Achse zur Kante, bei der der Character noch stabil steht.
+        /// Typischer Wert: Capsule Radius (0.5f).
+        /// Bei größerer Distanz wird der Character als instabil auf der Kante betrachtet.
+        /// </summary>
+        float MaxStableDistanceFromLedge { get; }
+
+        /// <summary>
+        /// Maximaler Winkelunterschied zwischen zwei aufeinanderfolgenden Oberflächen,
+        /// bei dem Ground Snapping noch aktiv bleibt.
+        /// Verhindert "Kleben" an steilen Kanten beim Herunterlaufen.
+        /// Typischer Wert: 50-80 Grad.
+        /// </summary>
+        float MaxStableDenivelationAngle { get; }
+
+        /// <summary>
+        /// Geschwindigkeit ab der Ground Snapping an Kanten deaktiviert wird.
+        /// Ermöglicht das "Abspringen" von Kanten bei hoher Geschwindigkeit.
+        /// 0 = Immer snappen, 10 = Bei > 10 m/s nicht mehr snappen.
+        /// </summary>
+        float MaxVelocityForLedgeSnap { get; }
+
+        /// <summary>
+        /// Ob Ledge Detection aktiviert ist.
+        /// Hat Performance-Kosten (zusätzliche Raycasts).
+        /// </summary>
+        bool LedgeDetectionEnabled { get; }
+
+        #endregion
+
         // Slope Sliding
         float SlopeSlideSpeed { get; }
 

@@ -44,6 +44,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             float currentY = Player.transform.position.y;
 
+            // Stabilitäts-Check: Wenn grounded aber Snapping verhindert wurde (z.B. Ledge Edge), zu Falling wechseln
+            // Dies verhindert das "Kleben" an Slope-Kanten
+            // WICHTIG: Verwende Motor's State (nicht externes GroundingDetection) für Konsistenz
+            var motor = Player.Locomotion?.Motor;
+            if (motor != null && ReusableData.IsGrounded && motor.GroundingStatus.SnappingPrevented)
+            {
+                // Auf instabiler Oberfläche (z.B. Ledge Edge) - zu Falling wechseln
+                ChangeState(stateMachine.FallingState);
+                return;
+            }
+
             // Track time since last grounded (for Coyote Time)
             if (ReusableData.IsGrounded)
             {
@@ -79,11 +90,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnPhysicsUpdate(float deltaTime)
         {
-            // Apply slight downward force to keep grounded
-            if (ReusableData.IsGrounded && ReusableData.VerticalVelocity <= 0)
-            {
-                ReusableData.VerticalVelocity = -2f;
-            }
+            // Grounding-Velocity (-2f) wird von CharacterLocomotion gesetzt
+            // States setzen nur positive Velocity (Jump-Force)
         }
 
         /// <summary>

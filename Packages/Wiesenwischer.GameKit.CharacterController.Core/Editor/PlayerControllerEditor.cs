@@ -1,7 +1,6 @@
 using UnityEditor;
 using UnityEngine;
 using Wiesenwischer.GameKit.CharacterController.Core;
-using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 {
@@ -16,7 +15,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         // Foldout States
         private bool _debugFoldout = true;
-        private bool _stateHistoryFoldout = false;
         private bool _configFoldout = true;
 
         // Styles
@@ -91,11 +89,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             EditorGUILayout.EndHorizontal();
 
             // Grounded Status
-            var groundedColor = _controller.GroundingDetection?.IsGrounded == true ? Color.green : Color.red;
+            var groundedColor = _controller.IsGrounded ? Color.green : Color.red;
             GUI.color = groundedColor;
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Grounded:", GUILayout.Width(100));
-            EditorGUILayout.LabelField(_controller.GroundingDetection?.IsGrounded.ToString() ?? "N/A");
+            EditorGUILayout.LabelField(_controller.IsGrounded.ToString());
+            EditorGUILayout.EndHorizontal();
+            GUI.color = Color.white;
+
+            // Sliding Status
+            var slidingColor = _controller.IsSliding ? Color.yellow : Color.white;
+            GUI.color = slidingColor;
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Sliding:", GUILayout.Width(100));
+            EditorGUILayout.LabelField(_controller.IsSliding.ToString());
             EditorGUILayout.EndHorizontal();
             GUI.color = Color.white;
 
@@ -103,9 +110,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Velocities", _headerStyle);
 
-            DrawVelocityBar("Horizontal", _controller.HorizontalVelocity.magnitude, _controller.LocomotionConfig?.RunSpeed ?? 10f);
-            DrawVelocityBar("Vertical", _controller.VerticalVelocity, _controller.LocomotionConfig?.MaxFallSpeed ?? 20f, true);
-            DrawVector3Field("Total Velocity", _controller.Velocity);
+            var reusableData = _controller.ReusableData;
+            if (reusableData != null)
+            {
+                DrawVelocityBar("Horizontal", reusableData.HorizontalVelocity.magnitude, _controller.LocomotionConfig?.RunSpeed ?? 10f);
+                DrawVelocityBar("Vertical", reusableData.VerticalVelocity, _controller.LocomotionConfig?.MaxFallSpeed ?? 20f, true);
+                DrawVector3Field("Total Velocity", reusableData.Velocity);
+            }
 
             // Tick System
             EditorGUILayout.Space(5);
@@ -118,24 +129,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
                 EditorGUILayout.LabelField("Tick Delta:", $"{_controller.TickSystem.TickDelta * 1000:F2} ms");
             }
 
-            // Ground Info
-            if (_controller.GroundingDetection != null)
-            {
-                var gi = _controller.GroundingDetection.GroundInfo;
-                EditorGUILayout.Space(5);
-                EditorGUILayout.LabelField("Ground Info", _headerStyle);
-                EditorGUILayout.LabelField("Slope Angle:", $"{gi.SlopeAngle:F1}°");
+            // Ground Info (direkt vom Motor)
+            var gi = _controller.GroundInfo;
+            EditorGUILayout.Space(5);
+            EditorGUILayout.LabelField("Ground Info", _headerStyle);
+            EditorGUILayout.LabelField("Slope Angle:", $"{gi.SlopeAngle:F1}°");
 
-                var walkableColor = gi.IsWalkable ? Color.green : Color.yellow;
-                GUI.color = walkableColor;
-                EditorGUILayout.LabelField("Walkable:", gi.IsWalkable.ToString());
-                GUI.color = Color.white;
+            var walkableColor = gi.IsWalkable ? Color.green : Color.yellow;
+            GUI.color = walkableColor;
+            EditorGUILayout.LabelField("Walkable:", gi.IsWalkable.ToString());
+            GUI.color = Color.white;
 
-                EditorGUILayout.LabelField("Distance:", $"{gi.Distance:F3}");
-            }
-
-            // State History
-            DrawStateHistory();
+            EditorGUILayout.LabelField("Distance:", $"{gi.Distance:F3}");
 
             EditorGUI.indentLevel--;
 
@@ -177,56 +182,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             EditorGUILayout.EndHorizontal();
         }
 
-        private void DrawStateHistory()
-        {
-            if (_controller.StateMachine?.History == null) return;
-
-            EditorGUILayout.Space(5);
-            _stateHistoryFoldout = EditorGUILayout.Foldout(_stateHistoryFoldout, $"State History ({_controller.StateMachine.History.Count})", true);
-
-            if (!_stateHistoryFoldout) return;
-
-            EditorGUI.indentLevel++;
-
-            var entries = _controller.StateMachine.History.GetRecentEntries(10);
-            foreach (var entry in entries)
-            {
-                var color = GetReasonColor(entry.Reason);
-                GUI.color = color;
-                EditorGUILayout.LabelField($"[{entry.Tick}] {entry.FromStateName} → {entry.ToStateName} ({entry.Reason})");
-                GUI.color = Color.white;
-            }
-
-            EditorGUI.indentLevel--;
-        }
-
-        private Color GetReasonColor(StateTransitionReason reason)
-        {
-            return reason switch
-            {
-                StateTransitionReason.Initialization => Color.cyan,
-                StateTransitionReason.Condition => Color.green,
-                StateTransitionReason.Forced => Color.yellow,
-                StateTransitionReason.NetworkSync => Color.magenta,
-                StateTransitionReason.Rollback => Color.red,
-                _ => Color.white
-            };
-        }
-
         // Scene View Gizmos
         [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
         static void DrawGizmos(PlayerController controller, GizmoType gizmoType)
         {
             if (controller == null) return;
 
+            var reusableData = controller.ReusableData;
+            if (reusableData == null) return;
+
             // Movement Direction
-            if (Application.isPlaying && controller.HorizontalVelocity.sqrMagnitude > 0.01f)
+            if (Application.isPlaying && reusableData.HorizontalVelocity.sqrMagnitude > 0.01f)
             {
                 Gizmos.color = Color.blue;
                 var start = controller.transform.position + Vector3.up * 0.5f;
-                var end = start + controller.HorizontalVelocity.normalized * 2f;
+                var end = start + reusableData.HorizontalVelocity.normalized * 2f;
                 Gizmos.DrawLine(start, end);
-                DrawArrowHead(end, controller.HorizontalVelocity.normalized, 0.3f);
+                DrawArrowHead(end, reusableData.HorizontalVelocity.normalized, 0.3f);
             }
 
             // Forward Direction

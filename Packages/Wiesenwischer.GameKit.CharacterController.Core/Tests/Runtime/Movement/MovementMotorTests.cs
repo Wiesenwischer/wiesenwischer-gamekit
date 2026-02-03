@@ -272,8 +272,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Locomotion
             // Assert
             Assert.AreEqual(Vector2.zero, input.MoveDirection);
             Assert.AreEqual(Vector3.forward, input.LookDirection);
-            Assert.IsFalse(input.IsSprinting);
             Assert.AreEqual(0f, input.VerticalVelocity);
+            Assert.AreEqual(1f, input.SpeedModifier);
         }
 
         [Test]
@@ -284,15 +284,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Locomotion
             {
                 MoveDirection = new Vector2(0.5f, 0.5f),
                 LookDirection = Vector3.right,
-                IsSprinting = true,
-                VerticalVelocity = 5f
+                VerticalVelocity = 5f,
+                SpeedModifier = 2f
             };
 
             // Assert
             Assert.AreEqual(new Vector2(0.5f, 0.5f), input.MoveDirection);
             Assert.AreEqual(Vector3.right, input.LookDirection);
-            Assert.IsTrue(input.IsSprinting);
             Assert.AreEqual(5f, input.VerticalVelocity);
+            Assert.AreEqual(2f, input.SpeedModifier);
         }
 
         #endregion
@@ -482,6 +482,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Locomotion
             public float JumpDuration { get; set; } = 0.4f;
             public float CoyoteTime { get; set; } = 0.15f;
             public float JumpBufferTime { get; set; } = 0.1f;
+            public bool UseVariableJump { get; set; } = true;
             public float GroundCheckDistance { get; set; } = 0.2f;
             public float GroundCheckRadius { get; set; } = 0.3f;
             public LayerMask GroundLayers { get; set; } = ~0;
@@ -490,8 +491,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Locomotion
             public bool RotateTowardsMovement { get; set; } = true;
             public float MaxStepHeight { get; set; } = 0.3f;
             public float MinStepDepth { get; set; } = 0.1f;
+            public bool LedgeDetectionEnabled { get; set; } = true;
+            public float MaxStableDistanceFromLedge { get; set; } = 0.5f;
+            public float MaxStableDenivelationAngle { get; set; } = 60f;
+            public float MaxVelocityForLedgeSnap { get; set; } = 0f;
             public float SlopeSlideSpeed { get; set; } = 8f;
             public bool UseSlopeDependentSlideSpeed { get; set; } = true;
+            public float SoftLandingThreshold { get; set; } = 5f;
+            public float HardLandingThreshold { get; set; } = 15f;
+            public float SoftLandingDuration { get; set; } = 0.1f;
+            public float HardLandingDuration { get; set; } = 0.4f;
         }
 
         #endregion

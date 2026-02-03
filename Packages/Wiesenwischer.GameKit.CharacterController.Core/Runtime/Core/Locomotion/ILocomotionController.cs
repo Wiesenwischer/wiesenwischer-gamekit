@@ -1,4 +1,5 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Motor;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 {
@@ -75,11 +76,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public Vector3 LookDirection;
 
         /// <summary>
-        /// Ob der Sprint-Button gehalten wird.
-        /// </summary>
-        public bool IsSprinting;
-
-        /// <summary>
         /// Die vertikale Geschwindigkeit (für Gravity/Jump).
         /// Wird vom State Machine gesetzt.
         /// </summary>
@@ -92,15 +88,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool StepDetectionEnabled;
 
         /// <summary>
+        /// Geschwindigkeits-Multiplikator vom State Machine.
+        /// Wird mit WalkSpeed multipliziert (z.B. 0 für Idle, 1 für Walk, 2 für Run).
+        /// </summary>
+        public float SpeedModifier;
+
+        /// <summary>
         /// Erstellt einen leeren Locomotion Input.
         /// </summary>
         public static LocomotionInput Empty => new LocomotionInput
         {
             MoveDirection = Vector2.zero,
             LookDirection = Vector3.forward,
-            IsSprinting = false,
             VerticalVelocity = 0f,
-            StepDetectionEnabled = false
+            StepDetectionEnabled = false,
+            SpeedModifier = 1f
         };
     }
 
@@ -140,6 +142,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool IsWalkable;
 
         /// <summary>
+        /// Detaillierter Stabilitäts-Report mit Ledge- und Step-Informationen.
+        /// Verwendet direkt Motor.HitStabilityReport (KCC Pattern).
+        /// </summary>
+        public HitStabilityReport StabilityReport;
+
+        /// <summary>
         /// Erstellt einen leeren GroundInfo (nicht geerdet).
         /// </summary>
         public static GroundInfo Empty => new GroundInfo
@@ -149,7 +157,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             Normal = Vector3.up,
             SlopeAngle = 0f,
             Distance = float.MaxValue,
-            IsWalkable = false
+            IsWalkable = false,
+            StabilityReport = new HitStabilityReport()
         };
     }
 }

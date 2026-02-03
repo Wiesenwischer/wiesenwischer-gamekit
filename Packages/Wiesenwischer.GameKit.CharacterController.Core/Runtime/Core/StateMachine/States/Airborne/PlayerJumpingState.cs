@@ -61,8 +61,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         private bool HitCeiling()
         {
-            var motor = stateMachine.Player.KinematicMotor;
-            return motor != null && (motor.CollisionFlags & CollisionFlags.Above) != 0;
+            var motor = stateMachine.Player.CharacterMotor;
+            if (motor == null) return false;
+
+            // Spherecast nach oben um Decke zu erkennen
+            float checkDistance = 0.1f;
+            Vector3 origin = motor.TransientPosition + Vector3.up * (motor.Height - motor.Radius);
+
+            return Physics.SphereCast(
+                origin,
+                motor.Radius * 0.9f,
+                Vector3.up,
+                out _,
+                checkDistance,
+                Config.GroundLayers,
+                QueryTriggerInteraction.Ignore);
         }
 
         private float CalculateJumpVelocity()
