@@ -34,6 +34,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         // Cached GroundInfo
         private GroundInfo _cachedGroundInfo;
 
+        // Collision tracking für AfterCharacterUpdate sync
+        private bool _wasBlockedThisFrame;
+
         /// <summary>
         /// Erstellt eine neue CharacterLocomotion. Erwartet einen existierenden CharacterMotor.
         /// </summary>
@@ -41,7 +44,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         {
             _motor = motor ?? throw new System.ArgumentNullException(nameof(motor));
             _config = config ?? throw new System.ArgumentNullException(nameof(config));
-            _transform = motor.Transform;
+            _transform = motor.transform;
 
             // Module initialisieren
             _gravityModule = new GravityModule();
@@ -122,6 +125,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void BeforeCharacterUpdate(float deltaTime)
         {
+            _wasBlockedThisFrame = false;
+
             // Step Detection vom State Machine übernehmen
             // Grounded States setzen StepDetectionEnabled = true
             // Airborne States setzen StepDetectionEnabled = false
@@ -158,25 +163,34 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                 _config.Acceleration,
                 _config.Deceleration,
                 _config.AirControl,
+                _config.AirDrag,
                 _motor.GroundingStatus.IsStableOnGround,
                 deltaTime);
 
-            // Vertikale Bewegung (via GravityModule)
-            _verticalVelocity = _gravityModule.CalculateVerticalVelocity(
-                _currentInput.VerticalVelocity,
-                _motor.GroundingStatus.IsStableOnGround,
-                _config.Gravity,
-                _config.MaxFallSpeed,
-                deltaTime);
+            // Vertikale Bewegung: State Machine ist Owner der Vertical Velocity
+            // (Gravity wird in PlayerAirborneState.OnPhysicsUpdate angewendet)
+            _verticalVelocity = _currentInput.VerticalVelocity;
 
             // ForceUnground wenn wir springen
-            if (_currentInput.VerticalVelocity > 0 && _verticalVelocity > 0)
+            if (_verticalVelocity > 0)
             {
                 _motor.ForceUnground(0.1f);
             }
 
             // Finale Velocity setzen
-            currentVelocity = _horizontalVelocity + Vector3.up * _verticalVelocity;
+            if (_motor.GroundingStatus.IsStableOnGround && _verticalVelocity <= 0 && _horizontalVelocity.sqrMagnitude > 0.01f)
+            {
+                // Am Boden: Velocity auf Slope-Oberfläche reorientieren.
+                // Verhindert Speed-Verlust auf Rampen und Hängenbleiben an Slope-Kanten,
+                // da der Motor die Velocity nicht mehr intern reprojizieren muss.
+                currentVelocity = _motor.GetDirectionTangentToSurface(
+                    _horizontalVelocity, _motor.GroundingStatus.GroundNormal) * _horizontalVelocity.magnitude;
+            }
+            else
+            {
+                // In der Luft oder beim Springen: Flache horizontale + vertikale Velocity
+                currentVelocity = _horizontalVelocity + Vector3.up * _verticalVelocity;
+            }
         }
 
         public void PostGroundingUpdate(float deltaTime)
@@ -192,7 +206,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void AfterCharacterUpdate(float deltaTime)
         {
-            // Nach dem Update
+            // Sync horizontale Velocity NUR wenn eine Wand-Kollision erkannt wurde.
+            // OnMovementHit setzt _wasBlockedThisFrame bei instabilen Treffern (Wände).
+            // Ohne Sync behält _horizontalVelocity "Phantom Velocity" gegen Wände.
+            if (_wasBlockedThisFrame)
+            {
+                Vector3 resolvedHorizontal = new Vector3(_motor.BaseVelocity.x, 0f, _motor.BaseVelocity.z);
+                _horizontalVelocity = resolvedHorizontal;
+            }
         }
 
         public bool IsColliderValidForCollisions(Collider coll)
@@ -208,7 +229,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void OnMovementHit(Collider hitCollider, Vector3 hitNormal, Vector3 hitPoint, ref HitStabilityReport hitStabilityReport)
         {
-            // Movement hit callback
+            // Instabile Treffer (Wände, zu steile Oberflächen) markieren,
+            // damit AfterCharacterUpdate die Velocity korrigieren kann.
+            if (!hitStabilityReport.IsStable)
+            {
+                _wasBlockedThisFrame = true;
+            }
         }
 
         public void ProcessHitStabilityReport(Collider hitCollider, Vector3 hitNormal, Vector3 hitPoint, Vector3 atCharacterPosition, Quaternion atCharacterRotation, ref HitStabilityReport hitStabilityReport)

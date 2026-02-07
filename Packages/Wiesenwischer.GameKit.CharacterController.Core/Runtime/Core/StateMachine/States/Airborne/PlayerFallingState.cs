@@ -65,9 +65,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
                     ReusableData.JumpPressed = true;
                     ChangeState(stateMachine.JumpingState);
                 }
+                else if (Mathf.Abs(ReusableData.LandingVelocity) >= Config.HardLandingThreshold)
+                {
+                    ChangeState(stateMachine.HardLandingState);
+                }
                 else
                 {
-                    ChangeState(stateMachine.LandingState);
+                    ChangeState(stateMachine.SoftLandingState);
                 }
             }
         }

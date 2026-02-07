@@ -3,21 +3,17 @@ using UnityEngine;
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
     /// <summary>
-    /// State nach der Landung.
-    /// Spielt Landungsanimation ab und verhindert kurzzeitig Bewegung.
-    /// Die Recovery-Zeit hängt von der Aufprallgeschwindigkeit ab.
+    /// State nach einer harten Landung (hoher Fall).
+    /// Stoppt Bewegung komplett und erzwingt eine Recovery-Zeit.
     /// </summary>
-    public class PlayerLandingState : PlayerGroundedState
+    public class PlayerHardLandingState : PlayerGroundedState
     {
-        public override string StateName => "Landing";
+        public override string StateName => "HardLanding";
 
-        /// <summary>Verbleibende Landungs-Recovery-Zeit.</summary>
         private float _landingRecoveryTimer;
-
-        /// <summary>Ob ein Jump während der Landung gebuffert wurde.</summary>
         private bool _jumpBuffered;
 
-        public PlayerLandingState(PlayerMovementStateMachine stateMachine) : base(stateMachine)
+        public PlayerHardLandingState(PlayerMovementStateMachine stateMachine) : base(stateMachine)
         {
         }
 
@@ -27,34 +23,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
             _jumpBuffered = false;
 
-            // Berechne Recovery-Zeit basierend auf Aufprallgeschwindigkeit
+            // Recovery-Zeit berechnen basierend auf Aufprallgeschwindigkeit
             float landingSpeed = Mathf.Abs(ReusableData.LandingVelocity);
 
-            if (landingSpeed < Config.SoftLandingThreshold)
+            if (landingSpeed < Config.HardLandingThreshold)
             {
-                // Weiche Landung - fast keine Verzögerung
-                _landingRecoveryTimer = 0f;
-            }
-            else if (landingSpeed < Config.HardLandingThreshold)
-            {
-                // Normale Landung - interpoliere zwischen soft und hard
-                float t = (landingSpeed - Config.SoftLandingThreshold) / (Config.HardLandingThreshold - Config.SoftLandingThreshold);
+                // Zwischen soft und hard - interpoliere
+                float t = Mathf.InverseLerp(Config.SoftLandingThreshold, Config.HardLandingThreshold, landingSpeed);
                 _landingRecoveryTimer = Mathf.Lerp(Config.SoftLandingDuration, Config.HardLandingDuration, t);
             }
             else
             {
-                // Harte Landung - maximale Recovery
+                // Maximale Recovery
                 _landingRecoveryTimer = Config.HardLandingDuration;
-                // Hier könnte später Falldamage angewendet werden
             }
 
-            // Stoppe horizontale Bewegung bei harter Landung
-            if (landingSpeed >= Config.HardLandingThreshold)
-            {
-                ReusableData.HorizontalVelocity = Vector3.zero;
-            }
-
-            // Setze Geschwindigkeitsmodifier auf 0 während Landing
+            // Bewegung komplett stoppen
+            ReusableData.HorizontalVelocity = Vector3.zero;
             ReusableData.MovementSpeedModifier = 0f;
         }
 
@@ -62,7 +47,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             base.OnHandleInput();
 
-            // Buffere Jump während Landing für responsive Controls
+            // Jump-Buffer: Speichere Jump-Input während Recovery
             if (ReusableData.JumpPressed)
             {
                 _jumpBuffered = true;
@@ -71,11 +56,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnUpdate()
         {
-            // Nicht base.OnUpdate() aufrufen - wir wollen Coyote Time Check überspringen
+            // NICHT base.OnUpdate() - Coyote Time Check überspringen
 
             _landingRecoveryTimer -= Time.deltaTime;
 
-            // Wenn Recovery vorbei, wechsle zum nächsten State
             if (_landingRecoveryTimer <= 0f)
             {
                 // Gebufferter Jump?
@@ -86,10 +70,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
                     return;
                 }
 
-                // Hat der Spieler Movement Input?
+                // Zum passenden Movement State wechseln
                 if (ReusableData.MoveInput.sqrMagnitude > 0.01f)
                 {
-                    // Wechsle zu entsprechendem Movement State
                     if (ReusableData.SprintHeld)
                     {
                         ChangeState(stateMachine.SprintingState);
@@ -113,8 +96,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         protected override void OnExit()
         {
             base.OnExit();
-
-            // Setze Speed Modifier zurück
             ReusableData.MovementSpeedModifier = 1f;
         }
     }

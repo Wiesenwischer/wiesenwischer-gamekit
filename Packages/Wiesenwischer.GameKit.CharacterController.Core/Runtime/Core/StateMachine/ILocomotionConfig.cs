@@ -17,6 +17,19 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
 
         // Air Movement
         float AirControl { get; }
+
+        /// <summary>
+        /// Wie schnell horizontales Momentum in der Luft verloren geht (0 = kein Drag, 1 = volle Abbremsung).
+        /// Getrennt von AirControl (Steuerbarkeit). AirDrag = 1 bedeutet Deceleration wie am Boden.
+        /// </summary>
+        float AirDrag { get; }
+
+        /// <summary>
+        /// Minimale Falldistanz in Metern, ab der der Character als "fallend" erkannt wird.
+        /// Drops unterhalb dieses Werts werden ignoriert (z.B. Treppen, kleine Kanten).
+        /// </summary>
+        float MinFallDistance { get; }
+
         float Gravity { get; }
         float MaxFallSpeed { get; }
 

@@ -17,8 +17,8 @@ MonoBehaviour:
   _acceleration: 10
   _deceleration: 15
   _airControl: 0.3
-  _gravity: 50
-  _maxFallSpeed: 70
+  _gravity: 40
+  _maxFallSpeed: 50
   _jumpHeight: 2
   _jumpDuration: 0.4
   _coyoteTime: 0.15

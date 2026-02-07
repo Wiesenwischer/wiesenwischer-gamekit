@@ -287,8 +287,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             // Simulate locomotion
             Locomotion.Simulate(input, deltaTime);
 
-            // Sync velocities back to ReusableData
-            ReusableData.VerticalVelocity = Locomotion.VerticalVelocity;
+            // Nur horizontale Velocity sync-back (Motor berechnet Acceleration/Deceleration)
+            // Vertical Velocity wird NICHT zurückgelesen - die State Machine ist Owner
+            // (verhindert Race Condition zwischen TickSystem und Motor-FixedUpdate)
             ReusableData.HorizontalVelocity = Locomotion.HorizontalVelocity;
         }
 

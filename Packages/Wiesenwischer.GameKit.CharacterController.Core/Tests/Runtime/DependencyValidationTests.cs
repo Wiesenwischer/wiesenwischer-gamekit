@@ -284,6 +284,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
             public float Acceleration { get; set; } = 10f;
             public float Deceleration { get; set; } = 10f;
             public float AirControl { get; set; } = 0.3f;
+            public float AirDrag { get; set; } = 0.8f;
+            public float MinFallDistance { get; set; } = 0.5f;
             public float Gravity { get; set; } = 20f;
             public float MaxFallSpeed { get; set; } = 50f;
             public float JumpHeight { get; set; } = 2f;

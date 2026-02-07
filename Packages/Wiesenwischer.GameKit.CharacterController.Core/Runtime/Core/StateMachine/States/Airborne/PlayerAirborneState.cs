@@ -28,5 +28,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             // Air Control - reduzierter Movement-Modifier in der Luft
             ReusableData.MovementSpeedModifier = Config.AirControl;
         }
+
+        protected override void OnPhysicsUpdate(float deltaTime)
+        {
+            // Gravity anwenden - State Machine ist Owner der Vertical Velocity
+            ReusableData.VerticalVelocity -= Config.Gravity * deltaTime;
+
+            // Fallgeschwindigkeit begrenzen
+            if (ReusableData.VerticalVelocity < -Config.MaxFallSpeed)
+            {
+                ReusableData.VerticalVelocity = -Config.MaxFallSpeed;
+            }
+        }
     }
 }

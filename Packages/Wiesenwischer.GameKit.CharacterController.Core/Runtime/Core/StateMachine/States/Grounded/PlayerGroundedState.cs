@@ -74,12 +74,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
                 {
                     ReusableData.LastGroundedY = currentY;
                 }
-                // Bei kleinem Drop (eine Stufe runter): auch aktualisieren
-                else if (fallDistance <= Config.MaxStepHeight)
+                // Bei kleinem Drop (unter MinFallDistance): auch aktualisieren
+                else if (fallDistance <= Config.MinFallDistance)
                 {
                     ReusableData.LastGroundedY = currentY;
                 }
-                // Bei großem Drop: Zu Falling wechseln
+                // Bei großem Drop (>= MinFallDistance): Zu Falling wechseln
                 else if (ReusableData.TimeSinceGrounded > Config.CoyoteTime)
                 {
                     ChangeState(stateMachine.FallingState);
@@ -90,8 +90,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnPhysicsUpdate(float deltaTime)
         {
-            // Grounding-Velocity (-2f) wird von CharacterLocomotion gesetzt
-            // States setzen nur positive Velocity (Jump-Force)
+            // Grounding-Velocity: Kleine negative Velocity hält Character am Boden
+            // (verhindert Schweben auf Rampen und bei Ground Snapping)
+            if (ReusableData.VerticalVelocity <= 0)
+            {
+                ReusableData.VerticalVelocity = -2f;
+            }
         }
 
         /// <summary>
