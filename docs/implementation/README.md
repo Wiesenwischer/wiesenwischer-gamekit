@@ -23,7 +23,7 @@ Dieser Plan beschreibt die schrittweise Implementierung des GameKit Character Co
 | Phase | Name | Ausgearbeitet | Status |
 |-------|------|---------------|--------|
 | 1 | Animation-Vorbereitung | ✅ | Offen |
-| 2 | Animator Setup | ❌ | Offen |
+| 2 | Animator Setup | ✅ | Offen |
 | 3 | Animation-Integration | ❌ | Offen |
 | 4 | Ability System | ❌ | Offen |
 | 5 | Netzwerk-Grundstruktur | ❌ | Offen |
@@ -54,17 +54,17 @@ Dieser Plan beschreibt die schrittweise Implementierung des GameKit Character Co
 
 ### Phase 2: Animator Setup
 **Branch:** `feature/phase-2-animator-setup`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja
 
 **Relevante Spezifikationen:**
 - [Animationskonzept LayeredAbilities](../specs/Animationskonzept_LayeredAbilities.md)
 
 **Schritte:**
-- [ ] 2.1 Avatar Masks erstellen
-- [ ] 2.2 Animator Controller erstellen
-- [ ] 2.3 Locomotion Blend Tree
-- [ ] 2.4 Airborne States
-- [ ] 2.5 Parameter-Bridge
+- [ ] [2.1 Avatar Masks erstellen](phase-2-animator-setup/2.1-avatar-masks.md)
+- [ ] [2.2 Animator Controller erstellen](phase-2-animator-setup/2.2-animator-controller.md)
+- [ ] [2.3 Locomotion Blend Tree](phase-2-animator-setup/2.3-locomotion-blend-tree.md)
+- [ ] [2.4 Airborne States](phase-2-animator-setup/2.4-airborne-states.md)
+- [ ] [2.5 Parameter-Bridge](phase-2-animator-setup/2.5-parameter-bridge.md)
 
 ---
 
