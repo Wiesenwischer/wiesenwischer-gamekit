@@ -11,56 +11,44 @@
 ## Tracking-Tabelle
 
 ### Phase 1: Animation-Vorbereitung
-| # | Schritt | Status | Datum |
-|---|---------|--------|-------|
-| 1.1 | Character Asset beschaffen (Mixamo) | ⏳ Ausstehend | |
-| 1.2 | Character in Unity importieren | ⏳ Ausstehend | |
-| 1.3 | Basis-Animationen beschaffen | ⏳ Ausstehend | |
-| 1.4 | Animation Package Struktur erstellen | ⏳ Ausstehend | |
+- [ ] 1.1 Character Asset beschaffen (Mixamo)
+- [ ] 1.2 Character in Unity importieren
+- [ ] 1.3 Basis-Animationen beschaffen
+- [ ] 1.4 Animation Package Struktur erstellen
 
 ### Phase 2: Animator Setup
-| # | Schritt | Status | Datum |
-|---|---------|--------|-------|
-| 2.1 | Avatar Masks erstellen | ⏳ Ausstehend | |
-| 2.2 | Animator Controller erstellen | ⏳ Ausstehend | |
-| 2.3 | Locomotion Blend Tree (Idle/Walk/Run/Sprint) | ⏳ Ausstehend | |
-| 2.4 | Airborne States (Jump/Fall/Land) | ⏳ Ausstehend | |
-| 2.5 | Parameter-Bridge zum Code | ⏳ Ausstehend | |
+- [ ] 2.1 Avatar Masks erstellen
+- [ ] 2.2 Animator Controller erstellen
+- [ ] 2.3 Locomotion Blend Tree (Idle/Walk/Run/Sprint)
+- [ ] 2.4 Airborne States (Jump/Fall/Land)
+- [ ] 2.5 Parameter-Bridge zum Code
 
 ### Phase 3: Animation-Integration
-| # | Schritt | Status | Datum |
-|---|---------|--------|-------|
-| 3.1 | IAnimationController Interface | ⏳ Ausstehend | |
-| 3.2 | CharacterAnimator Komponente | ⏳ Ausstehend | |
-| 3.3 | State Machine → Animator Sync | ⏳ Ausstehend | |
-| 3.4 | Player Prefab mit Animation | ⏳ Ausstehend | |
-| 3.5 | Testing & Feintuning | ⏳ Ausstehend | |
+- [ ] 3.1 IAnimationController Interface
+- [ ] 3.2 CharacterAnimator Komponente
+- [ ] 3.3 State Machine → Animator Sync
+- [ ] 3.4 Player Prefab mit Animation
+- [ ] 3.5 Testing & Feintuning
 
 ### Phase 4: Ability System Grundstruktur
-| # | Schritt | Status | Datum |
-|---|---------|--------|-------|
-| 4.1 | IAbility Interface definieren | ⏳ Ausstehend | |
-| 4.2 | AbilitySystem Manager | ⏳ Ausstehend | |
-| 4.3 | JumpAbility implementieren | ⏳ Ausstehend | |
-| 4.4 | SprintAbility implementieren | ⏳ Ausstehend | |
-| 4.5 | Ability-Animation Layer Integration | ⏳ Ausstehend | |
+- [ ] 4.1 IAbility Interface definieren
+- [ ] 4.2 AbilitySystem Manager
+- [ ] 4.3 JumpAbility implementieren
+- [ ] 4.4 SprintAbility implementieren
+- [ ] 4.5 Ability-Animation Layer Integration
 
 ### Phase 5: Netzwerk-Grundstruktur
-| # | Schritt | Status | Datum |
-|---|---------|--------|-------|
-| 5.1 | FishNet Package einbinden | ⏳ Ausstehend | |
-| 5.2 | NetworkPlayer Komponente | ⏳ Ausstehend | |
-| 5.3 | Input Synchronisation | ⏳ Ausstehend | |
-| 5.4 | Position/Rotation Sync | ⏳ Ausstehend | |
-| 5.5 | Client-Side Prediction Basis | ⏳ Ausstehend | |
+- [ ] 5.1 FishNet Package einbinden
+- [ ] 5.2 NetworkPlayer Komponente
+- [ ] 5.3 Input Synchronisation
+- [ ] 5.4 Position/Rotation Sync
+- [ ] 5.5 Client-Side Prediction Basis
 
 ### Phase 6: Netzwerk-Animation
-| # | Schritt | Status | Datum |
-|---|---------|--------|-------|
-| 6.1 | Animator Parameter Sync | ⏳ Ausstehend | |
-| 6.2 | State Sync (Grounded/Airborne) | ⏳ Ausstehend | |
-| 6.3 | Ability Sync | ⏳ Ausstehend | |
-| 6.4 | Lag Compensation | ⏳ Ausstehend | |
+- [ ] 6.1 Animator Parameter Sync
+- [ ] 6.2 State Sync (Grounded/Airborne)
+- [ ] 6.3 Ability Sync
+- [ ] 6.4 Lag Compensation
 
 ---
 
