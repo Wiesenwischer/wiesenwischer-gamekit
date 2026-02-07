@@ -290,6 +290,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         private void RunAllSteps()
         {
+            // Step 0: Create Demo Scene if no Player exists
+            var player = GameObject.FindGameObjectWithTag("Player") ?? GameObject.Find("Player");
+            if (player == null)
+            {
+                DemoSceneSetup.CreateDemoScene();
+            }
+
             // Step 1: Create LocomotionConfig if needed
             if (!HasLocomotionConfig())
             {

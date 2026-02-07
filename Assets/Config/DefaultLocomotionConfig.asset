@@ -17,19 +17,21 @@ MonoBehaviour:
   _acceleration: 10
   _deceleration: 15
   _airControl: 0.3
-  _gravity: 40
+  _airDrag: 0.8
+  _minFallDistance: 0.5
+  _gravity: 70
   _maxFallSpeed: 50
   _jumpHeight: 2
-  _jumpDuration: 0.4
+  _jumpDuration: 2
   _coyoteTime: 0.15
-  _jumpBufferTime: 0.1
+  _jumpBufferTime: 1
   _useVariableJump: 1
   _groundCheckDistance: 0.2
   _groundCheckRadius: 0.3
   _groundLayers:
     serializedVersion: 2
     m_Bits: 1
-  _maxSlopeAngle: 32.8
+  _maxSlopeAngle: 49.9
   _rotationSpeed: 720
   _rotateTowardsMovement: 1
   _maxStepHeight: 0.35

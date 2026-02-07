@@ -174,14 +174,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             ground.layer = LayerMask.NameToLayer("Default");
 
             // Material
-            var renderer = ground.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"))
-                {
-                    color = new Color(0.5f, 0.5f, 0.5f)
-                };
-            }
+            SetMaterialColor(ground.GetComponent<Renderer>(), new Color(0.5f, 0.5f, 0.5f));
         }
 
         private static void CreateObstacles()
@@ -207,14 +200,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             cube.transform.position = position;
             cube.transform.localScale = scale;
 
-            var renderer = cube.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"))
-                {
-                    color = new Color(0.7f, 0.4f, 0.2f)
-                };
-            }
+            SetMaterialColor(cube.GetComponent<Renderer>(), new Color(0.7f, 0.4f, 0.2f));
         }
 
         private static void CreateSlope(string name, Vector3 position, float angle)
@@ -228,14 +214,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             slope.transform.rotation = Quaternion.Euler(angle, 0f, 0f);
             slope.transform.position = position + Vector3.up * 0.5f;
 
-            var renderer = slope.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"))
-                {
-                    color = new Color(0.3f, 0.6f, 0.3f)
-                };
-            }
+            SetMaterialColor(slope.GetComponent<Renderer>(), new Color(0.3f, 0.6f, 0.3f));
         }
 
         private static void CreateStairs(string name, Vector3 position, int steps, float stepHeight, float stepDepth)
@@ -251,14 +230,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
                 step.transform.localPosition = new Vector3(0f, stepHeight * (i + 0.5f), stepDepth * i);
                 step.transform.localScale = new Vector3(2f, stepHeight, stepDepth);
 
-                var renderer = step.GetComponent<Renderer>();
-                if (renderer != null)
-                {
-                    renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"))
-                    {
-                        color = new Color(0.4f, 0.4f, 0.6f)
-                    };
-                }
+                SetMaterialColor(step.GetComponent<Renderer>(), new Color(0.4f, 0.4f, 0.6f));
             }
         }
 
@@ -284,14 +256,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Entferne Collider vom Visual
             Object.DestroyImmediate(visual.GetComponent<CapsuleCollider>());
 
-            var renderer = visual.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"))
-                {
-                    color = new Color(0.2f, 0.4f, 0.8f)
-                };
-            }
+            SetMaterialColor(visual.GetComponent<Renderer>(), new Color(0.2f, 0.4f, 0.8f));
 
             // PlayerController Component
             player.AddComponent<PlayerController>();
@@ -314,15 +279,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             }
 
             // Input Provider
-            player.AddComponent<Input.PlayerInputProvider>();
+            var inputProvider = player.AddComponent<Input.PlayerInputProvider>();
+
+            // Referenzen verdrahten via SerializedObject
+            var inputProviderSO = new SerializedObject(inputProvider);
+            inputProviderSO.FindProperty("_playerInput").objectReferenceValue = playerInput;
+            inputProviderSO.ApplyModifiedProperties();
+
+            var controllerSO = new SerializedObject(player.GetComponent<PlayerController>());
+            controllerSO.FindProperty("_inputProviderComponent").objectReferenceValue = inputProvider;
+            controllerSO.ApplyModifiedProperties();
 
             // Ground Check Transform
             var groundCheck = new GameObject("GroundCheck");
             groundCheck.transform.parent = player.transform;
             groundCheck.transform.localPosition = Vector3.zero;
 
-            // Hinweis für LocomotionConfig
-            Debug.Log("[DemoSceneSetup] Player erstellt. Bitte eine LocomotionConfig im PlayerController zuweisen!");
+            Debug.Log("[DemoSceneSetup] Player erstellt mit Input-Referenzen.");
         }
 
         #endregion
@@ -360,7 +333,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
                 playerInput.actions = inputActions;
             }
 
-            player.AddComponent<Input.PlayerInputProvider>();
+            var inputProvider = player.AddComponent<Input.PlayerInputProvider>();
+
+            // Referenzen verdrahten
+            var inputProviderSO = new SerializedObject(inputProvider);
+            inputProviderSO.FindProperty("_playerInput").objectReferenceValue = playerInput;
+            inputProviderSO.ApplyModifiedProperties();
+
+            var controllerSO = new SerializedObject(player.GetComponent<PlayerController>());
+            controllerSO.FindProperty("_inputProviderComponent").objectReferenceValue = inputProvider;
+            controllerSO.ApplyModifiedProperties();
 
             // Ground Check
             var groundCheck = new GameObject("GroundCheck");
@@ -435,6 +417,22 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         #endregion
 
         #region Utility
+
+        private static void SetMaterialColor(Renderer renderer, Color color)
+        {
+            if (renderer == null) return;
+
+            var shader = Shader.Find("HDRP/Lit");
+            if (shader == null)
+            {
+                Debug.LogWarning("[DemoSceneSetup] HDRP/Lit Shader nicht gefunden. Material wird nicht gesetzt.");
+                return;
+            }
+
+            var mat = new Material(shader);
+            mat.SetColor("_BaseColor", color);
+            renderer.material = mat;
+        }
 
         private static void EnsureDirectoryExists(string path)
         {
