@@ -31,12 +31,15 @@ Eine Phase gilt als **nicht ausgearbeitet** wenn:
 
 Finde die erste Phase (nach Nummer sortiert), die nicht vollständig ausgearbeitet ist.
 
-### 4. Bestehende Spezifikationen lesen
+### 4. Bestehende Spezifikationen lesen (PFLICHT)
 
 Bevor die Phase ausgearbeitet wird:
-- Lies relevante Spezifikationen in `docs/specs/`
+- Lies die in `docs/implementation/README.md` verlinkten Spezifikationen für diese Phase
+- Lies weitere relevante Spezifikationen in `docs/specs/`
 - Verstehe die Architektur und bestehenden Code
 - Prüfe Abhängigkeiten zu vorherigen Phasen
+
+**WICHTIG:** Die Spezifikationen sind bindend. Die Phase-Dokumentation muss den Spezifikationen entsprechen.
 
 ### 5. Phase-Dokumentation erstellen
 
@@ -68,11 +71,18 @@ Falls Unklarheiten bestehen:
 - Frage den User nach Klärung
 - Warte auf Antwort bevor die Dokumentation finalisiert wird
 
-### 7. Commit erstellen
+### 7. Ausarbeitungsstatus aktualisieren
+
+In `docs/implementation/README.md`:
+- In der Phasen-Übersicht Tabelle: `❌` → `✅` für "Ausgearbeitet"
+- Bei der Phase selbst: `**Ausgearbeitet:** ❌ Nein` → `**Ausgearbeitet:** ✅ Ja`
+- Schritte mit Links versehen: `- [ ] X.Y Name` → `- [ ] [X.Y Name](phase-X-.../X.Y-name.md)`
+
+### 8. Commit erstellen
 
 Nach Erstellung der Dokumentation:
 ```bash
-git add docs/implementation/phase-X-*/
+git add docs/implementation/
 git commit -m "docs: Arbeite Phase X aus - [Phasen-Name]"
 ```
 
