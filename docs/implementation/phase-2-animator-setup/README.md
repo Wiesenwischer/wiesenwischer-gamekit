@@ -20,6 +20,7 @@ Den Unity Animator Controller vollständig konfigurieren:
 ## Relevante Spezifikationen
 
 - [Animationskonzept LayeredAbilities](../../specs/Animationskonzept_LayeredAbilities.md)
+- [AAA Action Combat & Character Architecture](../../specs/AAA_Action_Combat_Character_Architecture.md)
 
 ---
 
@@ -48,7 +49,12 @@ Den Unity Animator Controller vollständig konfigurieren:
 
 ## Architektur-Überblick
 
-### Layer-Struktur (aus Spezifikation)
+### Layer-Struktur (aus Spezifikationen)
+
+Basiert auf dem 3-Schichten-Modell der AAA Action Combat Architecture:
+- **Movement Layer** → Animator Layer 0
+- **Ability Layer** → Animator Layer 1
+- **Status Layer** → Animator Layer 2
 
 ```
 Layer 0: Base Movement (Weight 1.0, keine Mask)
@@ -63,7 +69,18 @@ Layer 1: Abilities (Weight 0.0 default, UpperBody Mask)
 ├── Cast_Fireball
 ├── Attack_Melee
 └── ... (wird in Phase 4+ erweitert)
+
+Layer 2: Status (Weight 0.0 default, keine Mask → Full-Body Override)
+├── Empty (Default)
+├── Stunned
+├── Knockback
+├── Dead
+└── ... (wird in späteren Phasen erweitert)
+
+Layer 3: Facial / LookAt (optional, wird in Phase 7 IK ergänzt)
 ```
+
+> **Hinweis:** Layer 2 (Status) hat **keine Mask** und überschreibt bei Aktivierung den gesamten Körper. Status-Effekte wie Stun oder Death haben Vorrang über Movement + Abilities. Dies folgt dem Priority-System der AAA-Spec (Status Priority > Ability Priority > Movement Priority).
 
 ### Animator-Parameter
 
@@ -75,6 +92,8 @@ Layer 1: Abilities (Weight 0.0 default, UpperBody Mask)
 | `Jump` | Trigger | Löst Jump-Animation aus |
 | `Land` | Trigger | Löst Land-Animation aus |
 | `HardLanding` | Bool | Ob die Landung eine harte Landung ist (für Land-Transition-Auswahl) |
+
+> **Vorbereitung für spätere Phasen:** Die AAA-Spec beschreibt Animation-Driven Windows (Hit Window, Cancel Window, Input Buffer Window) für Action Combat. Diese werden über `StateMachineBehaviour`s realisiert und in Phase 8 (Combat Abilities) implementiert. Die Animator-Grundstruktur hier muss keine zusätzlichen Parameter dafür vorsehen – die States werden in Phase 8 um Behaviours erweitert.
 
 ### Speed-Normalisierung
 
@@ -96,7 +115,7 @@ Ergebnis:
 
 Nach Abschluss dieser Phase:
 - [ ] Avatar Masks erstellt (UpperBody, LowerBody, ArmsOnly)
-- [ ] Animator Controller mit 2 Layern (Base Movement, Abilities)
+- [ ] Animator Controller mit 3 Layern (Base Movement, Abilities, Status)
 - [ ] Locomotion Blend Tree mit 4 Clips (Idle, Walk, Run, Sprint)
 - [ ] Airborne States mit korrekten Transitionen
 - [ ] Parameter-Bridge Komponente synchronisiert State Machine mit Animator
