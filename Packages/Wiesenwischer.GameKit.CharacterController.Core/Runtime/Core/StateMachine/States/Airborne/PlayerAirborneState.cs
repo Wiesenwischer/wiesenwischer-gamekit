@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
     /// <summary>
@@ -42,14 +40,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnPhysicsUpdate(float deltaTime)
         {
-            // Gravity anwenden - State Machine ist Owner der Vertical Velocity
-            ReusableData.VerticalVelocity -= Config.Gravity * deltaTime;
-
-            // Fallgeschwindigkeit begrenzen
-            if (ReusableData.VerticalVelocity < -Config.MaxFallSpeed)
-            {
-                ReusableData.VerticalVelocity = -Config.MaxFallSpeed;
-            }
+            // Gravity wird von CharacterLocomotion via GravityModule angewendet (Intent System).
+            // States setzen nur noch Intent (Jump, JumpCut, ResetVertical).
         }
     }
 }

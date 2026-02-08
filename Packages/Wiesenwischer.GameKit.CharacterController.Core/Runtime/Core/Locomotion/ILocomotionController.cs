@@ -60,7 +60,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
     /// <summary>
     /// Struct für Locomotion Input.
-    /// Enthält alle Eingaben, die für die Bewegung relevant sind.
+    /// Enthält Intent-basierte Eingaben für die Bewegung.
+    /// States setzen Intent (Modifier, Impulse, Flags), CharacterLocomotion führt Physik aus.
     /// </summary>
     public struct LocomotionInput
     {
@@ -76,12 +77,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public Vector3 LookDirection;
 
         /// <summary>
-        /// Die vertikale Geschwindigkeit (für Gravity/Jump).
-        /// Wird vom State Machine gesetzt.
-        /// </summary>
-        public float VerticalVelocity;
-
-        /// <summary>
         /// Ob Step Detection aktiv sein soll.
         /// Wird von Grounded States auf true gesetzt, von Airborne States auf false.
         /// </summary>
@@ -93,6 +88,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         /// </summary>
         public float SpeedModifier;
 
+        #region Vertical Intent
+
+        /// <summary>
+        /// Sprung-Intent. Wenn true, wird ein Jump-Impulse angewendet.
+        /// One-Shot: Wird nach Konsum zurückgesetzt.
+        /// </summary>
+        public bool Jump;
+
+        /// <summary>
+        /// Variable Jump Cut. Wenn true, wird die aufwärts-Velocity reduziert.
+        /// Wird gesetzt wenn der Jump-Button früh losgelassen wird.
+        /// One-Shot: Wird nach Konsum zurückgesetzt.
+        /// </summary>
+        public bool JumpCut;
+
+        /// <summary>
+        /// Setzt die vertikale Velocity auf 0 (z.B. bei Ceiling Hit).
+        /// One-Shot: Wird nach Konsum zurückgesetzt.
+        /// </summary>
+        public bool ResetVerticalVelocity;
+
+        #endregion
+
         /// <summary>
         /// Erstellt einen leeren Locomotion Input.
         /// </summary>
@@ -100,7 +118,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         {
             MoveDirection = Vector2.zero,
             LookDirection = Vector3.forward,
-            VerticalVelocity = 0f,
             StepDetectionEnabled = false,
             SpeedModifier = 1f
         };

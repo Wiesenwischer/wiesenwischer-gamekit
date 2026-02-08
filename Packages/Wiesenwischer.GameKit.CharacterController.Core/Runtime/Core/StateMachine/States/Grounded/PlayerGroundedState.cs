@@ -16,8 +16,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnEnter()
         {
-            // Reset vertical velocity when landing
-            ReusableData.VerticalVelocity = 0f;
+            // VerticalVelocity wird NICHT mehr hier resettet - CharacterLocomotion
+            // handhabt das via GravityModule (GroundingVelocity wenn grounded).
             ReusableData.TimeSinceGrounded = 0f;
 
             // Step Detection aktivieren für Grounded States
@@ -90,25 +90,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnPhysicsUpdate(float deltaTime)
         {
-            if (ReusableData.IsGrounded)
-            {
-                // Grounding-Velocity: Kleine negative Velocity hält Character am Boden
-                // (verhindert Schweben auf Rampen und bei Ground Snapping)
-                if (ReusableData.VerticalVelocity <= 0)
-                {
-                    ReusableData.VerticalVelocity = -2f;
-                }
-            }
-            else
-            {
-                // Coyote Time: Nicht mehr am Boden, aber noch im GroundedState.
-                // Gravity normal anwenden, damit der Character visuell sofort fällt.
-                ReusableData.VerticalVelocity -= Config.Gravity * deltaTime;
-                if (ReusableData.VerticalVelocity < -Config.MaxFallSpeed)
-                {
-                    ReusableData.VerticalVelocity = -Config.MaxFallSpeed;
-                }
-            }
+            // Grounding-Velocity und Gravity werden von CharacterLocomotion gehandhabt.
+            // GravityModule.CalculateVerticalVelocity() macht beides:
+            // - Grounded + nicht aufwärts → GroundingVelocity (-2f)
+            // - Nicht grounded (Coyote Time) → Gravity anwenden + MaxFallSpeed clamping
         }
 
         /// <summary>

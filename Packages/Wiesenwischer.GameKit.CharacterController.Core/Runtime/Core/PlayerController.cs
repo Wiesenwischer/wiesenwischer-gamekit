@@ -273,24 +273,32 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         {
             if (Locomotion == null || ReusableData == null) return;
 
-            // Create locomotion input from ReusableData
-            // SpeedModifier wird vom State gesetzt (0=Idle, 1=Walk, 2=Run, AirControl=Airborne)
+            // Intent-basierter Input: States setzen Modifier und One-Shot Flags,
+            // CharacterLocomotion führt die Physik aus (Gravity, Jump-Impulse, etc.)
             var input = new LocomotionInput
             {
                 MoveDirection = ReusableData.MoveInput,
                 LookDirection = GetCameraForward(),
-                VerticalVelocity = ReusableData.VerticalVelocity,
+                SpeedModifier = ReusableData.MovementSpeedModifier,
                 StepDetectionEnabled = ReusableData.StepDetectionEnabled,
-                SpeedModifier = ReusableData.MovementSpeedModifier
+                // Vertical Intent (One-Shot Flags)
+                Jump = ReusableData.JumpRequested,
+                JumpCut = ReusableData.JumpCutRequested,
+                ResetVerticalVelocity = ReusableData.ResetVerticalRequested,
             };
+
+            // One-Shot Flags konsumieren (nach Kopie in LocomotionInput)
+            ReusableData.JumpRequested = false;
+            ReusableData.JumpCutRequested = false;
+            ReusableData.ResetVerticalRequested = false;
 
             // Simulate locomotion
             Locomotion.Simulate(input, deltaTime);
 
-            // Nur horizontale Velocity sync-back (Motor berechnet Acceleration/Deceleration)
-            // Vertical Velocity wird NICHT zurückgelesen - die State Machine ist Owner
-            // (verhindert Race Condition zwischen TickSystem und Motor-FixedUpdate)
+            // Sync-Back: Locomotion → ReusableData
+            // Beide Velocity-Komponenten kommen von der Execution Layer (CharacterLocomotion)
             ReusableData.HorizontalVelocity = Locomotion.HorizontalVelocity;
+            ReusableData.VerticalVelocity = Locomotion.VerticalVelocity;
         }
 
         /// <summary>
