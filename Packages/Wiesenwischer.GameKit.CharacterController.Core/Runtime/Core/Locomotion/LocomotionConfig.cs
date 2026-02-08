@@ -24,6 +24,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Tooltip("Verzögerung beim Stoppen der Bewegung (m/s²)")]
         [SerializeField] private float _deceleration = 15.0f;
 
+        [Tooltip("Sprint-Multiplikator relativ zu Run (z.B. 1.5 = 50% schneller als Run)")]
+        [SerializeField] private float _sprintMultiplier = 1.5f;
+
         [Header("Air Movement")]
         [Tooltip("Steuerbarkeit in der Luft (0 = keine Steuerung, 1 = volle Kontrolle). Beeinflusst wie stark der Spieler die Richtung in der Luft ändern kann.")]
         [Range(0f, 1f)]
@@ -125,6 +128,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float RunSpeed => _runSpeed;
         public float Acceleration => _acceleration;
         public float Deceleration => _deceleration;
+        public float SprintMultiplier => _sprintMultiplier;
         public float AirControl => _airControl;
         public float AirDrag => _airDrag;
         public float MinFallDistance => _minFallDistance;

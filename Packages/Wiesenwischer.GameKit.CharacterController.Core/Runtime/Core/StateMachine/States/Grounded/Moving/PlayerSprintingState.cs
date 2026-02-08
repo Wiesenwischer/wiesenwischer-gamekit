@@ -15,9 +15,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         protected override void OnEnter()
         {
             base.OnEnter();
-            // Sprint ist schneller als Run
-            // Annahme: Sprint = Run * 1.5 (kann in Config ausgelagert werden)
-            ReusableData.MovementSpeedModifier = (Config.RunSpeed / Config.WalkSpeed) * 1.5f;
+            // Sprint ist schneller als Run - Multiplikator aus Config
+            ReusableData.MovementSpeedModifier = (Config.RunSpeed / Config.WalkSpeed) * Config.SprintMultiplier;
         }
 
         protected override void OnUpdate()

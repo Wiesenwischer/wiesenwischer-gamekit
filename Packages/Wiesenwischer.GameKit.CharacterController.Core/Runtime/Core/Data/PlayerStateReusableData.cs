@@ -45,9 +45,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Data
         /// <summary>Movement Speed Modifier (z.B. 1.0 für Walk, 1.5 für Run).</summary>
         public float MovementSpeedModifier { get; set; } = 1f;
 
-        /// <summary>Deceleration Force Modifier.</summary>
-        public float MovementDecelerationForce { get; set; } = 1f;
-
         #endregion
 
         #region Ground State
@@ -165,7 +162,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Data
             VerticalVelocity = 0f;
             HorizontalVelocity = Vector3.zero;
             MovementSpeedModifier = 1f;
-            MovementDecelerationForce = 1f;
         }
 
         /// <summary>

@@ -15,6 +15,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         float Acceleration { get; }
         float Deceleration { get; }
 
+        /// <summary>
+        /// Multiplikator für Sprint-Geschwindigkeit relativ zu Run.
+        /// Sprint = (RunSpeed / WalkSpeed) * SprintMultiplier.
+        /// </summary>
+        float SprintMultiplier { get; }
+
         // Air Movement
         float AirControl { get; }
 

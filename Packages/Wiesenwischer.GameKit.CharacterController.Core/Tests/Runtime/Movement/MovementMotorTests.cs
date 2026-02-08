@@ -479,6 +479,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Locomotion
             public float RunSpeed { get; set; } = 10f;
             public float Acceleration { get; set; } = 10f;
             public float Deceleration { get; set; } = 10f;
+            public float SprintMultiplier { get; set; } = 1.5f;
             public float AirControl { get; set; } = 0.3f;
             public float AirDrag { get; set; } = 0.8f;
             public float MinFallDistance { get; set; } = 0.5f;
