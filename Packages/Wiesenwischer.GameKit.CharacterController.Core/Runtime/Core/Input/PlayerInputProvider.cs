@@ -5,34 +5,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
 {
     /// <summary>
     /// Input Provider für Spieler-Input.
-    /// Verwendet Event-Callbacks wie Genshin Impact.
+    /// Arbeitet direkt mit dem InputActionAsset — ohne PlayerInput-Component.
+    /// Volle Kontrolle über ActionMap-Lifecycle (Enable/Disable).
     /// </summary>
     public class PlayerInputProvider : MonoBehaviour, IMovementInputProvider
     {
         [Header("Input Settings")]
         [SerializeField] private bool _isActive = true;
 
-        [Header("Input System References")]
-        [SerializeField] private PlayerInput _playerInput;
+        [Header("Input Actions")]
+        [SerializeField] private InputActionAsset _inputActions;
+        [SerializeField] private string _actionMapName = "Player";
 
-        [Header("Action Names")]
-        [SerializeField] private string _moveActionName = "Move";
-        [SerializeField] private string _lookActionName = "Look";
-        [SerializeField] private string _jumpActionName = "Jump";
-        [SerializeField] private string _sprintActionName = "Sprint";
-        [SerializeField] private string _dashActionName = "Dash";
-
+        private InputActionMap _actionMap;
         private InputAction _moveAction;
         private InputAction _lookAction;
         private InputAction _jumpAction;
         private InputAction _sprintAction;
         private InputAction _dashAction;
 
-        // Flags die bei "started" gesetzt werden
         private bool _jumpStarted;
         private bool _dashStarted;
 
-        #region IMovementInputProvider Implementation
+        #region IMovementInputProvider
 
         public Vector2 MoveInput => _isActive && _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
         public Vector2 LookInput => _isActive && _lookAction != null ? _lookAction.ReadValue<Vector2>() : Vector2.zero;
@@ -42,7 +37,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             get
             {
                 if (!_isActive || !_jumpStarted) return false;
-                // Einmal konsumieren, dann false
                 _jumpStarted = false;
                 return true;
             }
@@ -65,7 +59,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
 
         public void UpdateInput()
         {
-            // Nichts zu tun - Events setzen die Flags
         }
 
         public void ResetInput()
@@ -78,36 +71,44 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
 
         #region Unity Callbacks
 
-        private void Awake()
-        {
-            // Nur Referenz auf PlayerInput finden, Actions noch nicht auflösen
-            // (PlayerInput aktiviert Actions erst in OnEnable)
-            if (_playerInput == null)
-            {
-                _playerInput = GetComponent<PlayerInput>();
-            }
-
-            if (_playerInput == null)
-            {
-                Debug.LogError($"[PlayerInputProvider] PlayerInput-Komponente fehlt auf '{gameObject.name}'!");
-                enabled = false;
-            }
-        }
-
-        private void Start()
-        {
-            // Actions erst in Start() auflösen, damit PlayerInput.OnEnable() bereits gelaufen ist
-            InitializeInputSystem();
-        }
-
         private void OnEnable()
         {
-            SubscribeEvents();
+            if (_inputActions == null)
+            {
+                Debug.LogError($"[PlayerInputProvider] InputActionAsset fehlt auf '{gameObject.name}'!");
+                enabled = false;
+                return;
+            }
+
+            _actionMap = _inputActions.FindActionMap(_actionMapName);
+            if (_actionMap == null)
+            {
+                Debug.LogError($"[PlayerInputProvider] ActionMap '{_actionMapName}' nicht gefunden!");
+                enabled = false;
+                return;
+            }
+
+            _moveAction = _actionMap.FindAction("Move");
+            _lookAction = _actionMap.FindAction("Look");
+            _jumpAction = _actionMap.FindAction("Jump");
+            _sprintAction = _actionMap.FindAction("Sprint");
+            _dashAction = _actionMap.FindAction("Dash");
+
+            if (_moveAction == null)
+                Debug.LogError($"[PlayerInputProvider] Move-Action nicht in ActionMap '{_actionMapName}'!");
+
+            if (_jumpAction != null) _jumpAction.started += OnJumpStarted;
+            if (_dashAction != null) _dashAction.started += OnDashStarted;
+
+            _actionMap.Enable();
         }
 
         private void OnDisable()
         {
-            UnsubscribeEvents();
+            if (_jumpAction != null) _jumpAction.started -= OnJumpStarted;
+            if (_dashAction != null) _dashAction.started -= OnDashStarted;
+
+            _actionMap?.Disable();
         }
 
         #endregion
@@ -122,46 +123,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         private void OnDashStarted(InputAction.CallbackContext context)
         {
             _dashStarted = true;
-        }
-
-        private void SubscribeEvents()
-        {
-            if (_jumpAction != null) _jumpAction.started += OnJumpStarted;
-            if (_dashAction != null) _dashAction.started += OnDashStarted;
-        }
-
-        private void UnsubscribeEvents()
-        {
-            if (_jumpAction != null) _jumpAction.started -= OnJumpStarted;
-            if (_dashAction != null) _dashAction.started -= OnDashStarted;
-        }
-
-        #endregion
-
-        #region Input System
-
-        private void InitializeInputSystem()
-        {
-            if (_playerInput == null || _playerInput.actions == null)
-            {
-                Debug.LogError($"[PlayerInputProvider] PlayerInput oder Actions Asset fehlt auf '{gameObject.name}'!");
-                enabled = false;
-                return;
-            }
-
-            _moveAction = _playerInput.actions.FindAction(_moveActionName);
-            _lookAction = _playerInput.actions.FindAction(_lookActionName);
-            _jumpAction = _playerInput.actions.FindAction(_jumpActionName);
-            _sprintAction = _playerInput.actions.FindAction(_sprintActionName);
-            _dashAction = _playerInput.actions.FindAction(_dashActionName);
-
-            if (_moveAction == null)
-            {
-                Debug.LogError($"[PlayerInputProvider] Move-Action '{_moveActionName}' nicht gefunden!");
-            }
-
-            // Event-Callbacks registrieren (OnEnable lief vor Start, Actions waren null)
-            SubscribeEvents();
         }
 
         #endregion

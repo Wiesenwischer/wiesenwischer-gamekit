@@ -80,19 +80,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 pcSo.ApplyModifiedProperties();
             }
 
-            // PlayerInput (Unity Input System)
-            var playerInput = root.AddComponent<PlayerInput>();
+            // PlayerInputProvider (arbeitet direkt mit InputActionAsset, kein PlayerInput-Component)
+            var inputProvider = root.AddComponent<PlayerInputProvider>();
             if (inputActions != null)
             {
-                playerInput.actions = inputActions;
-                playerInput.notificationBehavior = PlayerNotifications.InvokeCSharpEvents;
+                var ipSo = new SerializedObject(inputProvider);
+                ipSo.FindProperty("_inputActions").objectReferenceValue = inputActions;
+                ipSo.ApplyModifiedProperties();
             }
-
-            // PlayerInputProvider
-            var inputProvider = root.AddComponent<PlayerInputProvider>();
-            var ipSo = new SerializedObject(inputProvider);
-            ipSo.FindProperty("_playerInput").objectReferenceValue = playerInput;
-            ipSo.ApplyModifiedProperties();
 
             // === Character Model (Child) ===
             var model = (GameObject)PrefabUtility.InstantiatePrefab(characterModel);
