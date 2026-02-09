@@ -5,28 +5,25 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera
 {
     /// <summary>
     /// Verbindet das Unity Input System mit der ThirdPersonCamera.
+    /// Arbeitet direkt mit dem InputActionAsset — ohne PlayerInput-Component.
     /// </summary>
     [RequireComponent(typeof(ThirdPersonCamera))]
     public class CameraInputHandler : MonoBehaviour
     {
-        [Header("Input Settings")]
-        [Tooltip("Input Action für Kamera-Rotation (Look)")]
-        [SerializeField] private InputActionReference _lookAction;
+        [Header("Input Actions")]
+        [SerializeField] private InputActionAsset _inputActions;
+        [SerializeField] private string _actionMapName = "Player";
+        [SerializeField] private string _lookActionName = "Look";
+        [SerializeField] private string _zoomActionName = "ScrollWheel";
 
-        [Tooltip("Input Action für Zoom (ScrollWheel)")]
-        [SerializeField] private InputActionReference _zoomAction;
-
-        [Header("Mouse Settings")]
-        [Tooltip("Skalierung für Maus-Input")]
+        [Header("Sensitivity")]
         [SerializeField] private float _mouseScale = 0.1f;
-
-        [Tooltip("Skalierung für Gamepad-Input")]
         [SerializeField] private float _gamepadScale = 3f;
 
         private ThirdPersonCamera _camera;
-        private PlayerInput _playerInput;
-        private InputAction _lookInputAction;
-        private InputAction _zoomInputAction;
+        private InputActionMap _actionMap;
+        private InputAction _lookAction;
+        private InputAction _zoomAction;
         private bool _isGamepad;
 
         #region Unity Callbacks
@@ -38,123 +35,66 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera
 
         private void OnEnable()
         {
-            SetupInputActions();
-        }
-
-        private void OnDisable()
-        {
-            CleanupInputActions();
-        }
-
-        private void Update()
-        {
-            ReadInput();
-        }
-
-        #endregion
-
-        #region Input Setup
-
-        private void SetupInputActions()
-        {
-            // Versuche InputActions von Reference zu bekommen
-            if (_lookAction != null)
+            if (_inputActions == null)
             {
-                _lookInputAction = _lookAction.action;
-                _lookInputAction?.Enable();
+                Debug.LogWarning($"[CameraInputHandler] InputActionAsset fehlt auf '{gameObject.name}'!");
+                return;
             }
 
-            if (_zoomAction != null)
+            _actionMap = _inputActions.FindActionMap(_actionMapName);
+            if (_actionMap == null)
             {
-                _zoomInputAction = _zoomAction.action;
-                _zoomInputAction?.Enable();
+                Debug.LogError($"[CameraInputHandler] ActionMap '{_actionMapName}' nicht gefunden!");
+                return;
             }
 
-            // Fallback: Suche PlayerInput Component
-            if (_lookInputAction == null)
-            {
-                _playerInput = FindObjectOfType<PlayerInput>();
-                if (_playerInput != null)
-                {
-                    _lookInputAction = _playerInput.actions?.FindAction("Look");
-                    _zoomInputAction = _playerInput.actions?.FindAction("ScrollWheel");
-                }
-            }
+            _lookAction = _actionMap.FindAction(_lookActionName);
+            _zoomAction = _actionMap.FindAction(_zoomActionName);
 
-            // Registriere für Device-Changes
+            _actionMap.Enable();
+
             InputSystem.onDeviceChange += OnDeviceChange;
             UpdateCurrentDevice();
         }
 
-        private void CleanupInputActions()
+        private void OnDisable()
         {
             InputSystem.onDeviceChange -= OnDeviceChange;
+            _actionMap?.Disable();
         }
 
-        private void OnDeviceChange(InputDevice device, InputDeviceChange change)
-        {
-            if (change == InputDeviceChange.UsageChanged)
-            {
-                UpdateCurrentDevice();
-            }
-        }
-
-        private void UpdateCurrentDevice()
-        {
-            // Prüfe ob Gamepad aktiv ist
-            _isGamepad = Gamepad.current != null && Gamepad.current.wasUpdatedThisFrame;
-        }
-
-        #endregion
-
-        #region Input Reading
-
-        private void ReadInput()
+        private void Update()
         {
             if (_camera == null) return;
 
-            // Look Input
-            Vector2 lookInput = Vector2.zero;
-            if (_lookInputAction != null)
-            {
-                lookInput = _lookInputAction.ReadValue<Vector2>();
-            }
-
-            // Skaliere Input je nach Device
+            // Look
+            Vector2 lookInput = _lookAction?.ReadValue<Vector2>() ?? Vector2.zero;
             float scale = _isGamepad ? _gamepadScale : _mouseScale;
-            lookInput *= scale;
+            _camera.SetRotationInput(lookInput * scale);
 
-            _camera.SetRotationInput(lookInput);
-
-            // Zoom Input
+            // Zoom
             float zoomInput = 0f;
-            if (_zoomInputAction != null)
+            if (_zoomAction != null)
             {
-                Vector2 scrollValue = _zoomInputAction.ReadValue<Vector2>();
-                zoomInput = scrollValue.y * 0.1f; // Normalisiere Scroll-Werte
+                Vector2 scrollValue = _zoomAction.ReadValue<Vector2>();
+                zoomInput = scrollValue.y * 0.1f;
             }
-
             _camera.SetZoomInput(zoomInput);
         }
 
         #endregion
 
-        #region Public Methods
+        #region Device Detection
 
-        /// <summary>
-        /// Setzt die Look-Action manuell.
-        /// </summary>
-        public void SetLookAction(InputAction action)
+        private void OnDeviceChange(InputDevice device, InputDeviceChange change)
         {
-            _lookInputAction = action;
+            if (change == InputDeviceChange.UsageChanged)
+                UpdateCurrentDevice();
         }
 
-        /// <summary>
-        /// Setzt die Zoom-Action manuell.
-        /// </summary>
-        public void SetZoomAction(InputAction action)
+        private void UpdateCurrentDevice()
         {
-            _zoomInputAction = action;
+            _isGamepad = Gamepad.current != null && Gamepad.current.wasUpdatedThisFrame;
         }
 
         #endregion

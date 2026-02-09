@@ -5,7 +5,8 @@
         "Wiesenwischer.GameKit.CharacterController.Camera.Runtime",
         "Wiesenwischer.GameKit.CharacterController.Core.Runtime",
         "Unity.Cinemachine",
-        "Unity.Cinemachine.Editor"
+        "Unity.Cinemachine.Editor",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"
