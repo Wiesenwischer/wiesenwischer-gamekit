@@ -59,11 +59,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             _groundDetectionModule = new GroundDetectionModule();
             _gravityModule = new GravityModule();
 
-            // Module initialisieren
-            _gravityModule = new GravityModule();
-            _accelerationModule = new AccelerationModule();
-            _groundDetectionModule = new GroundDetectionModule();
-
             // Registriere uns als Controller beim Motor
             _motor.CharacterController = this;
 
@@ -158,7 +153,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void UpdateVelocity(ref Vector3 currentVelocity, float deltaTime)
         {
-<<<<<<< HEAD
             // === HORIZONTAL ===
             // Zwei Quellen je nach Situation:
             // - Am Boden: Motor's BaseVelocity (respektiert Wand-Kollisionen, Slope-Magnitude)
@@ -191,32 +185,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                 _transform.forward,
                 _config.WalkSpeed,
                 _currentInput.SpeedModifier);
-=======
-            // Horizontale Bewegung (via AccelerationModule)
-            Vector3 targetHorizontal = _accelerationModule.CalculateTargetVelocity(
-                _currentInput.MoveDirection,
-                _currentInput.LookDirection,
-                _transform.forward,
-                _config.WalkSpeed,
-                _currentInput.SpeedModifier);
-
-            _horizontalVelocity = _accelerationModule.CalculateHorizontalVelocity(
-                _horizontalVelocity,
-                targetHorizontal,
-                _config.Acceleration,
-                _config.Deceleration,
-                _config.AirControl,
-                _motor.GroundingStatus.IsStableOnGround,
-                deltaTime);
-
-            // Vertikale Bewegung (via GravityModule)
-            _verticalVelocity = _gravityModule.CalculateVerticalVelocity(
-                _currentInput.VerticalVelocity,
-                _motor.GroundingStatus.IsStableOnGround,
-                _config.Gravity,
-                _config.MaxFallSpeed,
-                deltaTime);
->>>>>>> origin/main
 
             Vector3 newHorizontal = _accelerationModule.CalculateHorizontalVelocity(
                 currentHorizontal,
@@ -302,15 +270,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         {
             // Nach Ground Probing - hier haben wir den aktuellen Ground-State
             UpdateCachedGroundInfo();
-<<<<<<< HEAD
             // Ground Snapping wird in UpdateVelocity gehandhabt
-=======
-
-            // Ground Snapping via GravityModule
-            _verticalVelocity = _gravityModule.ApplyGroundSnapping(
-                _verticalVelocity,
-                _motor.GroundingStatus.IsStableOnGround);
->>>>>>> origin/main
         }
 
         public void AfterCharacterUpdate(float deltaTime)
