@@ -28,11 +28,11 @@ Den Unity Animator Controller vollständig konfigurieren:
 
 | # | Schritt | Commit-Message | Status |
 |---|---------|----------------|--------|
-| 2.1 | [Avatar Masks erstellen](2.1-avatar-masks.md) | `feat(phase-2): 2.1 Avatar Masks erstellen` | [ ] |
-| 2.2 | [Animator Controller erstellen](2.2-animator-controller.md) | `feat(phase-2): 2.2 Animator Controller erstellen` | [ ] |
-| 2.3 | [Locomotion Blend Tree](2.3-locomotion-blend-tree.md) | `feat(phase-2): 2.3 Locomotion Blend Tree` | [ ] |
-| 2.4 | [Airborne States](2.4-airborne-states.md) | `feat(phase-2): 2.4 Airborne States` | [ ] |
-| 2.5 | [Parameter-Bridge](2.5-parameter-bridge.md) | `feat(phase-2): 2.5 Parameter-Bridge` | [ ] |
+| 2.1 | [Avatar Masks erstellen](2.1-avatar-masks.md) | `feat(phase-2): 2.1 Avatar Masks erstellen` | [x] |
+| 2.2 | [Animator Controller erstellen](2.2-animator-controller.md) | `feat(phase-2): 2.2 Animator Controller erstellen` | [x] |
+| 2.3 | [Locomotion Blend Tree](2.3-locomotion-blend-tree.md) | `feat(phase-2): 2.3 Locomotion Blend Tree` | [x] |
+| 2.4 | [Airborne States](2.4-airborne-states.md) | `feat(phase-2): 2.4 Airborne States` | [x] |
+| 2.5 | [Parameter-Bridge](2.5-parameter-bridge.md) | `feat(phase-2): 2.5 Parameter-Bridge` | [x] |
 
 ---
 
