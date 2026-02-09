@@ -1,3 +1,10 @@
+---
+name: add-spec
+description: Neue Spezifikation analysieren, in Phasen aufteilen und in den Master-Implementierungsplan aufnehmen. Erkennt automatisch neue Spec-Dateien.
+disable-model-invocation: true
+argument-hint: "[docs/specs/MeineSpec.md]"
+---
+
 # Neue Spec analysieren und in den Plan aufnehmen
 
 Dieser Befehl nimmt eine Spezifikations-Datei entgegen, analysiert sie, teilt sie in Phasen auf und integriert sie in den Master-Implementierungsplan.

@@ -1,3 +1,9 @@
+---
+name: switch-phase
+description: Alle aktiven Phasen (Integration-Branches) anzeigen und zu einer anderen Phase wechseln. Behandelt uncommitted Changes sicher.
+disable-model-invocation: true
+---
+
 # Phase wechseln
 
 Dieser Befehl zeigt alle aktiven Phasen und wechselt zu einer anderen Phase.
