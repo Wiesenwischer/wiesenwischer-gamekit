@@ -65,7 +65,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
             // Öffentliche Felder direkt setzen
             motor.MaxStableSlopeAngle = 60f;
-            motor.StepHandling = CharacterMotor.StepHandlingMethod.Standard;
+            motor.StepHandling = StepHandlingMethod.Standard;
             motor.MaxStepHeight = 0.35f;
             motor.LedgeAndDenivelationHandling = true;
             motor.MaxStableDistanceFromLedge = 0.5f;
