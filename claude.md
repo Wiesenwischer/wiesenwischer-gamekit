@@ -150,10 +150,25 @@ Für die Implementierung stehen zwei Befehle zur Verfügung:
 
 ### 🌳 Branching-Modell
 
-Es wird **Trunk-Based Development** verwendet:
+Es wird **Trunk-Based Development** mit **Integration-Branches** verwendet:
 - `main` ist der **Hauptzweig** und ist **geschützt**
 - **Keine direkten Commits auf `main`** - alle Änderungen über Pull Requests
-- Feature-Branches sind kurzlebig (max. wenige Tage)
+- **Integration-Branches** (`integration/`) sind langlebige Branches pro Phase
+- **Feature-Branches** sind kurzlebig (max. 1 Tag) und gehen in den Integration-Branch
+
+### 📐 Branch-Hierarchie
+
+```
+main (geschützt, stabil)
+  └── integration/phase-10-cc-data-model (langlebig, Phase-Dauer)
+        ├── feat/cc-package-structure    → PR → integration-branch
+        ├── feat/cc-appearance-model     → PR → integration-branch
+        └── test/cc-data-model-tests     → PR → integration-branch
+                                              │
+                                   Phase fertig & getestet
+                                              │
+                                              └── PR → main
+```
 
 ### 📝 Branch-Namenskonventionen
 
@@ -161,11 +176,12 @@ Format: `<type>/<kurze-beschreibung>`
 
 | Typ | Verwendung | Beispiel |
 |-----|------------|----------|
-| `feature/` | Neue Funktionalität | `feature/jump-mechanics` |
+| `integration/` | Langlebiger Phase-Branch (Integrations-Basis) | `integration/phase-10-cc-data-model` |
+| `feat/` | Neue Funktionalität (kurzlebig) | `feat/cc-appearance-model` |
 | `fix/` | Bugfixes | `fix/ground-detection` |
 | `docs/` | Dokumentation | `docs/api-reference` |
 | `refactor/` | Code-Umbau ohne Funktionsänderung | `refactor/state-machine` |
-| `test/` | Tests hinzufügen/ändern | `test/movement-tests` |
+| `test/` | Tests hinzufügen/ändern | `test/cc-data-model-tests` |
 | `chore/` | Wartung, Config, CI/CD | `chore/release-drafter` |
 
 ### 🔁 Commit-Richtlinien
@@ -192,18 +208,28 @@ Format: `<type>/<kurze-beschreibung>`
 - Keine Claude-spezifischen Footer in Commit-Messages oder PRs
 - Breaking Changes mit `!` markieren: `feat!: Neue API`
 
-### 🚀 Feature-Implementierung Workflow
+### 🚀 Phase starten (Integration-Branch)
 
-1. **Branch erstellen**
+1. **Integration-Branch erstellen**
    ```bash
    git checkout main
    git pull origin main
-   git checkout -b feature/<name>
+   git checkout -b integration/phase-X-beschreibung
+   git push -u origin integration/phase-X-beschreibung
+   ```
+
+### 🔧 Schritt implementieren (Feature-Branch)
+
+1. **Feature-Branch vom Integration-Branch erstellen**
+   ```bash
+   git checkout integration/phase-X-beschreibung
+   git pull origin integration/phase-X-beschreibung
+   git checkout -b feat/<fachliche-beschreibung>
    ```
 
 2. **Entwickeln & Committen**
    - Kleine, atomare Commits
-   - Regelmäßig pushen
+   - Ein Branch = ein fachliches Thema (1-3 Schritte)
 
 3. **Kompilierung prüfen (PFLICHT)**
    - Unity Editor Logs auf Compiler-Fehler prüfen
@@ -214,22 +240,34 @@ Format: `<type>/<kurze-beschreibung>`
    powershell -Command "Get-Content 'C:\Users\marcu\AppData\Local\Unity\Editor\Editor.log' -Tail 100 | Select-String -Pattern 'error|CS\d{4}'"
    ```
 
-4. **Pull Request erstellen**
+4. **PR in Integration-Branch erstellen**
    ```bash
-   git push -u origin feature/<name>
-   gh pr create --title "feat: <Beschreibung>" --body "..."
+   git push -u origin feat/<fachliche-beschreibung>
+   gh pr create --base integration/phase-X-beschreibung --title "feat: <Beschreibung>" --body "..."
    ```
-
-4. **PR-Titel für Release Drafter**
-   - Muss mit Conventional Commit Prefix beginnen
-   - Beispiel: `feat: Implementiere Jump-Mechanik`
+   - PR-Titel mit Conventional Commit Prefix
    - Labels werden automatisch gesetzt (Autolabeler)
 
-5. **Nach Merge**
+5. **Nach Merge in Integration-Branch**
+   ```bash
+   git checkout integration/phase-X-beschreibung
+   git pull origin integration/phase-X-beschreibung
+   git branch -d feat/<fachliche-beschreibung>
+   ```
+
+### ✅ Phase abschließen
+
+1. **PR von Integration-Branch → main erstellen**
+   ```bash
+   gh pr create --base main --title "feat: Phase X - <Beschreibung>" --body "..."
+   ```
+2. **Nach Review: Merge in main**
+3. **Integration-Branch löschen**
    ```bash
    git checkout main
    git pull origin main
-   git branch -d feature/<name>
+   git branch -d integration/phase-X-beschreibung
+   git push origin --delete integration/phase-X-beschreibung
    ```
 
 ### 🏷️ PR Labels (für Release Notes)
