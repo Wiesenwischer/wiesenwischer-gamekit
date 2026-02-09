@@ -4,16 +4,37 @@ Dieser Befehl findet die nächste Phase, die noch nicht detailliert ausgearbeite
 
 ## Anweisungen
 
-### 1. Implementierungsübersicht lesen
+### 1. Master-Plan lesen
 
 Lies die Datei `docs/implementation/README.md` und identifiziere:
-- Welche Phasen existieren
-- Welche Phasen bereits Ordner mit detaillierten Schritt-Dokumenten haben
-- Welche Phase als nächstes ausgearbeitet werden muss
+- Alle Epics und ihre Phasen
+- Welche Phasen als `✅` (ausgearbeitet) und welche als `❌` (nicht ausgearbeitet) markiert sind
+- Welche Phasen als `Offen`, `In Arbeit` oder `Abgeschlossen` markiert sind
+- Abhängigkeiten zwischen Phasen (siehe Abhängigkeiten-Diagramm)
 
-### 2. Phase-Ordner prüfen
+### 2. Kandidaten ermitteln
 
-Für jede Phase prüfen ob der Ordner existiert und vollständig ist:
+Eine Phase kommt als nächste in Frage wenn:
+- Sie als `❌` (nicht ausgearbeitet) markiert ist
+- Alle ihre Abhängigkeiten (vorherige Phasen) bereits ausgearbeitet ODER abgeschlossen sind
+- Sie nicht bereits in Arbeit ist
+
+**WICHTIG:** Die Epics haben keine feste Reihenfolge. Es können Phasen aus verschiedenen Epics gleichzeitig als Kandidat in Frage kommen.
+
+### 3. User wählen lassen
+
+Falls mehrere Phasen als Kandidat in Frage kommen:
+- Zeige dem User die Kandidaten gruppiert nach Epic
+- Für jeden Kandidaten: Phase-Nummer, Name, Epic-Zugehörigkeit
+- Frage den User welche Phase ausgearbeitet werden soll
+- Empfehle eine Phase basierend auf Abhängigkeiten und Vollständigkeit des Epics
+
+Falls nur eine Phase in Frage kommt:
+- Informiere den User und fahre direkt fort
+
+### 4. Phase-Ordner prüfen
+
+Für die gewählte Phase prüfen ob bereits Dateien existieren:
 ```
 docs/implementation/phase-X-*/
 ├── README.md           # Phase-Übersicht
@@ -23,40 +44,74 @@ docs/implementation/phase-X-*/
 ```
 
 Eine Phase gilt als **nicht ausgearbeitet** wenn:
-- Der Ordner leer ist (nur Ordner existiert)
+- Der Ordner nicht existiert
+- Der Ordner leer ist
 - README.md fehlt
 - Schritt-Dateien fehlen
 
-### 3. Nächste Phase identifizieren
-
-Finde die erste Phase (nach Nummer sortiert), die nicht vollständig ausgearbeitet ist.
-
-### 4. Bestehende Spezifikationen lesen (PFLICHT)
+### 5. Bestehende Spezifikationen lesen (PFLICHT)
 
 Bevor die Phase ausgearbeitet wird:
-- Lies die in `docs/implementation/README.md` verlinkten Spezifikationen für diese Phase
+- Lies die im Master-Plan verlinkten Spezifikationen für diese Phase und das zugehörige Epic
+- Lies die Haupt-Spezifikation des Epics (falls vorhanden)
 - Lies weitere relevante Spezifikationen in `docs/specs/`
 - Verstehe die Architektur und bestehenden Code
 - Prüfe Abhängigkeiten zu vorherigen Phasen
 
 **WICHTIG:** Die Spezifikationen sind bindend. Die Phase-Dokumentation muss den Spezifikationen entsprechen.
 
-### 5. Phase-Dokumentation erstellen
+### 5b. Impact-Analyse auf aktive Phasen
+
+Prüfe ob die neue Phase Auswirkungen auf **bereits ausgearbeitete oder in Arbeit befindliche Phasen** hat.
+
+**Prüfschritte:**
+1. Identifiziere alle Phasen mit Status `In Arbeit` oder `Offen` + `✅ Ausgearbeitet`
+2. Lies deren Detail-Dokumentation (README.md + Schritt-Dateien)
+3. Prüfe ob die neue Phase:
+   - Interfaces/Klassen erweitert, die in einer aktiven Phase definiert werden
+   - Neue Anforderungen an bestehende Komponenten stellt
+   - Architektur-Entscheidungen beeinflusst, die in einer aktiven Phase getroffen wurden
+
+**Falls Auswirkungen gefunden werden:**
+
+1. **Impact Note in der aktiven Phase hinterlegen**
+   - In der README.md der betroffenen Phase einen `## Impact Notes` Abschnitt ergänzen (falls noch nicht vorhanden)
+   - Format:
+     ```markdown
+     ## Impact Notes
+
+     > **Phase Y (Name)** — [Kurzbeschreibung der Auswirkung]
+     > Betrifft: [Datei/Interface/Klasse]
+     > Aktion: Wird in Phase Y, Schritt Y.1 adressiert
+     ```
+
+2. **Adaptierungsschritt in der neuen Phase einplanen**
+   - Falls die neue Phase Änderungen an bestehenden Interfaces/Klassen braucht, einen expliziten Schritt am Anfang der Phase einplanen (z.B. "X.1 Interface-Erweiterung aus Phase Z")
+   - Dieser Schritt dokumentiert exakt welche Anpassungen nötig sind
+
+3. **User warnen bei kritischen Auswirkungen**
+   - Falls eine Auswirkung bereits implementierte Schritte brechen könnte → User explizit warnen
+   - Empfehlung geben: Erst aktive Phase abschließen, oder Anpassung jetzt einbauen
+
+**Falls keine Auswirkungen:** Weiter mit Schritt 6.
+
+### 6. Phase-Dokumentation erstellen
 
 Erstelle für die Phase:
 
 **README.md** mit:
-- Branch-Name
-- Abhängigkeiten
-- Geschätzte Dauer
+- Integration-Branch-Name (Format: `integration/phase-X-beschreibung`)
+- Epic-Zugehörigkeit
+- Abhängigkeiten (welche Phasen müssen vorher abgeschlossen sein)
 - Ziel der Phase
-- Tabelle aller Schritte mit Commit-Messages
+- Tabelle aller Schritte mit Commit-Messages und empfohlenem Feature-Branch-Typ
 - Voraussetzungen
 - Erwartetes Ergebnis
-- Link zur nächsten Phase
+- Link zur nächsten Phase im selben Epic
 
 **Für jeden Schritt eine eigene Datei** mit:
 - Commit-Message
+- Empfohlener Branch-Name und -Typ (z.B. `feat/cc-appearance-model`)
 - Ziel des Schritts
 - Detaillierte Anweisungen
 - Code-Beispiele (falls relevant)
@@ -64,21 +119,28 @@ Erstelle für die Phase:
 - Erwartete Dateien nach dem Schritt
 - Link zum nächsten Schritt
 
-### 6. Offene Fragen klären
+**Hinweis zum Branch-Modell:**
+- Die Phase hat einen langlebigen `integration/`-Branch
+- Jeder Schritt (oder 2-3 zusammengehörige Schritte) bekommt einen kurzlebigen Feature-Branch
+- Feature-Branches gehen per PR in den Integration-Branch
+- Am Phase-Ende geht der Integration-Branch per PR in main
+
+### 7. Offene Fragen klären
 
 Falls Unklarheiten bestehen:
 - Liste die offenen Punkte auf
 - Frage den User nach Klärung
 - Warte auf Antwort bevor die Dokumentation finalisiert wird
 
-### 7. Ausarbeitungsstatus aktualisieren
+### 8. Ausarbeitungsstatus aktualisieren
 
 In `docs/implementation/README.md`:
 - In der Phasen-Übersicht Tabelle: `❌` → `✅` für "Ausgearbeitet"
-- Bei der Phase selbst: `**Ausgearbeitet:** ❌ Nein` → `**Ausgearbeitet:** ✅ Ja`
+- In der Phasen-Übersicht Tabelle: `—` → `[Features](phase-X-.../README.md)` für die Features-Spalte
+- Bei der Phase selbst: `**Ausgearbeitet:** ❌ Nein` → `**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-X-.../README.md)`
 - Schritte mit Links versehen: `- [ ] X.Y Name` → `- [ ] [X.Y Name](phase-X-.../X.Y-name.md)`
 
-### 8. Commit erstellen
+### 9. Commit erstellen
 
 Nach Erstellung der Dokumentation:
 ```bash
@@ -88,16 +150,44 @@ git commit -m "docs: Arbeite Phase X aus - [Phasen-Name]"
 
 **WICHTIG:** Kein Claude-Footer in der Commit-Message!
 
-## Beispiel-Ausgabe
+## Beispiel-Ausgaben
+
+### Beispiel 1: Ohne Auswirkungen
 
 ```
-Phase 2 (Animator Setup) ist die nächste nicht-ausgearbeitete Phase.
+Nicht-ausgearbeitete Phasen mit erfüllten Abhängigkeiten:
 
-Erstelle Dokumentation für:
-- docs/implementation/phase-2-animator-setup/README.md
-- docs/implementation/phase-2-animator-setup/2.1-avatar-masks.md
-- docs/implementation/phase-2-animator-setup/2.2-animator-controller.md
-- docs/implementation/phase-2-animator-setup/2.3-locomotion-blend-tree.md
-- docs/implementation/phase-2-animator-setup/2.4-airborne-states.md
-- docs/implementation/phase-2-animator-setup/2.5-parameter-bridge.md
+Epic "Character Creator & Ausrüstung":
+  → Phase 10: CC Core Data Model & Catalogs (keine Abhängigkeiten)
+
+Welche Phase soll ausgearbeitet werden?
+→ Phase 10
+
+Impact-Analyse: Keine Auswirkungen auf aktive Phasen.
+
+Erstelle Dokumentation für Phase 10: CC Core Data Model & Catalogs
+- docs/implementation/phase-10-cc-data-model/README.md
+- docs/implementation/phase-10-cc-data-model/10.1-package-structure.md
+- ...
+```
+
+### Beispiel 2: Mit Auswirkungen auf aktive Phase
+
+```
+Ausarbeitung: Phase 4 (Ability System)
+
+Impact-Analyse:
+  ⚠ Phase 3 (Animation-Integration, ✅ ausgearbeitet, Status: Offen)
+    Auswirkung: IAnimationController braucht neue Methode PlayAbilityAnimation(string)
+    Betrifft: IAnimationController.cs (definiert in Phase 3, Schritt 3.1)
+    → Adaptierungsschritt 4.1 eingeplant: "IAnimationController um Ability-Methoden erweitern"
+    → Impact Note in Phase 3 README hinterlegt
+
+Keine kritischen Konflikte (Phase 3 noch nicht implementiert).
+
+Erstelle Dokumentation für Phase 4: Ability System
+- docs/implementation/phase-4-ability-system/README.md
+- docs/implementation/phase-4-ability-system/4.1-animation-interface-extension.md
+- docs/implementation/phase-4-ability-system/4.2-iability-interface.md
+- ...
 ```
