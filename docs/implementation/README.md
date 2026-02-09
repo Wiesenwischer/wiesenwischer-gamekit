@@ -41,7 +41,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 | Phase | Epic | Name | Features | Ausgearbeitet | Status |
 |-------|------|------|----------|---------------|--------|
-| 1 | Animation | Animation-Vorbereitung | [Features](phase-1-animation-prep/README.md) | ✅ | Offen |
+| 1 | Animation | Animation-Vorbereitung | [Features](phase-1-animation-prep/README.md) | ✅ | Abgeschlossen |
 | 2 | Animation | Animator Setup | [Features](phase-2-animator-setup/README.md) | ✅ | Offen |
 | 3 | Animation | Animation-Integration | [Features](phase-3-animation-integration/README.md) | ✅ | Offen |
 | 4 | Combat | Ability System | — | ❌ | Offen |
@@ -108,10 +108,10 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 **Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-1-animation-prep/README.md)
 
 **Schritte:**
-- [ ] [1.1 Character Asset beschaffen](phase-1-animation-prep/1.1-character-asset.md)
-- [ ] [1.2 Character in Unity importieren](phase-1-animation-prep/1.2-import-character.md)
-- [ ] [1.3 Basis-Animationen beschaffen](phase-1-animation-prep/1.3-animations.md)
-- [ ] [1.4 Animation Package Struktur](phase-1-animation-prep/1.4-package-structure.md)
+- [x] [1.1 Character Asset beschaffen](phase-1-animation-prep/1.1-character-asset.md)
+- [x] [1.2 Character in Unity importieren](phase-1-animation-prep/1.2-import-character.md)
+- [x] [1.3 Basis-Animationen beschaffen](phase-1-animation-prep/1.3-animations.md)
+- [x] [1.4 Animation Package Struktur](phase-1-animation-prep/1.4-package-structure.md)
 
 ---
 

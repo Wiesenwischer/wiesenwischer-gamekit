@@ -19,10 +19,10 @@ Alle Assets und Strukturen vorbereiten, die für die Animation benötigt werden:
 
 | # | Schritt | Commit-Message | Status |
 |---|---------|----------------|--------|
-| 1.1 | [Character Asset beschaffen](1.1-character-asset.md) | `feat(phase-1): 1.1 Character Asset beschaffen` | [ ] |
-| 1.2 | [Character importieren](1.2-import-character.md) | `feat(phase-1): 1.2 Character in Unity importieren` | [ ] |
-| 1.3 | [Animationen beschaffen](1.3-animations.md) | `feat(phase-1): 1.3 Basis-Animationen beschaffen` | [ ] |
-| 1.4 | [Package Struktur](1.4-package-structure.md) | `feat(phase-1): 1.4 Animation Package Struktur` | [ ] |
+| 1.1 | [Character Asset beschaffen](1.1-character-asset.md) | `feat(phase-1): 1.1 Character Asset beschaffen` | [x] |
+| 1.2 | [Character importieren](1.2-import-character.md) | `feat(phase-1): 1.2 Character in Unity importieren` | [x] |
+| 1.3 | [Animationen beschaffen](1.3-animations.md) | `feat(phase-1): 1.3 Basis-Animationen beschaffen` | [x] |
+| 1.4 | [Package Struktur](1.4-package-structure.md) | `feat(phase-1): 1.4 Animation Package Struktur` | [x] |
 
 ---
 
@@ -37,10 +37,10 @@ Alle Assets und Strukturen vorbereiten, die für die Animation benötigt werden:
 ## Ergebnis
 
 Nach Abschluss dieser Phase:
-- [ ] Character FBX in `Assets/Characters/`
-- [ ] Avatar korrekt konfiguriert (Humanoid)
-- [ ] Alle Animationen in `Assets/Animations/`
-- [ ] Animation Package unter `Packages/...Animation/`
+- [x] Character FBX in `Assets/Characters/`
+- [x] Avatar korrekt konfiguriert (Humanoid)
+- [x] Alle Animationen in `Assets/Animations/`
+- [x] Animation Package unter `Packages/...Animation/`
 
 ---
 
