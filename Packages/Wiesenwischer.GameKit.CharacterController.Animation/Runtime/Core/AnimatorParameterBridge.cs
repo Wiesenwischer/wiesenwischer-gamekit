@@ -18,6 +18,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         [SerializeField] private float _verticalVelocityDampTime = 0.05f;
 
         private Animator _animator;
+        private bool _isValid;
 
         private void Awake()
         {
@@ -27,11 +28,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 _playerController = GetComponentInParent<PlayerController>();
         }
 
+        private void OnEnable()
+        {
+            ValidateSetup();
+        }
+
         private void LateUpdate()
         {
-            if (_playerController == null || _animator == null) return;
+            if (!_isValid) return;
 
             UpdateParameters();
+        }
+
+        private void ValidateSetup()
+        {
+            _isValid = _animator != null
+                       && _animator.runtimeAnimatorController != null
+                       && _playerController != null;
+
+            if (_animator != null && _animator.runtimeAnimatorController == null)
+            {
+                Debug.LogWarning($"[AnimatorParameterBridge] Animator auf '{gameObject.name}' hat keinen Controller zugewiesen. " +
+                                 "Bitte Wizard erneut ausführen: Wiesenwischer > GameKit > Setup Character Controller");
+            }
         }
 
         private void UpdateParameters()
@@ -66,31 +85,37 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
 
         public void SetSpeed(float speed)
         {
+            if (!_isValid) return;
             _animator.SetFloat(AnimationParameters.SpeedHash, speed);
         }
 
         public void SetGrounded(bool isGrounded)
         {
+            if (!_isValid) return;
             _animator.SetBool(AnimationParameters.IsGroundedHash, isGrounded);
         }
 
         public void SetVerticalVelocity(float velocity)
         {
+            if (!_isValid) return;
             _animator.SetFloat(AnimationParameters.VerticalVelocityHash, velocity);
         }
 
         public void TriggerJump()
         {
+            if (!_isValid) return;
             _animator.SetTrigger(AnimationParameters.JumpHash);
         }
 
         public void TriggerLand()
         {
+            if (!_isValid) return;
             _animator.SetTrigger(AnimationParameters.LandHash);
         }
 
         public void SetAbilityLayerWeight(float weight)
         {
+            if (!_isValid) return;
             _animator.SetLayerWeight(AnimationParameters.AbilityLayerIndex, weight);
         }
 
@@ -98,12 +123,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
 
         public void TriggerLanding(bool isHardLanding)
         {
+            if (!_isValid) return;
             _animator.SetBool(AnimationParameters.HardLandingHash, isHardLanding);
             TriggerLand();
         }
 
         public void SetStatusLayerWeight(float weight)
         {
+            if (!_isValid) return;
             _animator.SetLayerWeight(AnimationParameters.StatusLayerIndex, weight);
         }
     }

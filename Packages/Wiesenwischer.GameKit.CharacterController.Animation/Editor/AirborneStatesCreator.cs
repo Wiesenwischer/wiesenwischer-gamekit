@@ -12,7 +12,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private const string ClipBasePath = "Assets/Animations/Locomotion/";
 
-        [MenuItem("Wiesenwischer/GameKit/Setup Airborne States")]
+        [MenuItem("Wiesenwischer/GameKit/Animation/Setup Airborne States", false, 102)]
         public static void SetupAirborneStates()
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
@@ -115,6 +115,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             t8.hasExitTime = false;
             t8.duration = 0.1f;
             t8.AddCondition(AnimatorConditionMode.If, 0, AnimationParameters.IsGroundedParam);
+
+            // 9. Fall → Locomotion (Safety-Net: IsGrounded ohne Land-Trigger, z.B. Treppen)
+            var t9 = fallState.AddTransition(locomotionState);
+            t9.hasExitTime = false;
+            t9.duration = 0.15f;
+            t9.AddCondition(AnimatorConditionMode.If, 0, AnimationParameters.IsGroundedParam);
 
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();

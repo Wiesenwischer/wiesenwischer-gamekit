@@ -23,7 +23,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         private const string OutputPath = "Assets/Prefabs/Player.prefab";
 
-        [MenuItem("Wiesenwischer/GameKit/Create Player Prefab")]
+        [MenuItem("Wiesenwischer/GameKit/Prefabs/Create Player Prefab", false, 200)]
         public static void CreatePlayerPrefab()
         {
             // Assets laden
@@ -89,7 +89,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             }
 
             // PlayerInputProvider
-            root.AddComponent<PlayerInputProvider>();
+            var inputProvider = root.AddComponent<PlayerInputProvider>();
+            var ipSo = new SerializedObject(inputProvider);
+            ipSo.FindProperty("_playerInput").objectReferenceValue = playerInput;
+            ipSo.ApplyModifiedProperties();
 
             // === Character Model (Child) ===
             var model = (GameObject)PrefabUtility.InstantiatePrefab(characterModel);
@@ -136,7 +139,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             }
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Create Player Prefab", true)]
+        [MenuItem("Wiesenwischer/GameKit/Prefabs/Create Player Prefab", true)]
         private static bool ValidateCreatePlayerPrefab()
         {
             return !Application.isPlaying;

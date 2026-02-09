@@ -12,7 +12,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private const string MaskPath =
             "Packages/Wiesenwischer.GameKit.CharacterController.Animation/Resources/AvatarMasks/";
 
-        [MenuItem("Wiesenwischer/GameKit/Create Animator Controller")]
+        [MenuItem("Wiesenwischer/GameKit/Animation/Create Animator Controller", false, 100)]
         public static void CreateController()
         {
             var controller = AnimatorController.CreateAnimatorControllerAtPath(
@@ -30,32 +30,41 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var upperBodyMask = AssetDatabase.LoadAssetAtPath<AvatarMask>(
                 MaskPath + "Mask_UpperBody.mask");
 
+            var controllerPath = ControllerPath + "CharacterAnimatorController.controller";
+
+            // Layer 1: Abilities
+            var abilityStateMachine = new AnimatorStateMachine { name = "Abilities" };
+            AssetDatabase.AddObjectToAsset(abilityStateMachine, controllerPath);
+
             var abilityLayer = new AnimatorControllerLayer
             {
                 name = "Abilities",
                 defaultWeight = 0f,
                 avatarMask = upperBodyMask,
                 blendingMode = AnimatorLayerBlendingMode.Override,
-                stateMachine = new AnimatorStateMachine()
+                stateMachine = abilityStateMachine
             };
 
-            var emptyState = abilityLayer.stateMachine.AddState("Empty");
-            abilityLayer.stateMachine.defaultState = emptyState;
+            var emptyState = abilityStateMachine.AddState("Empty");
+            abilityStateMachine.defaultState = emptyState;
 
             controller.AddLayer(abilityLayer);
 
             // Layer 2: Status (Full-Body Override für Stun, Knockback, Death)
+            var statusStateMachine = new AnimatorStateMachine { name = "Status" };
+            AssetDatabase.AddObjectToAsset(statusStateMachine, controllerPath);
+
             var statusLayer = new AnimatorControllerLayer
             {
                 name = "Status",
                 defaultWeight = 0f,
                 avatarMask = null,
                 blendingMode = AnimatorLayerBlendingMode.Override,
-                stateMachine = new AnimatorStateMachine()
+                stateMachine = statusStateMachine
             };
 
-            var statusEmptyState = statusLayer.stateMachine.AddState("Empty");
-            statusLayer.stateMachine.defaultState = statusEmptyState;
+            var statusEmptyState = statusStateMachine.AddState("Empty");
+            statusStateMachine.defaultState = statusEmptyState;
 
             controller.AddLayer(statusLayer);
 
