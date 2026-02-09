@@ -1,8 +1,9 @@
-namespace Wiesenwischer.GameKit.CharacterController.Animation
+namespace Wiesenwischer.GameKit.CharacterController.Core.Animation
 {
     /// <summary>
     /// Interface für Animation-Steuerung.
-    /// Abstrahiert den Zugriff auf den Animator.
+    /// Liegt im Core-Package, damit PlayerController und States darauf zugreifen können.
+    /// Implementierung liegt im Animation-Package (AnimatorParameterBridge).
     /// </summary>
     public interface IAnimationController
     {
@@ -30,6 +31,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         /// Triggert die Land-Animation.
         /// </summary>
         void TriggerLand();
+
+        /// <summary>
+        /// Setzt den HardLanding-Parameter und triggert die Land-Animation.
+        /// Kombiniert SetHardLanding + TriggerLand in einem Aufruf.
+        /// </summary>
+        void TriggerLanding(bool isHardLanding);
 
         /// <summary>
         /// Setzt das Gewicht des Ability-Layers (0-1).

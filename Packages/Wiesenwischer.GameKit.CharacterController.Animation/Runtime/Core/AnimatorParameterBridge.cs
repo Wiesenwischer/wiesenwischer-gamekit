@@ -1,5 +1,6 @@
 using UnityEngine;
 using Wiesenwischer.GameKit.CharacterController.Core;
+using Wiesenwischer.GameKit.CharacterController.Core.Animation;
 
 namespace Wiesenwischer.GameKit.CharacterController.Animation
 {
