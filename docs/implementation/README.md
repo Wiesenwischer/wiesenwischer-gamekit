@@ -139,7 +139,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 
 **Schritte:**
 - [x] [3.1 PlayerController Animation-Anbindung](phase-3-animation-integration/3.1-controller-binding.md)
-- [ ] [3.2 State Animation-Trigger](phase-3-animation-integration/3.2-state-animation-triggers.md)
+- [x] [3.2 State Animation-Trigger](phase-3-animation-integration/3.2-state-animation-triggers.md)
 - [ ] [3.3 Player Prefab zusammenbauen](phase-3-animation-integration/3.3-player-prefab.md)
 - [ ] [3.4 Test-Szene & Verifikation](phase-3-animation-integration/3.4-test-verification.md)
 

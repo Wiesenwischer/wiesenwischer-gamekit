@@ -30,7 +30,7 @@ Die in Phase 2 erstellte AnimatorParameterBridge und den Animator Controller mit
 | # | Schritt | Commit-Message | Branch-Typ | Status |
 |---|---------|----------------|------------|--------|
 | 3.1 | [PlayerController Animation-Anbindung](3.1-controller-binding.md) | `feat(phase-3): 3.1 PlayerController Animation-Anbindung` | `feat/animation-controller-binding` | [x] |
-| 3.2 | [State Animation-Trigger](3.2-state-animation-triggers.md) | `feat(phase-3): 3.2 State Animation-Trigger` | `feat/state-animation-triggers` | [ ] |
+| 3.2 | [State Animation-Trigger](3.2-state-animation-triggers.md) | `feat(phase-3): 3.2 State Animation-Trigger` | `feat/state-animation-triggers` | [x] |
 | 3.3 | [Player Prefab zusammenbauen](3.3-player-prefab.md) | `feat(phase-3): 3.3 Player Prefab zusammenbauen` | `feat/animated-player-prefab` | [ ] |
 | 3.4 | [Test-Szene & Verifikation](3.4-test-verification.md) | `test(phase-3): 3.4 Test-Szene und Verifikation` | `test/animation-integration` | [ ] |
 
