@@ -16,6 +16,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             base.OnEnter();
 
+            // Animation-Trigger (Soft Landing)
+            Player.AnimationController?.TriggerLanding(false);
+
             // Momentum bleibt erhalten: AirborneState konserviert den SpeedModifier
             // aus dem Grounded State (z.B. 2.0 von RunningState).
             // Kein Override nötig – OnUpdate() transitioniert sofort zum passenden State.
