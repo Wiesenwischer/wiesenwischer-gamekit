@@ -1,0 +1,19 @@
+{
+    "name": "Wiesenwischer.GameKit.CharacterController.Animation.Editor",
+    "rootNamespace": "Wiesenwischer.GameKit.CharacterController.Animation.Editor",
+    "references": [
+        "Wiesenwischer.GameKit.CharacterController.Animation.Runtime",
+        "Wiesenwischer.GameKit.CharacterController.Core.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
