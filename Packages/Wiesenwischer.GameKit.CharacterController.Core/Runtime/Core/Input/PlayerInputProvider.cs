@@ -80,19 +80,34 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
 
         private void Awake()
         {
+            // Nur Referenz auf PlayerInput finden, Actions noch nicht auflösen
+            // (PlayerInput aktiviert Actions erst in OnEnable)
+            if (_playerInput == null)
+            {
+                _playerInput = GetComponent<PlayerInput>();
+            }
+
+            if (_playerInput == null)
+            {
+                Debug.LogError($"[PlayerInputProvider] PlayerInput-Komponente fehlt auf '{gameObject.name}'!");
+                enabled = false;
+            }
+        }
+
+        private void Start()
+        {
+            // Actions erst in Start() auflösen, damit PlayerInput.OnEnable() bereits gelaufen ist
             InitializeInputSystem();
         }
 
         private void OnEnable()
         {
-            if (_jumpAction != null) _jumpAction.started += OnJumpStarted;
-            if (_dashAction != null) _dashAction.started += OnDashStarted;
+            SubscribeEvents();
         }
 
         private void OnDisable()
         {
-            if (_jumpAction != null) _jumpAction.started -= OnJumpStarted;
-            if (_dashAction != null) _dashAction.started -= OnDashStarted;
+            UnsubscribeEvents();
         }
 
         #endregion
@@ -109,27 +124,27 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             _dashStarted = true;
         }
 
+        private void SubscribeEvents()
+        {
+            if (_jumpAction != null) _jumpAction.started += OnJumpStarted;
+            if (_dashAction != null) _dashAction.started += OnDashStarted;
+        }
+
+        private void UnsubscribeEvents()
+        {
+            if (_jumpAction != null) _jumpAction.started -= OnJumpStarted;
+            if (_dashAction != null) _dashAction.started -= OnDashStarted;
+        }
+
         #endregion
 
         #region Input System
 
         private void InitializeInputSystem()
         {
-            if (_playerInput == null)
+            if (_playerInput == null || _playerInput.actions == null)
             {
-                _playerInput = GetComponent<PlayerInput>();
-            }
-
-            if (_playerInput == null)
-            {
-                Debug.LogError($"[PlayerInputProvider] PlayerInput-Komponente fehlt auf '{gameObject.name}'!");
-                enabled = false;
-                return;
-            }
-
-            if (_playerInput.actions == null)
-            {
-                Debug.LogError($"[PlayerInputProvider] Kein Actions Asset auf '{gameObject.name}'!");
+                Debug.LogError($"[PlayerInputProvider] PlayerInput oder Actions Asset fehlt auf '{gameObject.name}'!");
                 enabled = false;
                 return;
             }
@@ -139,6 +154,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             _jumpAction = _playerInput.actions.FindAction(_jumpActionName);
             _sprintAction = _playerInput.actions.FindAction(_sprintActionName);
             _dashAction = _playerInput.actions.FindAction(_dashActionName);
+
+            if (_moveAction == null)
+            {
+                Debug.LogError($"[PlayerInputProvider] Move-Action '{_moveActionName}' nicht gefunden!");
+            }
+
+            // Event-Callbacks registrieren (OnEnable lief vor Start, Actions waren null)
+            SubscribeEvents();
         }
 
         #endregion
