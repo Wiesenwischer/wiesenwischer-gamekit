@@ -123,7 +123,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [x] [2.1 Avatar Masks erstellen](phase-2-animator-setup/2.1-avatar-masks.md)
 - [x] [2.2 Animator Controller erstellen](phase-2-animator-setup/2.2-animator-controller.md)
 - [x] [2.3 Locomotion Blend Tree](phase-2-animator-setup/2.3-locomotion-blend-tree.md)
-- [ ] [2.4 Airborne States](phase-2-animator-setup/2.4-airborne-states.md)
+- [x] [2.4 Airborne States](phase-2-animator-setup/2.4-airborne-states.md)
 - [ ] [2.5 Parameter-Bridge](phase-2-animator-setup/2.5-parameter-bridge.md)
 
 ---
