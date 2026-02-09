@@ -18,7 +18,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             "Anim_Land"
         };
 
-        [MenuItem("Wiesenwischer/GameKit/Rename Animation Clips")]
+        [MenuItem("Wiesenwischer/GameKit/Animation/Rename Animation Clips", false, 104)]
         public static void RenameAllClips()
         {
             int renamed = 0;

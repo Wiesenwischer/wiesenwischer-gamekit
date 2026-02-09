@@ -13,7 +13,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private const string DemoScenePath = "Assets/Scenes/MovementTest.unity";
         private const string PrefabsPath = "Assets/Prefabs";
 
-        [MenuItem("Wiesenwischer/GameKit/Create Demo Scene", false, 100)]
+        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Demo Scene", false, 301)]
         public static void CreateDemoScene()
         {
             // Erstelle neue Szene
@@ -35,7 +35,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             Debug.Log($"[DemoSceneSetup] Demo-Szene erstellt: {DemoScenePath}");
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Create Terrain Demo Scene", false, 103)]
+        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Terrain Demo Scene", false, 302)]
         public static void CreateTerrainDemoScene()
         {
             // Erstelle neue Szene
@@ -147,7 +147,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             Debug.Log("[DemoSceneSetup] Test-Terrain erstellt mit verschiedenen Hangwinkeln: ~20°, ~45°, ~60°");
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Create Core Prefabs", false, 101)]
+        [MenuItem("Wiesenwischer/GameKit/Prefabs/Create Core Prefabs", false, 201)]
         public static void CreateCorePrefabs()
         {
             EnsureDirectoryExists(PrefabsPath);
@@ -487,7 +487,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         #region Default Config
 
-        [MenuItem("Wiesenwischer/GameKit/Create Default LocomotionConfig", false, 102)]
+        [MenuItem("Wiesenwischer/GameKit/Config/Create Default LocomotionConfig", false, 400)]
         public static void CreateDefaultLocomotionConfig()
         {
             EnsureDirectoryExists("Assets/Config");
@@ -504,7 +504,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         }
 
         // Backwards compatibility alias
-        [MenuItem("Wiesenwischer/GameKit/Create Default MovementConfig", false, 999)]
+        [MenuItem("Wiesenwischer/GameKit/Config/Create Default MovementConfig", false, 401)]
         public static void CreateDefaultMovementConfig()
         {
             CreateDefaultLocomotionConfig();
