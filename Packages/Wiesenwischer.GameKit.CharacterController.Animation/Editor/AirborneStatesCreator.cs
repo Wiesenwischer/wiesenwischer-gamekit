@@ -53,12 +53,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var softLandState = rootStateMachine.AddState("SoftLand");
             softLandState.motion = landClip;
             softLandState.writeDefaultValues = false;
+            softLandState.iKOnFeet = true;
 
             // HardLand verwendet denselben Land-Clip mit reduzierter Speed
             var hardLandState = rootStateMachine.AddState("HardLand");
             hardLandState.motion = landClip;
             hardLandState.speed = 0.6f;
             hardLandState.writeDefaultValues = false;
+            hardLandState.iKOnFeet = true;
 
             // Write Defaults auch für Locomotion deaktivieren
             locomotionState.writeDefaultValues = false;

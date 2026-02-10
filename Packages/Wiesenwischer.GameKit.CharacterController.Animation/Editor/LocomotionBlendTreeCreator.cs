@@ -51,6 +51,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var rootStateMachine = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
             var locomotionState = rootStateMachine.AddState("Locomotion");
             locomotionState.motion = blendTree;
+            locomotionState.iKOnFeet = true;
             rootStateMachine.defaultState = locomotionState;
 
             EditorUtility.SetDirty(controller);
