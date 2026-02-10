@@ -10,6 +10,8 @@
 **Character Pipeline:** Character Creator 5 (CC5)
 **Goal:** AAA-quality modular Character Platform + Equipment System
 
+**System Overview:** ![Character Platform System Overview](../CharactorCreator_System_Overview.png)
+
 ---
 
 ## 0. Executive Summary
