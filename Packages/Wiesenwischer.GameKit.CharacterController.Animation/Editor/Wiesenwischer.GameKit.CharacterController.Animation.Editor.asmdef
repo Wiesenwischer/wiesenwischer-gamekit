@@ -3,7 +3,8 @@
     "rootNamespace": "Wiesenwischer.GameKit.CharacterController.Animation.Editor",
     "references": [
         "Wiesenwischer.GameKit.CharacterController.Animation.Runtime",
-        "Wiesenwischer.GameKit.CharacterController.Core.Runtime"
+        "Wiesenwischer.GameKit.CharacterController.Core.Runtime",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

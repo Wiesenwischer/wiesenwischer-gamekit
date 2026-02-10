@@ -1,14 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git init:*)",
-      "Bash(git lfs install:*)",
-      "Bash(git commit:*)",
-      "Bash(git add:*)",
-      "Bash(git push)",
-      "Bash(gh api:*)",
-      "WebFetch(domain:opsive.com)",
-      "Bash(dir:*)"
+      "Edit",
+      "Write",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(cd *)",
+      "Bash(mkdir *)",
+      "Bash(rm *)",
+      "Bash(powershell *)",
+      "Bash(dir *)",
+      "Bash(ls *)",
+      "WebFetch"
     ]
   },
   "enabledMcpjsonServers": [

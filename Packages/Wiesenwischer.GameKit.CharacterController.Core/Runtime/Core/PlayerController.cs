@@ -1,4 +1,5 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Animation;
 using Wiesenwischer.GameKit.CharacterController.Core.Data;
 using Wiesenwischer.GameKit.CharacterController.Core.Input;
 using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
@@ -52,6 +53,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         /// <summary>Die Locomotion-Konfiguration.</summary>
         public LocomotionConfig LocomotionConfig => _config;
+
+        /// <summary>Der Animation Controller (optional, auf Child-Object).</summary>
+        public IAnimationController AnimationController { get; private set; }
 
         #endregion
 
@@ -191,6 +195,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             }
 
             ValidateLocomotionConfig();
+
+            InitializeAnimationController();
+        }
+
+        private void InitializeAnimationController()
+        {
+            AnimationController = GetComponentInChildren<IAnimationController>();
+
+            if (AnimationController == null)
+                Debug.LogWarning("[PlayerController] Kein IAnimationController gefunden. " +
+                                 "Animationen werden nicht abgespielt.");
         }
 
         private void ValidateLocomotionConfig()

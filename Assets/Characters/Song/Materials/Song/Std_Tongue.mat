@@ -55,15 +55,15 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GradientAOMap:
-        m_Texture: {fileID: 2800000, guid: 97b440bb97daa244d85b315b5b7d985c, type: 3}
+        m_Texture: {fileID: 2800000, guid: dc3a7a315364a6d4986f9adbc5c2d9b0, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MaskMap:
-        m_Texture: {fileID: 2800000, guid: debadc46c914705428bbca1b7edd1007, type: 3}
+        m_Texture: {fileID: 2800000, guid: 04845d75e529b0b4d9c8937f99a9a08d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MicroNormalMap:
-        m_Texture: {fileID: 2800000, guid: 5e8b8c0798ff6c04081d863d8d1b1979, type: 3}
+        m_Texture: {fileID: 2800000, guid: 00b7bec4aa43f15479d621e0d2259a49, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NormalMap:

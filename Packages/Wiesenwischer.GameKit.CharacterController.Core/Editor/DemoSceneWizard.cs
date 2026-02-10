@@ -17,7 +17,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private GUIStyle _pendingStyle;
         private bool _stylesInitialized;
 
-        [MenuItem("Wiesenwischer/GameKit/Demo Scene Wizard", false, 50)]
+        [MenuItem("Wiesenwischer/GameKit/Scenes/Demo Scene Wizard", false, 303)]
         public static void ShowWindow()
         {
             var window = GetWindow<DemoSceneWizard>("Demo Scene Wizard");

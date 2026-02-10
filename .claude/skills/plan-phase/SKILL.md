@@ -1,3 +1,9 @@
+---
+name: plan-phase
+description: Nächste nicht-ausgearbeitete Phase finden und detailliert ausarbeiten. Erstellt Phase-Ordner mit README und Schritt-Dateien.
+disable-model-invocation: true
+---
+
 # Nächste Phase ausarbeiten
 
 Dieser Befehl findet die nächste Phase, die noch nicht detailliert ausgearbeitet ist, und erstellt die vollständige Dokumentation dafür.

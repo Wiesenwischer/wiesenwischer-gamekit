@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
 {
@@ -9,6 +10,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
     public static class CameraSetupEditor
     {
         private const string ConfigPath = "Assets/Config/DefaultCameraConfig.asset";
+        private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
         [MenuItem("Wiesenwischer/GameKit/Camera/Setup Third Person Camera", false, 200)]
         public static void SetupThirdPersonCamera()
@@ -38,6 +40,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
             {
                 inputHandler = mainCamera.gameObject.AddComponent<CameraInputHandler>();
                 Debug.Log("[CameraSetup] CameraInputHandler Component hinzugefügt.");
+            }
+
+            // InputActionAsset zuweisen
+            var inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+            if (inputActions != null)
+            {
+                var inputSo = new SerializedObject(inputHandler);
+                inputSo.FindProperty("_inputActions").objectReferenceValue = inputActions;
+                inputSo.ApplyModifiedProperties();
+                Debug.Log("[CameraSetup] InputActionAsset zugewiesen.");
+            }
+            else
+            {
+                Debug.LogWarning($"[CameraSetup] InputActionAsset nicht gefunden: {InputActionsPath}");
             }
 
             // Suche oder erstelle CameraConfig

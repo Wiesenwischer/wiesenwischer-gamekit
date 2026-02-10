@@ -9,6 +9,14 @@
       },
       "hash": "286d0c6df1b8987820e2bce7c9281957c6c9e35f"
     },
+    "com.soupday.cc3_unity_tools": {
+      "version": "file:D:/CCIC_Auto_Setup_for_Unity/CCIC Auto Setup for Unity/Install in Unity/CCiC-Unity-Tools",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.collab-proxy": "1.14.12"
+      }
+    },
     "com.unity.burst": {
       "version": "1.8.21",
       "depth": 1,
@@ -272,6 +280,14 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"
+    },
+    "wiesenwischer.gamekit.charactercontroller.animation": {
+      "version": "file:Wiesenwischer.GameKit.CharacterController.Animation",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "wiesenwischer.gamekit.charactercontroller.core": "0.1.0"
+      }
     },
     "wiesenwischer.gamekit.charactercontroller.camera": {
       "version": "file:Wiesenwischer.GameKit.CharacterController.Camera",

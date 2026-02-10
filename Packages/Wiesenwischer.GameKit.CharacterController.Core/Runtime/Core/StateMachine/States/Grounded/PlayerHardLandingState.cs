@@ -21,6 +21,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             base.OnEnter();
 
+            // Animation-Trigger (Hard Landing)
+            Player.AnimationController?.TriggerLanding(true);
+
             _jumpBuffered = false;
 
             // Recovery-Zeit berechnen basierend auf Aufprallgeschwindigkeit

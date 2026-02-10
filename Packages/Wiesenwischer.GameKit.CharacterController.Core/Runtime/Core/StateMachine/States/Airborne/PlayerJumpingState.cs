@@ -29,6 +29,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             base.OnEnter();
 
+            // Animation-Trigger
+            Player.AnimationController?.TriggerJump();
+
             // Intent: Jump anmelden - CharacterLocomotion wendet den Impulse an
             ReusableData.JumpRequested = true;
             ReusableData.JumpButtonReleased = false;

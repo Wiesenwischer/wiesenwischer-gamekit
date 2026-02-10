@@ -12,7 +12,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private const string ClipBasePath = "Assets/Animations/Locomotion/";
 
-        [MenuItem("Wiesenwischer/GameKit/Setup Locomotion Blend Tree")]
+        [MenuItem("Wiesenwischer/GameKit/Animation/Setup Locomotion Blend Tree", false, 101)]
         public static void SetupLocomotionBlendTree()
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
@@ -51,6 +51,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var rootStateMachine = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
             var locomotionState = rootStateMachine.AddState("Locomotion");
             locomotionState.motion = blendTree;
+            locomotionState.iKOnFeet = true;
             rootStateMachine.defaultState = locomotionState;
 
             EditorUtility.SetDirty(controller);

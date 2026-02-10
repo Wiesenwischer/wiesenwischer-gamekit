@@ -232,7 +232,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         #region Menu Items
 
-        [MenuItem("Wiesenwischer/GameKit/Show Compile Log", false, 200)]
+        [MenuItem("Wiesenwischer/GameKit/Tools/Show Compile Log", false, 500)]
         public static void ShowCompileLog()
         {
             if (File.Exists(LogPath))
@@ -256,24 +256,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             }
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Force Recompile", false, 201)]
+        [MenuItem("Wiesenwischer/GameKit/Tools/Force Recompile", false, 501)]
         public static void ForceRecompile()
         {
             Debug.Log("[CompileWatcher] Requesting script compilation...");
             CompilationPipeline.RequestScriptCompilation();
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Toggle Console Logging", false, 202)]
+        [MenuItem("Wiesenwischer/GameKit/Tools/Toggle Console Logging", false, 502)]
         public static void ToggleConsoleLogging()
         {
             LogToConsole = !LogToConsole;
             Debug.Log($"[CompileWatcher] Console logging: {(LogToConsole ? "ON" : "OFF")}");
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Toggle Console Logging", true)]
+        [MenuItem("Wiesenwischer/GameKit/Tools/Toggle Console Logging", true)]
         public static bool ToggleConsoleLoggingValidate()
         {
-            Menu.SetChecked("Wiesenwischer/GameKit/Toggle Console Logging", LogToConsole);
+            Menu.SetChecked("Wiesenwischer/GameKit/Tools/Toggle Console Logging", LogToConsole);
             return true;
         }
 

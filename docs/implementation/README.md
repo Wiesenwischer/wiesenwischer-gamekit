@@ -42,7 +42,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | Phase | Epic | Name | Features | Ausgearbeitet | Status |
 |-------|------|------|----------|---------------|--------|
 | 1 | Animation | Animation-Vorbereitung | [Features](phase-1-animation-prep/README.md) | ✅ | Abgeschlossen |
-| 2 | Animation | Animator Setup | [Features](phase-2-animator-setup/README.md) | ✅ | Offen |
+| 2 | Animation | Animator Setup | [Features](phase-2-animator-setup/README.md) | ✅ | Abgeschlossen |
 | 3 | Animation | Animation-Integration | [Features](phase-3-animation-integration/README.md) | ✅ | Offen |
 | 4 | Combat | Ability System | — | ❌ | Offen |
 | 5 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
@@ -138,9 +138,9 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [GameKit CharacterController Modular](../specs/GameKit_CharacterController_Modular.md)
 
 **Schritte:**
-- [ ] [3.1 PlayerController Animation-Anbindung](phase-3-animation-integration/3.1-controller-binding.md)
-- [ ] [3.2 State Animation-Trigger](phase-3-animation-integration/3.2-state-animation-triggers.md)
-- [ ] [3.3 Player Prefab zusammenbauen](phase-3-animation-integration/3.3-player-prefab.md)
+- [x] [3.1 PlayerController Animation-Anbindung](phase-3-animation-integration/3.1-controller-binding.md)
+- [x] [3.2 State Animation-Trigger](phase-3-animation-integration/3.2-state-animation-triggers.md)
+- [x] [3.3 Player Prefab zusammenbauen](phase-3-animation-integration/3.3-player-prefab.md)
 - [ ] [3.4 Test-Szene & Verifikation](phase-3-animation-integration/3.4-test-verification.md)
 
 ---

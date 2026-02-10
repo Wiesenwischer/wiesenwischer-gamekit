@@ -22,6 +22,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
             // Step Detection aktivieren für Grounded States
             ReusableData.StepDetectionEnabled = true;
+
+            // Animator explizit informieren: wir sind am Boden
+            Player.AnimationController?.SetGrounded(true);
         }
 
         protected override void OnHandleInput()
