@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-5032274096847481184
+--- !u!114 &-5855289709113512288
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
@@ -70,11 +70,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _IDMap:
-        m_Texture: {fileID: 2800000, guid: b72746700cc845d498ec15e1899e1660, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3e270bddb314ba64da1e2e8ae5ecf711, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MaskMap:
-        m_Texture: {fileID: 2800000, guid: 73fc446210588c649a4ab604c32644b3, type: 3}
+        m_Texture: {fileID: 2800000, guid: 2681ff3301ef7ee4398f9ae2ec01e5a3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NormalMap:
@@ -82,11 +82,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _RootMap:
-        m_Texture: {fileID: 2800000, guid: 497deb208778c4f45837837cf38cd6ed, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0d46b8e1f2ff0c94997f3faf3dda04b3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SpecularMap:
-        m_Texture: {fileID: 2800000, guid: 26ff7dc34322da44fa2e2cd4a9e97259, type: 3}
+        m_Texture: {fileID: 2800000, guid: bbacdb8a5d1672f45993362f53f3beee, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - unity_Lightmaps:
@@ -189,12 +189,12 @@ Material:
     - _DoubleSidedConstants: {r: 1, g: 1, b: 1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _EmissiveColor: {r: 0, g: 0, b: 0, a: 0}
-    - _EndColor: {r: 0.7860137, g: 0.47561035, b: 0, a: 1}
+    - _EndColor: {r: 0.62858903, g: 0.49753284, b: 0.4325873, a: 1}
     - _HighlightAColor: {r: 0.75938094, g: 0.8904402, b: 0.99999994, a: 1}
-    - _HighlightADistribution: {r: 0.74710006, g: 0.8773001, b: 1, a: 0}
+    - _HighlightADistribution: {r: 0.8023, g: 0.90110004, b: 1, a: 0}
     - _HighlightBColor: {r: 0.75938094, g: 0.8904402, b: 0.99999994, a: 1}
-    - _HighlightBDistribution: {r: 0.8621, g: 0.9584001, b: 1, a: 0}
+    - _HighlightBDistribution: {r: 0.84830004, g: 0.9125001, b: 1, a: 0}
     - _RootColor: {r: 0.62858903, g: 0.49753284, b: 0.4325873, a: 1}
-    - _SpecularTint: {r: 1, g: 0.89607966, b: 0.76883185, a: 1}
+    - _SpecularTint: {r: 1, g: 0.930572, b: 0.89616656, a: 1}
     - _VertexBaseColor: {r: 0.99999994, g: 0.99999994, b: 0.99999994, a: 1}
   m_BuildTextureStacks: []

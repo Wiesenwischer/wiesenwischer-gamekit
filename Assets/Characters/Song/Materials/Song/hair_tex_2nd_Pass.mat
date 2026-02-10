@@ -182,7 +182,7 @@ Material:
     - _SpecularTint: {r: 1, g: 0.89607966, b: 0.76883185, a: 1}
     - _VertexBaseColor: {r: 0.99999994, g: 0.99999994, b: 0.99999994, a: 1}
   m_BuildTextureStacks: []
---- !u!114 &5145806183343452970
+--- !u!114 &1078390078683264240
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
