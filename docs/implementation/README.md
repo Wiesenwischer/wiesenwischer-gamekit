@@ -1,6 +1,6 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-09
+> **Letzte Aktualisierung:** 2026-02-10
 > **Status:** In Planung
 
 ---
@@ -28,12 +28,12 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 | Epic | Phasen | Status |
 |------|--------|--------|
-| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–3 | Offen |
+| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–3 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 4, 8 | Offen |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 5–6 | Offen |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 7 | Offen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 9 | Offen |
-| [Character Creator & Ausrüstung](#character-creator--ausrüstung) | 10–16 | Offen |
+| [Character Platform](#character-platform) | 10–18 | Offen |
 
 ---
 
@@ -43,20 +43,22 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 |-------|------|------|----------|---------------|--------|
 | 1 | Animation | Animation-Vorbereitung | [Features](phase-1-animation-prep/README.md) | ✅ | Abgeschlossen |
 | 2 | Animation | Animator Setup | [Features](phase-2-animator-setup/README.md) | ✅ | Abgeschlossen |
-| 3 | Animation | Animation-Integration | [Features](phase-3-animation-integration/README.md) | ✅ | Offen |
+| 3 | Animation | Animation-Integration | [Features](phase-3-animation-integration/README.md) | ✅ | Abgeschlossen |
 | 4 | Combat | Ability System | — | ❌ | Offen |
 | 5 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
 | 6 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
 | 7 | IK | IK System | — | ❌ | Offen |
 | 8 | Combat | Combat Abilities | — | ❌ | Offen |
 | 9 | Movement | Alternative Movement | — | ❌ | Offen |
-| 10 | Creator | CC: Core Data Model & Catalogs | — | ❌ | Offen |
-| 11 | Creator | CC: Builder Pipeline & Bone System | — | ❌ | Offen |
-| 12 | Creator | CC: Equipment System | — | ❌ | Offen |
-| 13 | Creator | CC: Hair & Material System | — | ❌ | Offen |
-| 14 | Creator | CC: Body & Face System | — | ❌ | Offen |
-| 15 | Creator | CC: Creator UI & Scene | — | ❌ | Offen |
-| 16 | Creator | CC: Save/Load & Integration | — | ❌ | Offen |
+| 10 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
+| 11 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
+| 12 | Character | CP: Equipment System | — | ❌ | Offen |
+| 13 | Character | CP: Hair & Material System | — | ❌ | Offen |
+| 14 | Character | CP: Body & Face System | — | ❌ | Offen |
+| 15 | Character | CP: Creator UI & Scene | — | ❌ | Offen |
+| 16 | Character | CP: Save/Load & Integration | — | ❌ | Offen |
+| 17 | Character | CP: DNA Space & Constraints | — | ❌ | Offen |
+| 18 | Character | CP: Morph Graph & HD Anatomy | — | ❌ | Offen |
 
 ---
 
@@ -78,7 +80,7 @@ Natürliche Bewegung (IK)
 Reiten, Gleiten & Schwimmen
   Phase 5 ──> Phase 9
 
-Character Creator & Ausrüstung (unabhängig von den anderen Epics)
+Character Platform (unabhängig von den anderen Epics)
   Phase 10 ──> Phase 11 ──> Phase 12
                    │
                    ├──> Phase 13 (Hair/Material)
@@ -86,6 +88,12 @@ Character Creator & Ausrüstung (unabhängig von den anderen Epics)
                             │
                             v
                         Phase 15 (UI) ──> Phase 16 (Save/Load)
+                                               │
+                                               v
+                        Phase 17 (DNA Space & Constraints)
+                                               │
+                                               v
+                        Phase 18 (Morph Graph & HD Anatomy)
 ```
 
 **Hinweis:** Die Epics haben **keine feste Reihenfolge** untereinander. Die Reihenfolge ergibt sich aus den Phasen-Abhängigkeiten und der aktuellen Priorität. Insbesondere kann der Character Creator komplett parallel zu den anderen Epics entwickelt werden.
@@ -269,149 +277,198 @@ Alternative Fortbewegungsarten mit eigenen Movement Controllern, Animationen und
 
 ---
 
-# Character Creator & Ausrüstung
+# Character Platform
 
-AAA-tauglicher Character Creator mit Live-Preview: Gesicht, Körper, Haare und Ausrüstung anpassen — datengetrieben, deterministisch und MMO-ready.
+AAA-taugliche Character Platform mit Live-Preview Creator, Equipment System, DNA-basiertem Appearance Model und deterministischer Assembly Pipeline — MMO-ready.
 
-**Haupt-Spezifikation:**
-- [Character Creator System Specification](../specs/Wiesenwischer_GameKit_CharacterCreator_Specification.md)
+**Haupt-Spezifikation (konsolidiert):**
+- [Character Platform Specification](../specs/Wiesenwischer_GameKit_CharacterPlatform_Specification.md)
+
+**Quell-Spezifikationen:**
+- [AAA Studio Technical Design Document v8](../specs/Wiesenwischer_GameKit_AAA_CharacterSystem_TechDesignDoc_v8.md)
+- [Character Creator System Specification v1.3](../specs/Wiesenwischer_GameKit_CharacterCreator_Specification.md)
 
 **Packages:**
-- `Wiesenwischer.GameKit.CharacterCreator.Core` — Datenmodell, Builder, Assembly, Services
-- `Wiesenwischer.GameKit.CharacterCreator.Content` — Kataloge, Presets, Icons
-- `Wiesenwischer.GameKit.CharacterCreator.UI` — Panels, Bindings, ViewModels
-- `Wiesenwischer.GameKit.CharacterCreator.Demo` — Demo-Scene, Sample-Content
+- `Wiesenwischer.GameKit.Character.Core` — AppearanceDNA, Constraints, Mapping, Interfaces, Services
+- `Wiesenwischer.GameKit.Character.Content` — Kataloge (SO), Presets, Mapping Tables, Icons
+- `Wiesenwischer.GameKit.Character.Runtime` — Assembly Graph, Builder Pipeline, Drivers, Components
+- `Wiesenwischer.GameKit.Character.Creator` — Creator UI, Preview Proxy, State, Camera
+- `Wiesenwischer.GameKit.Character.Demo` — Demo-Scene, Sample-Content
 
 ---
 
-### Phase 10: CC Core Data Model & Catalogs
-**Branch:** `integration/phase-10-cc-data-model`
+### Phase 10: CP Core Data Model & Catalogs
+**Branch:** `integration/phase-10-cp-data-model`
 **Ausgearbeitet:** ❌ Nein
 
-**Ziel:** Datenmodell und Katalog-System als Grundlage für alles weitere.
+**Ziel:** AppearanceDNA-Datenmodell und Katalog-System als Grundlage für alles weitere.
 
 **Vorläufige Schritte:**
-- [ ] 10.1 Package-Struktur anlegen (`CharacterCreator.Core`, `.Content`)
-- [ ] 10.2 `CharacterAppearance` + `SerializableColor` implementieren
+- [ ] 10.1 Package-Struktur anlegen (`Character.Core`, `Character.Content`)
+- [ ] 10.2 `AppearanceDNA` + Sub-DNA-Klassen (Body, Face, Skin, Eye, Equipment) + `SerializableColor`
 - [ ] 10.3 `EquipmentSlot` Enum und Grundtypen
 - [ ] 10.4 ScriptableObject-Kataloge (`HairCatalog`, `EquipmentCatalog`, `FacePresetCatalog`)
 - [ ] 10.5 `CatalogProvider` Service (Katalog-Zugriff zur Runtime)
-- [ ] 10.6 Unit Tests für Datenmodell
+- [ ] 10.6 Mapping Layer Grundstruktur (`BlendShapeMap`, `BoneMap`, `MaterialParamMap`)
+- [ ] 10.7 Unit Tests für Datenmodell
 
-**Referenz:** Spec Kapitel 4, 7, 8
+**Referenz:** Konsolidierte Spec Kapitel 4, 5, 6
 
 ---
 
-### Phase 11: CC Builder Pipeline & Bone System
-**Branch:** `integration/phase-11-cc-builder`
+### Phase 11: CP Builder Pipeline & Assembly Graph
+**Branch:** `integration/phase-11-cp-builder`
 **Ausgearbeitet:** ❌ Nein
 
-**Ziel:** Deterministische Build-Pipeline, die aus Appearance-Daten einen Character aufbaut.
+**Ziel:** Assembly Graph mit Dirty Tracking und deterministische Build-Pipeline.
+
+**Package:** `Character.Runtime`
 
 **Vorläufige Schritte:**
 - [ ] 11.1 `BoneMapCache` (Bone-Name → Transform Lookup)
-- [ ] 11.2 `CharacterBuilder` Grundgerüst mit Pipeline-Steps
-- [ ] 11.3 Pipeline Step: Resolve Assets
-- [ ] 11.4 Pipeline Step: Ensure Base Character
-- [ ] 11.5 Pipeline Step: Skeleton Mapping
-- [ ] 11.6 Pipeline Step: Post-Fix (Bounds, Validation)
-- [ ] 11.7 Unit Tests für Builder
+- [ ] 11.2 Assembly Graph Grundgerüst (Nodes, Dirty Tracking, Partial Rebuild)
+- [ ] 11.3 `CharacterBuilder` mit Pipeline-Steps
+- [ ] 11.4 Pipeline Step: Resolve Assets
+- [ ] 11.5 Pipeline Step: Ensure Base Character
+- [ ] 11.6 Pipeline Step: Skeleton Mapping
+- [ ] 11.7 Pipeline Step: Post-Fix (Bounds, Validation)
+- [ ] 11.8 Unit Tests für Builder & Graph
 
-**Referenz:** Spec Kapitel 6, 10
+**Referenz:** Konsolidierte Spec Kapitel 7, 8, 9
 
 ---
 
-### Phase 12: CC Equipment System
-**Branch:** `integration/phase-12-cc-equipment`
+### Phase 12: CP Equipment System
+**Branch:** `integration/phase-12-cp-equipment`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** Slot-basiertes Equipment-System mit SkinnedMesh Bone-Rebind.
 
 **Vorläufige Schritte:**
 - [ ] 12.1 `EquipmentBinder` (Bone Rebind by Name)
-- [ ] 12.2 Pipeline Step: Equip Equipment
-- [ ] 12.3 Body Masking / Hide-Under-Cloth (Basis)
-- [ ] 12.4 Compatibility Metadata auf Items
+- [ ] 12.2 Pipeline Step: Equip Equipment (EquipmentNode)
+- [ ] 12.3 Body Masking / Hide-Under-Cloth (Hide BlendShapes)
+- [ ] 12.4 Compatibility Metadata + Bone Coverage Validation
 - [ ] 12.5 Integration Tests mit Test-Prefabs
 
-**Referenz:** Spec Kapitel 13
+**Referenz:** Konsolidierte Spec Kapitel 14
 
 ---
 
-### Phase 13: CC Hair & Material System
-**Branch:** `integration/phase-13-cc-hair-material`
+### Phase 13: CP Hair & Material System
+**Branch:** `integration/phase-13-cp-hair-material`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** Hair-Prefab-System und Runtime-Material-Coloring via MaterialPropertyBlock.
 
 **Vorläufige Schritte:**
-- [ ] 13.1 Pipeline Step: Equip Hair (Prefab + Bone Rebind)
+- [ ] 13.1 Pipeline Step: Equip Hair (HairNode, Prefab + Bone Rebind)
 - [ ] 13.2 `HairColorApplier` mit MaterialPropertyBlock
 - [ ] 13.3 `HairShaderAdapter` (Shader-Property-Mapping)
-- [ ] 13.4 Pipeline Step: Apply Materials
-- [ ] 13.5 Skin/Tattoo Toggle (optional)
+- [ ] 13.4 Pipeline Step: Apply Materials (MaterialNode, Skin/Eyes/Hair)
+- [ ] 13.5 Skin Melanin Slider + Tattoo Toggle
 - [ ] 13.6 Tests
 
-**Referenz:** Spec Kapitel 14, 15
+**Referenz:** Konsolidierte Spec Kapitel 13, 15
 
 ---
 
-### Phase 14: CC Body & Face System
-**Branch:** `integration/phase-14-cc-body-face`
+### Phase 14: CP Body & Face System
+**Branch:** `integration/phase-14-cp-body-face`
 **Ausgearbeitet:** ❌ Nein
 
-**Ziel:** Bone-driven Body Sliders und Face-Preset-System.
+**Ziel:** Bone-driven Body Sliders (MVP) und Face-Preset-System.
 
 **Vorläufige Schritte:**
-- [ ] 14.1 Pipeline Step: Apply Body (Bone Scaling)
-- [ ] 14.2 Bone-Scaling-Config (Breast, Butt, Leg Length)
-- [ ] 14.3 Safety Rules (Scaling Ranges, Default Restore)
-- [ ] 14.4 Pipeline Step: Apply Face (Mesh Variant Swap)
-- [ ] 14.5 Face Morph Fallback (optional, wenn Blendshapes vorhanden)
-- [ ] 14.6 Tests
+- [ ] 14.1 Pipeline Step: Apply Body (BodyRatioNode, Bone Scaling)
+- [ ] 14.2 Bone-Scaling-Config (Breast, Butt, Leg Length, Height, ShoulderWidth)
+- [ ] 14.3 Safety Rules (Scaling Ranges, Default Restore, keine Twist-Bones)
+- [ ] 14.4 Pipeline Step: Apply Face (FaceMorphNode, Mesh Variant Swap)
+- [ ] 14.5 Face Morph Fallback (optional, wenn BlendShapes vorhanden)
+- [ ] 14.6 Eye System Basis (Iris Color + Pupil Size via MPB)
+- [ ] 14.7 Tests
 
-**Referenz:** Spec Kapitel 11, 12
+**Referenz:** Konsolidierte Spec Kapitel 10, 11, 12
 
 ---
 
-### Phase 15: CC Creator UI & Scene
-**Branch:** `integration/phase-15-cc-ui`
+### Phase 15: CP Creator UI & Scene
+**Branch:** `integration/phase-15-cp-ui`
 **Ausgearbeitet:** ❌ Nein
 
-**Ziel:** CharacterCreatorScene mit Live-Preview und Tab-basiertem UI.
+**Ziel:** CharacterCreatorScene mit Preview Proxy Pattern, Live-Preview und Tab-basiertem UI.
 
-**Packages:** `CharacterCreator.UI`, `CharacterCreator.Demo`
+**Packages:** `Character.Creator`, `Character.Demo`
 
 **Vorläufige Schritte:**
-- [ ] 15.1 UI Package-Struktur anlegen
-- [ ] 15.2 `CreatorState` (aktive Appearance, Dirty Flags, Debounce)
-- [ ] 15.3 `CreatorBootstrapper` + Scene-Hierarchie
-- [ ] 15.4 FacePanel (Grid mit Presets)
-- [ ] 15.5 BodyPanel (Sliders)
-- [ ] 15.6 HairPanel (Liste + Color Picker)
-- [ ] 15.7 OutfitPanel (Slot-Listen)
-- [ ] 15.8 Camera Focus Logic (Cinemachine)
-- [ ] 15.9 FinalizePanel
+- [ ] 15.1 Creator Package-Struktur anlegen
+- [ ] 15.2 Preview Proxy Pattern (Creator vs Gameplay Trennung)
+- [ ] 15.3 `CreatorState` (aktive DNA, Dirty Flags, Undo History, Debounce)
+- [ ] 15.4 `CreatorBootstrapper` + Scene-Hierarchie (Lighting, Environment)
+- [ ] 15.5 FacePanel (Grid mit Presets)
+- [ ] 15.6 BodyPanel (Sliders)
+- [ ] 15.7 HairPanel (Liste + Color Picker)
+- [ ] 15.8 OutfitPanel (Slot-Listen)
+- [ ] 15.9 Camera Focus Logic (Cinemachine)
+- [ ] 15.10 FinalizePanel
 
-**Referenz:** Spec Kapitel 5, 16
+**Referenz:** Konsolidierte Spec Kapitel 18
 
 ---
 
-### Phase 16: CC Save/Load & Integration
-**Branch:** `integration/phase-16-cc-saveload`
+### Phase 16: CP Save/Load & Integration
+**Branch:** `integration/phase-16-cp-saveload`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** JSON-Persistenz, Versionierung und Anbindung an das restliche GameKit.
 
 **Vorläufige Schritte:**
-- [ ] 16.1 JSON Serialisierung/Deserialisierung von `CharacterAppearance`
-- [ ] 16.2 `appearanceVersion` + Migration-Strategie
+- [ ] 16.1 JSON Serialisierung/Deserialisierung von `AppearanceDNA`
+- [ ] 16.2 DNA `version` + Migration-Strategie
 - [ ] 16.3 Preset-Management (Custom Presets speichern/laden)
-- [ ] 16.4 Integration: Character aus Appearance im Gameplay spawnen
+- [ ] 16.4 Integration: Character aus DNA im Gameplay spawnen
 - [ ] 16.5 Addressables-Vorbereitung (optional)
 - [ ] 16.6 End-to-End Tests
 
-**Referenz:** Spec Kapitel 17, 18
+**Referenz:** Konsolidierte Spec Kapitel 19
+
+---
+
+### Phase 17: CP DNA Space & Constraints (Post-MVP)
+**Branch:** `integration/phase-17-cp-dna-space`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** DNA Space Modell für Preset Mixing, Constraints für Realismus und NPC Variation.
+
+**Vorläufige Schritte:**
+- [ ] 17.1 DNA Space Modell (Parameter-Vektor, Preset als Punkt)
+- [ ] 17.2 Preset Mixing (Lerp/Choose/Blend per Channel-Typ)
+- [ ] 17.3 Constraint System Grundgerüst (Range, Dependency, Soft Correction)
+- [ ] 17.4 Constraint Execution Pipeline (Apply → Clamp → Constrain → Emit)
+- [ ] 17.5 NPC Randomization (Sample Space + Constrain)
+- [ ] 17.6 Tests
+
+**Referenz:** Konsolidierte Spec Kapitel 16
+
+---
+
+### Phase 18: CP Morph Graph & HD Anatomy (Post-MVP)
+**Branch:** `integration/phase-18-cp-morph-graph`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Morph Graph für AAA-Qualität Body/Face, HD Anatomy BlendShapes und erweiterte Systeme.
+
+**Vorläufige Schritte:**
+- [ ] 18.1 Mapping Layer erweitern (BlendShapeMap, BoneMap, MaterialParamMap als SO)
+- [ ] 18.2 Morph Graph (DNA Channels → Drivers, Curves, Normalization)
+- [ ] 18.3 HD Anatomy BlendShape Integration (BodyMorphNode)
+- [ ] 18.4 Advanced Face Morphs (FaceMorphNode mit BlendShapes)
+- [ ] 18.5 Aging System (strukturell + Material)
+- [ ] 18.6 Eye System erweitert (Shape Sliders, Eyelid Bones)
+- [ ] 18.7 Performance Tuning + LOD Integration
+- [ ] 18.8 Tests
+
+**Referenz:** Konsolidierte Spec Kapitel 17
 
 ---
 
