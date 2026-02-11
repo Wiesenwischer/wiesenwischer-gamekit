@@ -8,8 +8,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
     /// Glättet visuelle Y-Sprünge bei Step-Ups (Treppen/Kanten).
     /// Versetzt das Model-Child temporär nach unten und löst den Offset per SmoothDamp auf.
     /// Platzierung: Player Root-Object (neben CharacterMotor).
+    ///
+    /// Liest transform.position (interpoliert) statt TransientPosition, um korrekt
+    /// mit der Motor-Interpolation zusammenzuarbeiten. DefaultExecutionOrder(100)
+    /// stellt sicher, dass LateUpdate NACH der Motor-Interpolation läuft.
     /// </summary>
     [RequireComponent(typeof(CharacterMotor))]
+    [DefaultExecutionOrder(100)]
     public class GroundingSmoother : MonoBehaviour
     {
         [Header("References")]
@@ -26,7 +31,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
         [Tooltip("Nur smoothen wenn Character am Boden ist.")]
         [SerializeField] private bool _onlyWhenGrounded = true;
 
-        private float _previousMotorY;
+        // Step-Threshold: Filtert Slopes (kontinuierliche kleine Deltas) von echten Steps.
+        // 1cm ist hoch genug, um Slopes bei normaler Geschwindigkeit zu ignorieren,
+        // aber niedrig genug, um kleine Stufen (>2cm) zu erkennen.
+        internal const float StepThreshold = 0.01f;
+        internal const float SnapThreshold = 0.001f;
+
+        private float _previousY;
         private float _smoothOffset;
         private float _smoothVelocity;
         private CharacterMotor _motor;
@@ -40,16 +51,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
 
         private void OnEnable()
         {
-            _previousMotorY = _motor.TransientPosition.y;
+            // transform.position lesen — enthält interpolierte Motor-Position
+            _previousY = transform.position.y;
             _smoothOffset = 0f;
             _smoothVelocity = 0f;
         }
 
         private void LateUpdate()
         {
-            float currentY = _motor.TransientPosition.y;
-            float deltaY = currentY - _previousMotorY;
-            _previousMotorY = currentY;
+            // Interpolierte Position lesen (nach Motor-Interpolation dank ExecutionOrder)
+            float currentY = transform.position.y;
+            float deltaY = currentY - _previousY;
+            _previousY = currentY;
 
             if (_modelTransform == null)
                 return;
@@ -81,15 +94,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
                 return;
             }
 
-            // Step-Up erkannt: Offset aufbauen
-            if (Mathf.Abs(deltaY) > 0.001f)
+            // Step-Up erkannt: Offset aufbauen (Threshold filtert Slopes)
+            if (Mathf.Abs(deltaY) > StepThreshold)
                 _smoothOffset -= deltaY;
 
             // Offset über Zeit zu 0 auflösen
             _smoothOffset = Mathf.SmoothDamp(_smoothOffset, 0f, ref _smoothVelocity, _smoothTime);
 
             // Snap bei Minimal-Offset (kein ewiges Micro-Smoothing)
-            if (Mathf.Abs(_smoothOffset) < 0.001f)
+            if (Mathf.Abs(_smoothOffset) < SnapThreshold)
             {
                 _smoothOffset = 0f;
                 _smoothVelocity = 0f;
@@ -133,8 +146,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             if (justLanded)
                 return new SmootherState { SmoothOffset = 0f, SmoothVelocity = 0f };
 
-            // Step-Up: Offset aufbauen
-            if (Mathf.Abs(deltaY) > 0.001f)
+            // Step-Up: Offset aufbauen (StepThreshold filtert Slopes)
+            if (Mathf.Abs(deltaY) > StepThreshold)
                 state.SmoothOffset -= deltaY;
 
             // SmoothDamp
@@ -144,7 +157,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             state.SmoothVelocity = velocity;
 
             // Snap
-            if (Mathf.Abs(state.SmoothOffset) < 0.001f)
+            if (Mathf.Abs(state.SmoothOffset) < SnapThreshold)
             {
                 state.SmoothOffset = 0f;
                 state.SmoothVelocity = 0f;

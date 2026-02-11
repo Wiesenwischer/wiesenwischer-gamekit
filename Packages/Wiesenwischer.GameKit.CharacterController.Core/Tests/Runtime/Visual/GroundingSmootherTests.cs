@@ -57,10 +57,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
         [Test]
         public void SmallDelta_NoOffset()
         {
-            var result = Calculate(deltaY: 0.0005f);
+            var result = Calculate(deltaY: 0.005f);
 
             Assert.AreEqual(0f, result.SmoothOffset,
-                "Micro-Delta unter Threshold (0.001) sollte keinen Offset erzeugen");
+                "Delta unter StepThreshold (0.01) sollte keinen Offset erzeugen");
         }
 
         #endregion
@@ -99,7 +99,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
                 _state, DeltaTime);
 
             Assert.AreEqual(0f, result.SmoothOffset,
-                "Offset unter 0.001 sollte exakt auf 0 snappen");
+                "Offset unter SnapThreshold sollte exakt auf 0 snappen");
             Assert.AreEqual(0f, result.SmoothVelocity,
                 "Velocity sollte bei Snap auch auf 0 gesetzt werden");
         }
@@ -233,17 +233,35 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
         [Test]
         public void ContinuousSmallDelta_MinimalOffset()
         {
-            // Simuliere 30 Frames mit Slope-typischem deltaY (0.0005m bei 60fps)
+            // Simuliere 30 Frames mit Slope-typischem deltaY (0.005m bei 60fps)
+            // Entspricht ~2m/s auf ~15° Slope — unterhalb StepThreshold (0.01)
             for (int i = 0; i < 30; i++)
             {
                 _state = CalculateOffset(
-                    0.0005f, true, false,
+                    0.005f, true, false,
                     DefaultMaxStepDelta, true, DefaultSmoothTime,
                     _state, DeltaTime);
             }
 
             Assert.AreEqual(0f, _state.SmoothOffset,
-                "Kontinuierliche Micro-Deltas (Slopes) sollten keinen sichtbaren Offset erzeugen");
+                "Kontinuierliche Slope-Deltas unter StepThreshold sollten keinen Offset erzeugen");
+        }
+
+        [Test]
+        public void SteepSlope_FastWalk_NoOffset()
+        {
+            // Simuliere 30 Frames: 3m/s auf 10° Slope → deltaY ≈ 0.0087m/frame
+            // Knapp unter StepThreshold (0.01) — sollte NICHT als Step erkannt werden
+            for (int i = 0; i < 30; i++)
+            {
+                _state = CalculateOffset(
+                    0.0087f, true, false,
+                    DefaultMaxStepDelta, true, DefaultSmoothTime,
+                    _state, DeltaTime);
+            }
+
+            Assert.AreEqual(0f, _state.SmoothOffset,
+                "Schnelle Bewegung auf Slopes sollte keinen Offset erzeugen (unterhalb StepThreshold)");
         }
 
         #endregion
