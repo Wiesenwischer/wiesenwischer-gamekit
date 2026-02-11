@@ -189,7 +189,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 **Schritte:**
 - [x] [20.1 GroundingSmoother Komponente](phase-20-grounding-smoother/20.1-grounding-smoother-component.md)
 - [x] [20.2 Unit Tests](phase-20-grounding-smoother/20.2-unit-tests.md)
-- [ ] [20.3 Prefab-Integration](phase-20-grounding-smoother/20.3-prefab-integration.md)
+- [x] [20.3 Prefab-Integration](phase-20-grounding-smoother/20.3-prefab-integration.md)
 - [ ] [20.4 Verifikation](phase-20-grounding-smoother/20.4-verification.md)
 
 ---
