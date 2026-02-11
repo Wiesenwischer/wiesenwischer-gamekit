@@ -45,7 +45,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 2 | Animation | Animator Setup | [Features](phase-2-animator-setup/README.md) | ✅ | Abgeschlossen |
 | 3 | Animation | Animation-Integration | [Features](phase-3-animation-integration/README.md) | ✅ | Abgeschlossen |
 | 4 | Animation | Fortgeschrittene Lokomotion | [Features](phase-4-locomotion-features/README.md) | ✅ | Abgeschlossen |
-| 5 | Combat | Ability System | — | ❌ | Offen |
+| 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Offen |
 | 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
 | 8 | IK | IK System | — | ❌ | Offen |
@@ -196,7 +196,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 
 # Fähigkeiten & Action Combat
 
-Modulares Ability-System als Grundgerüst für Jump, Sprint und darauf aufbauend Nahkampf, Fernkampf und Zauber im Action-Combat-Stil.
+Modulares Ability-Framework als Infrastruktur für Nahkampf, Fernkampf, Zauber und Utility-Fähigkeiten im Action-Combat-Stil. Jump/Sprint bleiben Movement States — das Ability System ist eine orthogonale Schicht für Actions.
 
 **Relevante Spezifikationen:**
 - [Modulare Fertigkeiten Controller v2](../specs/ModularFertigkeitenController_Spezifikation_v2.md)
@@ -207,14 +207,14 @@ Modulares Ability-System als Grundgerüst für Jump, Sprint und darauf aufbauend
 
 ### Phase 5: Ability System
 **Branch:** `integration/phase-5-ability-system`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-5-ability-system/README.md)
 
-**Schritte (vorläufig):**
-- [ ] 5.1 IAbility Interface
-- [ ] 5.2 AbilitySystem Manager
-- [ ] 5.3 JumpAbility
-- [ ] 5.4 SprintAbility
-- [ ] 5.5 Animation Layer Integration
+**Schritte:**
+- [ ] [5.1 Package-Struktur & IAbility Interface](phase-5-ability-system/5.1-package-iability-interface.md)
+- [ ] [5.2 AbilityDefinition & AbilityContext](phase-5-ability-system/5.2-ability-definition-context.md)
+- [ ] [5.3 AbilitySystem Manager](phase-5-ability-system/5.3-ability-system-manager.md)
+- [ ] [5.4 Animation Layer Integration](phase-5-ability-system/5.4-animation-layer-integration.md)
+- [ ] [5.5 PlayerController Integration & Tests](phase-5-ability-system/5.5-integration-tests.md)
 
 ---
 
