@@ -35,6 +35,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         /// <summary>Der PlayerController.</summary>
         protected PlayerController Player => stateMachine.Player;
 
+        /// <summary>Ob der Character geerdet ist (von der IGroundDetectionStrategy).</summary>
+        protected bool IsGrounded => Player.Locomotion?.IsGrounded ?? false;
+
+        /// <summary>Ob der Character über einer Kante steht und fallen sollte (von der IGroundDetectionStrategy).</summary>
+        protected bool IsOverEdge => Player.Locomotion?.IsOverEdge ?? false;
+
         #endregion
 
         #region IPlayerMovementState Implementation

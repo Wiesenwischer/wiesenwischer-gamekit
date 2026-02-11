@@ -25,7 +25,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 "1. DefaultLocomotionConfig\n" +
                 "2. DefaultCameraConfig\n" +
                 "3. Avatar Masks\n" +
-                "4. Animator Controller (Locomotion + Airborne)\n" +
+                "4. Animator Controller (Locomotion + Airborne + Stopping)\n" +
                 "5. Player Prefab\n" +
                 "6. Animation Test Scene + Kamera\n\n" +
                 "Bestehende Assets werden überschrieben.\n" +
@@ -35,54 +35,60 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 return;
             }
 
-            int totalSteps = 8;
+            int totalSteps = 9;
             int step = 0;
 
             // === 1. LocomotionConfig ===
             EditorUtility.DisplayProgressBar("Character Controller Setup",
-                "1/8 — LocomotionConfig erstellen...", (float)step++ / totalSteps);
+                "1/9 — LocomotionConfig erstellen...", (float)step++ / totalSteps);
 
             EnsureLocomotionConfig();
 
             // === 2. CameraConfig ===
             EditorUtility.DisplayProgressBar("Character Controller Setup",
-                "2/8 — CameraConfig erstellen...", (float)step++ / totalSteps);
+                "2/9 — CameraConfig erstellen...", (float)step++ / totalSteps);
 
             EditorApplication.ExecuteMenuItem("Wiesenwischer/GameKit/Camera/Create Default Camera Config");
 
             // === 3. Avatar Masks ===
             EditorUtility.DisplayProgressBar("Character Controller Setup",
-                "3/8 — Avatar Masks erstellen...", (float)step++ / totalSteps);
+                "3/9 — Avatar Masks erstellen...", (float)step++ / totalSteps);
 
             AvatarMaskCreator.CreateAllMasks();
 
             // === 4. Animator Controller (frisch erstellen) ===
             EditorUtility.DisplayProgressBar("Character Controller Setup",
-                "4/8 — Animator Controller erstellen...", (float)step++ / totalSteps);
+                "4/9 — Animator Controller erstellen...", (float)step++ / totalSteps);
 
             RecreateAnimatorController();
 
             // === 5. Locomotion Blend Tree ===
             EditorUtility.DisplayProgressBar("Character Controller Setup",
-                "5/8 — Locomotion Blend Tree einrichten...", (float)step++ / totalSteps);
+                "5/9 — Locomotion Blend Tree einrichten...", (float)step++ / totalSteps);
 
             LocomotionBlendTreeCreator.SetupLocomotionBlendTree();
 
             // === 6. Airborne States ===
             EditorUtility.DisplayProgressBar("Character Controller Setup",
-                "6/8 — Airborne States einrichten...", (float)step++ / totalSteps);
+                "6/9 — Airborne States einrichten...", (float)step++ / totalSteps);
 
             AirborneStatesCreator.SetupAirborneStates();
 
-            // === 7. Player Prefab ===
+            // === 7. Stopping States ===
             EditorUtility.DisplayProgressBar("Character Controller Setup",
-                "7/8 — Player Prefab erstellen...", (float)step++ / totalSteps);
+                "7/9 — Stopping States einrichten...", (float)step++ / totalSteps);
+
+            StoppingStatesCreator.SetupStoppingStates();
+
+            // === 8. Player Prefab ===
+            EditorUtility.DisplayProgressBar("Character Controller Setup",
+                "8/9 — Player Prefab erstellen...", (float)step++ / totalSteps);
 
             PlayerPrefabCreator.CreatePlayerPrefab();
 
-            // === 8. Test Scene + Kamera ===
+            // === 9. Test Scene + Kamera ===
             EditorUtility.DisplayProgressBar("Character Controller Setup",
-                "8/8 — Test-Szene + Kamera einrichten...", (float)step++ / totalSteps);
+                "9/9 — Test-Szene + Kamera einrichten...", (float)step++ / totalSteps);
 
             AnimationTestSceneCreator.CreateTestScene();
             EditorApplication.ExecuteMenuItem("Wiesenwischer/GameKit/Camera/Setup Third Person Camera");

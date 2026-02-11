@@ -1,3 +1,5 @@
+using Wiesenwischer.GameKit.CharacterController.Core.Animation;
+
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
     /// <summary>
@@ -16,12 +18,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             base.OnEnter();
 
-            // Animation-Trigger (Soft Landing)
-            Player.AnimationController?.TriggerLanding(false);
+            Player.AnimationController?.PlayState(CharacterAnimationState.SoftLand);
 
             // Momentum bleibt erhalten: AirborneState konserviert den SpeedModifier
             // aus dem Grounded State (z.B. 2.0 von RunningState).
-            // Kein Override nötig – OnUpdate() transitioniert sofort zum passenden State.
+            // OnUpdate() transitioniert sofort zum passenden Movement State.
+            // Die SoftLand-Animation blendet via CrossFade sanft in Locomotion über.
         }
 
         protected override void OnUpdate()

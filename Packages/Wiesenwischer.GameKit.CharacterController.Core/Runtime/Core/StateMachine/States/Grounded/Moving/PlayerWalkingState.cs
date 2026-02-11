@@ -38,5 +38,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
                 return;
             }
         }
+
+        protected override IPlayerMovementState GetStoppingState()
+        {
+            return stateMachine.LightStoppingState;
+        }
     }
 }

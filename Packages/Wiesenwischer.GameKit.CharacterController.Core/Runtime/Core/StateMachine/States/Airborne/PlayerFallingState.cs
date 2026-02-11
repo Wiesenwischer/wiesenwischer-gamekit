@@ -1,4 +1,5 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Animation;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
@@ -10,36 +11,105 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
     {
         public override string StateName => "Falling";
 
+        // === Warum _wasUngrounded? ===
+        // Problem: FallingState kann betreten werden während IsGrounded noch true ist.
+        // Das passiert z.B. wenn GroundedState.OnUpdate() den Übergang auslöst weil
+        // CoyoteTime abgelaufen ist, aber die GroundDetectionStrategy noch Boden sieht.
+        // Ohne diesen Guard würde der Character sofort "landen" ohne je gefallen zu sein.
+        // Lösung: Mindestens 1 Frame lang IsGrounded=false abwarten vor Landing-Check.
+        private bool _wasUngrounded;
+
+        // === Warum _groundedFrameCount (Safety-Net)? ===
+        // Edge-Case: FallingState wird betreten und IsGrounded bleibt DAUERHAFT true
+        // (z.B. auf einer Rampe mit bestimmtem Winkel). _wasUngrounded wird nie true,
+        // und der Character steckt fest. Nach GroundedFrameThreshold Frames wird
+        // trotzdem HandleLanding() aufgerufen, damit der Character nicht ewig fällt.
+        private int _groundedFrameCount;
+        private const int GroundedFrameThreshold = 3;
+
         public PlayerFallingState(PlayerMovementStateMachine stateMachine) : base(stateMachine)
         {
+        }
+
+        protected override void OnEnter()
+        {
+            base.OnEnter();
+            Player.AnimationController?.PlayState(CharacterAnimationState.Fall);
+
+            // Wenn bereits in der Luft → _wasUngrounded sofort true (kein Warten nötig)
+            _wasUngrounded = !IsGrounded;
+            _groundedFrameCount = 0;
+
+#if UNITY_EDITOR
+            Debug.Log($"[FallingState] OnEnter | Y={Player.transform.position.y:F2} " +
+                      $"LastGroundedY={ReusableData.LastGroundedY:F2} " +
+                      $"IsGrounded={IsGrounded} " +
+                      $"wasUngrounded={_wasUngrounded}");
+#endif
         }
 
         protected override void OnUpdate()
         {
             base.OnUpdate();
 
-            // Berechne Fallhöhe
-            float fallDistance = ReusableData.LastGroundedY - Player.transform.position.y;
-
-            // Landing: Motor ist Single Source of Truth für Ground-State
-            if (ReusableData.IsGrounded)
+            // === Landing-Guard: Mindestens 1 Frame in der Luft gewesen? ===
+            if (!_wasUngrounded)
             {
-                // Landing-Klassifikation über Fall-Distanz statt akkumulierte VerticalVelocity.
-                // VerticalVelocity ist durch Erkennungs-Latenz aufgebläht (Gravity wird 1-2 Ticks
-                // nach tatsächlichem Bodenkontakt weiter angewendet).
-                // Umrechnung in äquivalente Geschwindigkeit: v = sqrt(2*g*d)
-                float effectiveFallDistance = Mathf.Max(0f, fallDistance);
-                float landingSpeed = Mathf.Sqrt(2f * Config.Gravity * effectiveFallDistance);
-                ReusableData.LandingVelocity = -landingSpeed;
-
-                if (landingSpeed >= Config.HardLandingThreshold)
+                // Noch nicht in der Luft gewesen → prüfen ob jetzt airborne
+                if (!IsGrounded)
                 {
-                    ChangeState(stateMachine.HardLandingState);
+                    // Jetzt airborne → ab nächstem Frame ist Landing erlaubt
+                    _wasUngrounded = true;
                 }
                 else
                 {
-                    ChangeState(stateMachine.SoftLandingState);
+                    // Immer noch grounded → Safety-Net Zähler hochzählen
+                    // Nach GroundedFrameThreshold Frames trotzdem landen
+                    _groundedFrameCount++;
+                    if (_groundedFrameCount >= GroundedFrameThreshold)
+                    {
+                        HandleLanding();
+                        return;
+                    }
                 }
+                // Kein Landing möglich solange _wasUngrounded=false (außer Safety-Net)
+                return;
+            }
+
+            // _wasUngrounded=true → Character war mindestens 1 Frame in der Luft
+            // Jetzt auf Bodenkontakt prüfen für Landing
+            if (IsGrounded)
+            {
+                HandleLanding();
+            }
+        }
+
+        /// <summary>
+        /// Gemeinsame Landing-Logik: Berechnet Fallhöhe und wählt Landing-State.
+        /// </summary>
+        private void HandleLanding()
+        {
+            float fallDistance = ReusableData.LastGroundedY - Player.transform.position.y;
+            float effectiveFallDistance = Mathf.Max(0f, fallDistance);
+            float landingSpeed = Mathf.Sqrt(2f * Config.Gravity * effectiveFallDistance);
+            ReusableData.LandingVelocity = -landingSpeed;
+
+#if UNITY_EDITOR
+            Debug.Log($"[FallingState] Landing! Y={Player.transform.position.y:F2} " +
+                      $"LastGroundedY={ReusableData.LastGroundedY:F2} " +
+                      $"fallDist={effectiveFallDistance:F2} " +
+                      $"landingSpeed={landingSpeed:F1} " +
+                      $"threshold={Config.HardLandingThreshold:F1} " +
+                      $"→ {(landingSpeed >= Config.HardLandingThreshold ? "HARD" : "SOFT")}");
+#endif
+
+            if (landingSpeed >= Config.HardLandingThreshold)
+            {
+                ChangeState(stateMachine.HardLandingState);
+            }
+            else
+            {
+                ChangeState(stateMachine.SoftLandingState);
             }
         }
     }

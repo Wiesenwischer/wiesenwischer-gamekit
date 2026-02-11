@@ -19,6 +19,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         private bool _jumpHeld;
         private bool _sprintHeld;
         private bool _dashPressed;
+        private bool _walkTogglePressed;
 
         // Zielposition für einfache Navigation
         private Vector3? _targetPosition;
@@ -32,6 +33,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         public bool JumpHeld => _jumpHeld;
         public bool SprintHeld => _sprintHeld;
         public bool DashPressed => _dashPressed;
+        public bool WalkTogglePressed => _walkTogglePressed;
         public bool IsActive => _isActive && enabled;
 
         public void UpdateInput()
@@ -54,6 +56,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             _jumpHeld = false;
             _sprintHeld = false;
             _dashPressed = false;
+            _walkTogglePressed = false;
         }
 
         #endregion
@@ -215,6 +218,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             // Reset "pressed" flags nach dem Frame
             _jumpPressed = false;
             _dashPressed = false;
+            _walkTogglePressed = false;
         }
 
         #endregion
@@ -231,6 +235,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             if (_jumpPressed || _jumpHeld) buttons |= InputButtons.Jump;
             if (_sprintHeld) buttons |= InputButtons.Sprint;
             if (_dashPressed) buttons |= InputButtons.Dash;
+            if (_walkTogglePressed) buttons |= InputButtons.Walk;
 
             return new InputSnapshot
             {

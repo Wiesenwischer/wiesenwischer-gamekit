@@ -23,8 +23,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             // Step Detection aktivieren für Grounded States
             ReusableData.StepDetectionEnabled = true;
 
-            // Animator explizit informieren: wir sind am Boden
-            Player.AnimationController?.SetGrounded(true);
+            // Animation-State wird von konkreten Subklassen in OnEnter gesetzt:
+            // IdlingState/RunningState/etc. → PlayState(Locomotion)
+            // SoftLandingState → PlayState(SoftLand)
+            // HardLandingState → PlayState(HardLand)
         }
 
         protected override void OnHandleInput()
@@ -47,43 +49,49 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             float currentY = Player.transform.position.y;
 
-            // Stabilitäts-Check: Wenn grounded aber Snapping verhindert wurde (z.B. Ledge Edge), zu Falling wechseln
-            // Dies verhindert das "Kleben" an Slope-Kanten
-            // WICHTIG: Verwende Motor's State (nicht externes GroundingDetection) für Konsistenz
-            var motor = Player.Locomotion?.Motor;
-            if (motor != null && ReusableData.IsGrounded && motor.GroundingStatus.SnappingPrevented)
-            {
-                // Auf instabiler Oberfläche (z.B. Ledge Edge) - zu Falling wechseln
-                ChangeState(stateMachine.FallingState);
-                return;
-            }
+            // === Fall-Detection Logik ===
+            //
+            // IsOverEdge (aus FallDetectionStrategy):
+            //   Motor-Modus: SnappingPrevented || !IsStableOnGround
+            //   Collider-Modus: Raycast von Capsule-Unterseite findet keinen Boden
+            //
+            // IsGrounded (aus GroundDetectionStrategy):
+            //   Motor-Modus: IsStableOnGround (KCC internes Grounding)
+            //   Collider-Modus: SphereCast nach unten findet Boden
+            //
+            // Ablauf:
+            // 1. !IsOverEdge → stabil auf Boden, Timer/Y resetten
+            // 2. IsOverEdge + IsGrounded → an Kante aber noch Bodenkontakt, Y weiter tracken
+            // 3. IsOverEdge + !IsGrounded → in der Luft, Y NICHT mehr updaten (Referenzpunkt fixiert)
+            // 4. Transition zu Falling wenn EINE der Bedingungen erfüllt:
+            //    a) fallDistance > MinFallDistance (genug gefallen, sofort transitionieren)
+            //    b) TimeSinceGrounded > CoyoteTime (Zeitfallback für kleine Drops/Kanten)
+            //    Beide sind unabhängig (||), weil:
+            //    - Nur fallDistance allein reicht nicht: Bei kleinen Steps ändert sich Y kaum
+            //    - Nur CoyoteTime allein reicht nicht: Bei großen Drops soll sofort reagiert werden
 
-            // Track time since last grounded (for Coyote Time)
-            if (ReusableData.IsGrounded)
+            if (!IsOverEdge)
             {
+                // Stabil auf dem Boden → alles resetten
                 ReusableData.TimeSinceGrounded = 0f;
                 ReusableData.LastGroundedY = currentY;
             }
             else
             {
+                // Über Kante — potentieller Fall.
+                // Solange IsGrounded=true (noch Bodenkontakt an Kante), Y weiter tracken
+                // damit fallDistance erst ab tatsächlichem Bodenverlust gemessen wird.
+                // Sobald IsGrounded=false bleibt LastGroundedY als Referenzpunkt fixiert.
+                if (IsGrounded)
+                {
+                    ReusableData.LastGroundedY = currentY;
+                }
+
                 ReusableData.TimeSinceGrounded += Time.deltaTime;
 
-                // Berechne wie weit der Character gefallen ist seit letztem Frame
                 float fallDistance = ReusableData.LastGroundedY - currentY;
 
-                // Aktualisiere LastGroundedY wenn Character NICHT fällt
-                // (geht hoch oder bleibt gleich - z.B. auf Treppen)
-                if (currentY >= ReusableData.LastGroundedY)
-                {
-                    ReusableData.LastGroundedY = currentY;
-                }
-                // Bei kleinem Drop (unter MinFallDistance): auch aktualisieren
-                else if (fallDistance <= Config.MinFallDistance)
-                {
-                    ReusableData.LastGroundedY = currentY;
-                }
-                // Bei großem Drop (>= MinFallDistance): Zu Falling wechseln
-                else if (ReusableData.TimeSinceGrounded > Config.CoyoteTime)
+                if (fallDistance > Config.MinFallDistance || ReusableData.TimeSinceGrounded > Config.CoyoteTime)
                 {
                     ChangeState(stateMachine.FallingState);
                     return;
@@ -117,7 +125,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             if (!ReusableData.JumpWasReleased) return false;
 
             // Kann springen wenn grounded ODER innerhalb Coyote Time
-            return ReusableData.IsGrounded || ReusableData.TimeSinceGrounded <= Config.CoyoteTime;
+            return IsGrounded || ReusableData.TimeSinceGrounded <= Config.CoyoteTime;
         }
 
         /// <summary>

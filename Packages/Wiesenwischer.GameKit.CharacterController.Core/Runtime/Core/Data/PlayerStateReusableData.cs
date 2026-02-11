@@ -45,15 +45,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Data
         /// <summary>Movement Speed Modifier (z.B. 1.0 für Walk, 1.5 für Run).</summary>
         public float MovementSpeedModifier { get; set; } = 1f;
 
+        /// <summary>
+        /// Überschreibt die Standard-Deceleration. Wenn > 0, wird dieser Wert statt Config.Deceleration verwendet.
+        /// Stopping-States setzen dies auf ihren tier-spezifischen Wert.
+        /// </summary>
+        public float DecelerationOverride { get; set; }
+
         #endregion
 
         #region Ground State
-
-        /// <summary>Ob der Character auf dem Boden steht.</summary>
-        public bool IsGrounded { get; set; }
-
-        /// <summary>Ob der Character gerade auf einem steilen Hang rutscht.</summary>
-        public bool IsSliding { get; set; }
 
         /// <summary>Zeit seit letztem Bodenkontakt (für Coyote Time).</summary>
         public float TimeSinceGrounded { get; set; }

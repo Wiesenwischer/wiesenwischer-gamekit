@@ -20,8 +20,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             // Step Detection deaktivieren für Airborne States
             ReusableData.StepDetectionEnabled = false;
 
-            // Animator explizit informieren: wir sind in der Luft
-            Player.AnimationController?.SetGrounded(false);
+            // Animation-State wird von konkreten Subklassen in OnEnter gesetzt:
+            // JumpingState → PlayState(Jump), FallingState → PlayState(Fall)
 
             // Mindestens Walk-Speed Modifier beibehalten,
             // damit von Idle fallende Characters steuerbar sind.

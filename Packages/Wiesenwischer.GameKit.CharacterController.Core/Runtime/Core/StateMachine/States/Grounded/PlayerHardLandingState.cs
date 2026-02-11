@@ -1,17 +1,20 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Animation;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
     /// <summary>
     /// State nach einer harten Landung (hoher Fall).
-    /// Stoppt Bewegung komplett und erzwingt eine Recovery-Zeit.
+    /// Stoppt Bewegung komplett und wartet auf Animations-Ende oder AllowExit Event.
+    /// Fallback auf Timer wenn kein AnimationController vorhanden.
     /// </summary>
     public class PlayerHardLandingState : PlayerGroundedState
     {
         public override string StateName => "HardLanding";
 
-        private float _landingRecoveryTimer;
         private bool _jumpBuffered;
+        private bool _useAnimationBasedRecovery;
+        private float _fallbackTimer;
 
         public PlayerHardLandingState(PlayerMovementStateMachine stateMachine) : base(stateMachine)
         {
@@ -21,29 +24,31 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             base.OnEnter();
 
-            // Animation-Trigger (Hard Landing)
-            Player.AnimationController?.TriggerLanding(true);
-
             _jumpBuffered = false;
+            _useAnimationBasedRecovery = Player.AnimationController != null;
 
-            // Recovery-Zeit berechnen basierend auf Aufprallgeschwindigkeit
-            float landingSpeed = Mathf.Abs(ReusableData.LandingVelocity);
-
-            if (landingSpeed < Config.HardLandingThreshold)
+            if (_useAnimationBasedRecovery)
             {
-                // Zwischen soft und hard - interpoliere
-                float t = Mathf.InverseLerp(Config.SoftLandingThreshold, Config.HardLandingThreshold, landingSpeed);
-                _landingRecoveryTimer = Mathf.Lerp(Config.SoftLandingDuration, Config.HardLandingDuration, t);
+                Player.AnimationController.PlayState(CharacterAnimationState.HardLand);
             }
             else
             {
-                // Maximale Recovery
-                _landingRecoveryTimer = Config.HardLandingDuration;
+                // Fallback: Timer basierend auf Aufprallgeschwindigkeit
+                float landingSpeed = Mathf.Abs(ReusableData.LandingVelocity);
+                if (landingSpeed < Config.HardLandingThreshold)
+                {
+                    float t = Mathf.InverseLerp(Config.SoftLandingThreshold, Config.HardLandingThreshold, landingSpeed);
+                    _fallbackTimer = Mathf.Lerp(Config.SoftLandingDuration, Config.HardLandingDuration, t);
+                }
+                else
+                {
+                    _fallbackTimer = Config.HardLandingDuration;
+                }
             }
 
-            // Intent: Keine Bewegung während Recovery
-            // AccelerationModule bremst über Deceleration ab (kein direkter Velocity-Reset)
+            // Horizontales Momentum sofort stoppen bei Hard Landing (kein Gleiten nach Aufprall)
             ReusableData.MovementSpeedModifier = 0f;
+            Player.Locomotion?.StopMovement();
         }
 
         protected override void OnHandleInput()
@@ -61,38 +66,51 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             // NICHT base.OnUpdate() - Coyote Time Check überspringen
 
-            _landingRecoveryTimer -= Time.deltaTime;
+            bool recoveryComplete;
 
-            if (_landingRecoveryTimer <= 0f)
+            if (_useAnimationBasedRecovery)
             {
-                // Gebufferter Jump?
-                if (_jumpBuffered && ReusableData.JumpWasReleased)
-                {
-                    ReusableData.JumpPressed = true;
-                    OnJump();
-                    return;
-                }
+                // CanExitAnimation: Designer-gesetzter AllowExit Event auf dem Clip
+                // IsAnimationComplete: Animation vollständig abgespielt
+                var anim = Player.AnimationController;
+                recoveryComplete = anim.CanExitAnimation || anim.IsAnimationComplete();
+            }
+            else
+            {
+                // Fallback: Timer
+                _fallbackTimer -= Time.deltaTime;
+                recoveryComplete = _fallbackTimer <= 0f;
+            }
 
-                // Zum passenden Movement State wechseln
-                if (ReusableData.MoveInput.sqrMagnitude > 0.01f)
+            if (!recoveryComplete) return;
+
+            // Gebufferter Jump?
+            if (_jumpBuffered && ReusableData.JumpWasReleased)
+            {
+                ReusableData.JumpPressed = true;
+                OnJump();
+                return;
+            }
+
+            // Zum passenden Movement State wechseln
+            if (ReusableData.MoveInput.sqrMagnitude > 0.01f)
+            {
+                if (ReusableData.SprintHeld)
                 {
-                    if (ReusableData.SprintHeld)
-                    {
-                        ChangeState(stateMachine.SprintingState);
-                    }
-                    else if (ReusableData.ShouldWalk)
-                    {
-                        ChangeState(stateMachine.WalkingState);
-                    }
-                    else
-                    {
-                        ChangeState(stateMachine.RunningState);
-                    }
+                    ChangeState(stateMachine.SprintingState);
+                }
+                else if (ReusableData.ShouldWalk)
+                {
+                    ChangeState(stateMachine.WalkingState);
                 }
                 else
                 {
-                    ChangeState(stateMachine.IdlingState);
+                    ChangeState(stateMachine.RunningState);
                 }
+            }
+            else
+            {
+                ChangeState(stateMachine.IdlingState);
             }
         }
 

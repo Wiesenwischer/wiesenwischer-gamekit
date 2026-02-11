@@ -41,6 +41,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         bool DashPressed { get; }
 
         /// <summary>
+        /// Ob der Walk-Toggle diesen Frame gedrückt wurde.
+        /// Schaltet zwischen Gehen und Rennen um (MMO-Style Toggle).
+        /// </summary>
+        bool WalkTogglePressed { get; }
+
+        /// <summary>
         /// Ob der Input Provider aktiv ist (z.B. für Netzwerk-Authority).
         /// </summary>
         bool IsActive { get; }
@@ -123,6 +129,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         Interact = 1 << 4,
         Attack = 1 << 5,
         Block = 1 << 6,
-        // Bit 7 reserviert für Erweiterungen
+        Walk = 1 << 7,
     }
 }

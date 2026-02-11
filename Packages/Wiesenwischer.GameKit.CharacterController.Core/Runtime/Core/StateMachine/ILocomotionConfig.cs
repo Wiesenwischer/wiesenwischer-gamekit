@@ -3,6 +3,28 @@ using UnityEngine;
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
 {
     /// <summary>
+    /// Bestimmt welche Ground Detection Strategy verwendet wird.
+    /// </summary>
+    public enum GroundDetectionMode
+    {
+        /// <summary>Motor's internes IsStableOnGround (KCC-Standard).</summary>
+        Motor = 0,
+        /// <summary>SphereCast von Capsule-Unterseite (Genshin-Style).</summary>
+        Collider = 1
+    }
+
+    /// <summary>
+    /// Bestimmt welche Fall Detection Strategy verwendet wird.
+    /// </summary>
+    public enum FallDetectionMode
+    {
+        /// <summary>SnappingPrevented + IsStableOnGround aus dem Motor (KCC-Standard).</summary>
+        Motor = 0,
+        /// <summary>Raycast von Capsule-Mitte — kein Boden = über Kante (Genshin-Style).</summary>
+        Collider = 1
+    }
+
+    /// <summary>
     /// Interface für Locomotion-Konfiguration.
     /// Ermöglicht den Zugriff auf Locomotion-Parameter ohne direkte Abhängigkeit von ScriptableObject.
     /// Wird von CharacterLocomotion und anderen Locomotion-Typen verwendet.
@@ -57,6 +79,25 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         LayerMask GroundLayers { get; }
         float MaxSlopeAngle { get; }
 
+        /// <summary>
+        /// Welche Ground Detection Strategy verwendet wird.
+        /// Motor = KCC-Standard (IsStableOnGround), Collider = SphereCast (Genshin-Style).
+        /// </summary>
+        GroundDetectionMode GroundDetection { get; }
+
+        /// <summary>
+        /// Welche Fall Detection Strategy verwendet wird.
+        /// Motor = SnappingPrevented, Collider = Raycast von Capsule-Mitte (Genshin-Style).
+        /// </summary>
+        FallDetectionMode FallDetection { get; }
+
+        /// <summary>
+        /// Raycast-Distanz von Capsule-Mitte nach unten für Fall-Erkennung.
+        /// Wenn kein Boden innerhalb dieser Distanz → Character fällt.
+        /// Nur aktiv bei FallDetection = Collider.
+        /// </summary>
+        float GroundToFallRayDistance { get; }
+
         // Rotation
         float RotationSpeed { get; }
         bool RotateTowardsMovement { get; }
@@ -64,6 +105,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         // Step Detection
         float MaxStepHeight { get; }
         float MinStepDepth { get; }
+
+        /// <summary>
+        /// Ob Treppen-Erkennung mit automatischer Geschwindigkeitsreduktion aktiviert ist.
+        /// Wenn true, wird die Geschwindigkeit beim Treppensteigen reduziert.
+        /// </summary>
+        bool StairSpeedReductionEnabled { get; }
+
+        /// <summary>
+        /// Geschwindigkeitsreduktion auf Treppen (0 = keine Reduktion, 1 = Stillstand).
+        /// Wird angewendet wenn der Motor mehrere Steps in kurzer Zeit erkennt.
+        /// </summary>
+        float StairSpeedReduction { get; }
 
         #region Ledge & Ground Snapping
 
@@ -96,6 +149,31 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         bool LedgeDetectionEnabled { get; }
 
         #endregion
+
+        // Stopping
+        /// <summary>Deceleration beim Stoppen aus Walk (m/s²).</summary>
+        float LightStopDeceleration { get; }
+
+        /// <summary>Deceleration beim Stoppen aus Run (m/s²).</summary>
+        float MediumStopDeceleration { get; }
+
+        /// <summary>Deceleration beim Stoppen aus Sprint (m/s²).</summary>
+        float HardStopDeceleration { get; }
+
+        // Slope Speed
+        /// <summary>
+        /// Maximale Speed-Reduktion bergauf bei steilstem begehbaren Winkel (MaxSlopeAngle).
+        /// 0 = keine Reduktion, 1 = Stillstand bei MaxSlopeAngle.
+        /// Skaliert linear mit dem Slope-Winkel.
+        /// </summary>
+        float UphillSpeedPenalty { get; }
+
+        /// <summary>
+        /// Speed-Bonus bergab bei steilstem begehbaren Winkel (MaxSlopeAngle).
+        /// Positiv = schneller bergab, 0 = kein Effekt, negativ = langsamer bergab.
+        /// Skaliert linear mit dem Slope-Winkel.
+        /// </summary>
+        float DownhillSpeedBonus { get; }
 
         // Slope Sliding
         float SlopeSlideSpeed { get; }

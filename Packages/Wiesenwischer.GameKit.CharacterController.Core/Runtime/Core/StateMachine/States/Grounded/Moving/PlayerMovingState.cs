@@ -1,4 +1,5 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Animation;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
@@ -14,16 +15,31 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
         }
 
+        protected override void OnEnter()
+        {
+            base.OnEnter();
+            Player.AnimationController?.PlayState(CharacterAnimationState.Locomotion);
+        }
+
         protected override void OnUpdate()
         {
             base.OnUpdate();
 
-            // Transition zu Idle wenn kein Input
+            // Transition zu Stopping-State wenn kein Input
             if (!HasMovementInput())
             {
-                ChangeState(stateMachine.IdlingState);
+                ChangeState(GetStoppingState());
                 return;
             }
+        }
+
+        /// <summary>
+        /// Gibt den passenden Stopping-State für diesen Movement-Tier zurück.
+        /// Wird von Subklassen überschrieben (Walk→Light, Run→Medium, Sprint→Hard).
+        /// </summary>
+        protected virtual IPlayerMovementState GetStoppingState()
+        {
+            return stateMachine.MediumStoppingState;
         }
     }
 }
