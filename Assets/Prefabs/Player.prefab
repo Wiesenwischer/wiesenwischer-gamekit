@@ -218,6 +218,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _playerController: {fileID: 0}
+  _transitionConfig: {fileID: 0}
   _speedDampTime: 0.1
   _verticalVelocityDampTime: 0.05
 --- !u!4 &4523652827095139177 stripped

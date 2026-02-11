@@ -322,6 +322,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Motor
         public bool KillRemainingMovementWhenExceedMaxMovementIterations = true;
 
         /// <summary>
+        /// Wenn false, wird Ground Snapping in ProbeGround übersprungen.
+        /// ProbeGround läuft weiterhin (Surface-Daten in GroundingStatus verfügbar),
+        /// aber der Character wird nicht auf den Boden gesnappt.
+        /// Wird von der IGroundDetectionStrategy gesteuert.
+        /// </summary>
+        [System.NonSerialized]
+        public bool GroundSnappingEnabled = true;
+
+        /// <summary>
         /// Contains the current grounding information
         /// </summary>
         [System.NonSerialized]
@@ -1319,7 +1328,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Motor
                         groundingReport.IsStableOnGround = true;
 
                         // Ground snapping
-                        if (!groundingReport.SnappingPrevented)
+                        if (!groundingReport.SnappingPrevented && GroundSnappingEnabled)
                         {
                             probingPosition = groundSweepPosition + (groundSweepDirection * (groundSweepHit.distance - CollisionOffset));
                         }
@@ -1805,18 +1814,40 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Motor
         /// <summary>
         /// Allows you to override the way velocity is projected on an obstruction
         /// </summary>
+        /// <summary>
+        /// Velocity-Projektion bei Kollision mit Oberflächen.
+        ///
+        /// Zwei Hauptfälle:
+        /// 1. Grounded (IsStableOnGround): KCC-Standard — Velocity entlang Oberfläche umleiten
+        /// 2. Airborne (!IsStableOnGround): Custom Winkel-Differenzierung für Slope/Wall
+        ///
+        /// Airborne-Logik (else-Branch) unterscheidet 3 Oberflächen-Typen:
+        ///
+        /// | Oberfläche       | Winkel zur Up-Achse | stableOnHit | Verhalten                            |
+        /// |------------------|---------------------|-------------|--------------------------------------|
+        /// | Begehbare Rampe  | &lt; MaxSlopeAngle     | true        | Landen → Velocity tangential (KCC)   |
+        /// | Steile Rampe     | MaxSlopeAngle–80°   | false       | Hoch: H beibehalten, V=0            |
+        /// |                  |                     |             | Runter: ProjectOnPlane (Rutschen)    |
+        /// | Wand             | &gt; 80°               | false       | H in Wand stoppen, V beibehalten     |
+        ///
+        /// Ohne diese Differenzierung: ProjectOnPlane(velocity, slopeNormal) hat eine horizontale
+        /// Komponente in der Normal → Velocity wird seitlich umgeleitet → Character wird
+        /// nach links/rechts geschleudert (abhängig vom Auftreffpunkt auf der Capsule).
+        /// </summary>
         public virtual void HandleVelocityProjection(ref Vector3 velocity, Vector3 obstructionNormal, bool stableOnHit)
         {
             if (GroundingStatus.IsStableOnGround && !MustUnground())
             {
-                // On stable slopes, simply reorient the movement without any loss
+                // === GROUNDED: KCC-Standard Velocity-Umleitung ===
                 if (stableOnHit)
                 {
+                    // Begehbare Oberfläche → Velocity entlang Slope umleiten, kein Speed-Verlust
                     velocity = GetDirectionTangentToSurface(velocity, obstructionNormal) * velocity.magnitude;
                 }
-                // On blocking hits, project the movement on the obstruction while following the grounding plane
                 else
                 {
+                    // Blockierende Oberfläche (Wand etc.) → Velocity auf Obstruktion projizieren,
+                    // dabei der Ground-Plane folgen (kein Abheben)
                     Vector3 obstructionRightAlongGround = Vector3.Cross(obstructionNormal, GroundingStatus.GroundNormal).normalized;
                     Vector3 obstructionUpAlongGround = Vector3.Cross(obstructionRightAlongGround, obstructionNormal).normalized;
                     velocity = GetDirectionTangentToSurface(velocity, obstructionUpAlongGround) * velocity.magnitude;
@@ -1825,16 +1856,56 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Motor
             }
             else
             {
+                // === AIRBORNE: Custom Winkel-Differenzierung ===
                 if (stableOnHit)
                 {
-                    // Handle stable landing
+                    // Begehbare Rampe (< MaxSlopeAngle): Character landet stabil
+                    // Vertikale Velocity entfernen, horizontal entlang Oberfläche umleiten
                     velocity = Vector3.ProjectOnPlane(velocity, CharacterUp);
                     velocity = GetDirectionTangentToSurface(velocity, obstructionNormal) * velocity.magnitude;
                 }
-                // Handle generic obstruction
                 else
                 {
-                    velocity = Vector3.ProjectOnPlane(velocity, obstructionNormal);
+                    // Nicht-begehbare Oberfläche → Winkel bestimmt Verhalten
+                    float angle = Vector3.Angle(_characterUp, obstructionNormal);
+
+                    if (angle <= 80f)
+                    {
+                        // --- Steile Rampe (MaxSlopeAngle bis 80°) ---
+                        if (velocity.y > 0f)
+                        {
+                            // Character springt HOCH gegen Slope:
+                            // Vertikale Velocity entfernen (Aufstieg stoppen),
+                            // horizontale Richtung exakt beibehalten → kein seitliches Schleudern
+                            velocity = new Vector3(velocity.x, 0f, velocity.z);
+                        }
+                        else
+                        {
+                            // Character fällt/rutscht auf Slope HERUNTER:
+                            // ProjectOnPlane damit er entlang der Oberfläche rutscht.
+                            // Hier ist die seitliche Komponente gewünscht (Rutsch-Richtung)
+                            velocity = Vector3.ProjectOnPlane(velocity, obstructionNormal);
+                        }
+                    }
+                    else
+                    {
+                        // --- Wand (> 80°) ---
+                        // Horizontale Speed basierend auf Auftreffwinkel reduzieren,
+                        // aber Richtung NICHT ändern. ProjectOnPlane ist hier falsch:
+                        // Die Capsule-Kontakt-Normal hat wegen der Rundung eine seitliche
+                        // Komponente → Velocity wird lateral umgeleitet (links/rechts Schleudern).
+                        // Stattdessen: Speed mit (1 - intoWallAmount) skalieren.
+                        // Head-on (1.0) → 0%, Glancing (0.1) → 90%, Parallel (0) → 100%.
+                        // Vertikale Velocity beibehalten (weiter fallen/aufsteigen).
+                        Vector3 horizontal = new Vector3(velocity.x, 0f, velocity.z);
+                        if (horizontal.sqrMagnitude > 0.001f)
+                        {
+                            Vector3 wallNormalFlat = new Vector3(obstructionNormal.x, 0f, obstructionNormal.z).normalized;
+                            float intoWallAmount = Mathf.Max(0f, -Vector3.Dot(horizontal.normalized, wallNormalFlat));
+                            horizontal *= (1f - intoWallAmount);
+                        }
+                        velocity = horizontal + Vector3.up * velocity.y;
+                    }
                 }
             }
         }

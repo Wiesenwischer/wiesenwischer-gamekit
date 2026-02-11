@@ -1,7 +1,7 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-10
-> **Status:** In Planung
+> **Letzte Aktualisierung:** 2026-02-11
+> **Status:** In Entwicklung
 
 ---
 
@@ -28,12 +28,12 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 | Epic | Phasen | Status |
 |------|--------|--------|
-| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–3 | Abgeschlossen |
-| [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 4, 8 | Offen |
-| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 5–6 | Offen |
-| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 7 | Offen |
-| [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 9 | Offen |
-| [Character Platform](#character-platform) | 10–18 | Offen |
+| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20 | In Arbeit |
+| [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | Offen |
+| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
+| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8 | Offen |
+| [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
+| [Character Platform](#character-platform) | 11–19 | Offen |
 
 ---
 
@@ -44,21 +44,23 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 1 | Animation | Animation-Vorbereitung | [Features](phase-1-animation-prep/README.md) | ✅ | Abgeschlossen |
 | 2 | Animation | Animator Setup | [Features](phase-2-animator-setup/README.md) | ✅ | Abgeschlossen |
 | 3 | Animation | Animation-Integration | [Features](phase-3-animation-integration/README.md) | ✅ | Abgeschlossen |
-| 4 | Combat | Ability System | — | ❌ | Offen |
-| 5 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
-| 6 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
-| 7 | IK | IK System | — | ❌ | Offen |
-| 8 | Combat | Combat Abilities | — | ❌ | Offen |
-| 9 | Movement | Alternative Movement | — | ❌ | Offen |
-| 10 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
-| 11 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
-| 12 | Character | CP: Equipment System | — | ❌ | Offen |
-| 13 | Character | CP: Hair & Material System | — | ❌ | Offen |
-| 14 | Character | CP: Body & Face System | — | ❌ | Offen |
-| 15 | Character | CP: Creator UI & Scene | — | ❌ | Offen |
-| 16 | Character | CP: Save/Load & Integration | — | ❌ | Offen |
-| 17 | Character | CP: DNA Space & Constraints | — | ❌ | Offen |
-| 18 | Character | CP: Morph Graph & HD Anatomy | — | ❌ | Offen |
+| 4 | Animation | Fortgeschrittene Lokomotion | [Features](phase-4-locomotion-features/README.md) | ✅ | Abgeschlossen |
+| 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Offen |
+| 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
+| 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
+| 8 | IK | IK System | — | ❌ | Offen |
+| 9 | Combat | Combat Abilities | — | ❌ | Offen |
+| 10 | Movement | Alternative Movement | — | ❌ | Offen |
+| 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
+| 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
+| 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
+| 13 | Character | CP: Equipment System | — | ❌ | Offen |
+| 14 | Character | CP: Hair & Material System | — | ❌ | Offen |
+| 15 | Character | CP: Body & Face System | — | ❌ | Offen |
+| 16 | Character | CP: Creator UI & Scene | — | ❌ | Offen |
+| 17 | Character | CP: Save/Load & Integration | — | ❌ | Offen |
+| 18 | Character | CP: DNA Space & Constraints | — | ❌ | Offen |
+| 19 | Character | CP: Morph Graph & HD Anatomy | — | ❌ | Offen |
 
 ---
 
@@ -66,34 +68,34 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 ```
 Lebendige Charaktere (Animation)
-  Phase 1 ──> Phase 2 ──> Phase 3
+  Phase 1 ──> Phase 2 ──> Phase 3 ──> Phase 4
 
 Fähigkeiten & Action Combat
-  Phase 3 ──> Phase 4 ──> Phase 8
+  Phase 4 ──> Phase 5 ──> Phase 9
 
 MMO-Netzwerk
-  Phase 4 ──> Phase 5 ──> Phase 6
+  Phase 5 ──> Phase 6 ──> Phase 7
 
 Natürliche Bewegung (IK)
-  Phase 3 ──> Phase 7
+  Phase 4 ──> Phase 20 (Grounding Smoother) ──> Phase 8
 
 Reiten, Gleiten & Schwimmen
-  Phase 5 ──> Phase 9
+  Phase 6 ──> Phase 10
 
 Character Platform (unabhängig von den anderen Epics)
-  Phase 10 ──> Phase 11 ──> Phase 12
+  Phase 11 ──> Phase 12 ──> Phase 13
                    │
-                   ├──> Phase 13 (Hair/Material)
-                   └──> Phase 14 (Body/Face)
+                   ├──> Phase 14 (Hair/Material)
+                   └──> Phase 15 (Body/Face)
                             │
                             v
-                        Phase 15 (UI) ──> Phase 16 (Save/Load)
+                        Phase 16 (UI) ──> Phase 17 (Save/Load)
                                                │
                                                v
-                        Phase 17 (DNA Space & Constraints)
+                        Phase 18 (DNA Space & Constraints)
                                                │
                                                v
-                        Phase 18 (Morph Graph & HD Anatomy)
+                        Phase 19 (Morph Graph & HD Anatomy)
 ```
 
 **Hinweis:** Die Epics haben **keine feste Reihenfolge** untereinander. Die Reihenfolge ergibt sich aus den Phasen-Abhängigkeiten und der aktuellen Priorität. Insbesondere kann der Character Creator komplett parallel zu den anderen Epics entwickelt werden.
@@ -102,12 +104,13 @@ Character Platform (unabhängig von den anderen Epics)
 
 # Lebendige Charaktere — Animation Pipeline
 
-Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit Layer-System aufbauen und in den Character Controller integrieren.
+Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit Layer-System aufbauen, in den Character Controller integrieren und fortgeschrittene Locomotion-Features implementieren.
 
 **Relevante Spezifikationen:**
 - [Animationskonzept LayeredAbilities](../specs/Animationskonzept_LayeredAbilities.md)
 - [GameKit CharacterController Modular](../specs/GameKit_CharacterController_Modular.md)
 - [AAA Action Combat & Character Architecture](../specs/AAA_Action_Combat_Character_Architecture.md)
+- [Animation CrossFade Architektur](../specs/Animation_CrossFade_Architektur.md)
 
 ---
 
@@ -149,13 +152,51 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [x] [3.1 PlayerController Animation-Anbindung](phase-3-animation-integration/3.1-controller-binding.md)
 - [x] [3.2 State Animation-Trigger](phase-3-animation-integration/3.2-state-animation-triggers.md)
 - [x] [3.3 Player Prefab zusammenbauen](phase-3-animation-integration/3.3-player-prefab.md)
-- [ ] [3.4 Test-Szene & Verifikation](phase-3-animation-integration/3.4-test-verification.md)
+- [x] [3.4 Test-Szene & Verifikation](phase-3-animation-integration/3.4-test-verification.md)
+
+---
+
+### Phase 4: Fortgeschrittene Lokomotion
+**Branch:** `integration/phase-4-locomotion-features`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-4-locomotion-features/README.md)
+
+**Relevante Spezifikationen:**
+- [Animation CrossFade Architektur](../specs/Animation_CrossFade_Architektur.md)
+- [GameKit CharacterController Modular](../specs/GameKit_CharacterController_Modular.md)
+
+**Schritte:**
+- [x] 4.1 Stopping States (Light/Medium/Hard Deceleration mit Animationen)
+- [x] 4.2 Landing System (Soft/Hard Landing mit konfigurierbaren Thresholds)
+- [x] 4.3 Walk Toggle (MMO-Style, Y-Taste)
+- [x] 4.4 Slope Speed Modifiers (Uphill Penalty, Downhill Bonus)
+- [x] 4.5 Air Movement (AirControl, AirDrag, MinFallDistance)
+- [x] 4.6 Detection Strategies (Ground/Fall, Motor/Collider-basiert)
+- [x] 4.7 Stair Speed Reduction (Step-Frequenz-Erkennung)
+- [x] 4.8 Ledge & Ground Snapping Config
+- [x] 4.9 Animation CrossFade-System + TransitionConfig
+
+---
+
+### Phase 20: Visual Grounding Smoother
+**Branch:** `integration/phase-20-grounding-smoother`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-20-grounding-smoother/README.md)
+
+**Ziel:** Visuelles Y-Smoothing für Step-Ups (Treppen/Kanten) — Mesh gleitet per SmoothDamp statt diskret zu springen. Voraussetzung für Foot IK (Phase 8).
+
+**Relevante Spezifikationen:**
+- [GroundingSmoother Spezifikation](../specs/GroundingSmoother_Spezifikation.md)
+
+**Schritte:**
+- [ ] [20.1 GroundingSmoother Komponente](phase-20-grounding-smoother/20.1-grounding-smoother-component.md)
+- [ ] [20.2 Unit Tests](phase-20-grounding-smoother/20.2-unit-tests.md)
+- [ ] [20.3 Prefab-Integration](phase-20-grounding-smoother/20.3-prefab-integration.md)
+- [ ] [20.4 Verifikation](phase-20-grounding-smoother/20.4-verification.md)
 
 ---
 
 # Fähigkeiten & Action Combat
 
-Modulares Ability-System als Grundgerüst für Jump, Sprint und darauf aufbauend Nahkampf, Fernkampf und Zauber im Action-Combat-Stil.
+Modulares Ability-Framework als Infrastruktur für Nahkampf, Fernkampf, Zauber und Utility-Fähigkeiten im Action-Combat-Stil. Jump/Sprint bleiben Movement States — das Ability System ist eine orthogonale Schicht für Actions.
 
 **Relevante Spezifikationen:**
 - [Modulare Fertigkeiten Controller v2](../specs/ModularFertigkeitenController_Spezifikation_v2.md)
@@ -164,30 +205,30 @@ Modulares Ability-System als Grundgerüst für Jump, Sprint und darauf aufbauend
 
 ---
 
-### Phase 4: Ability System
-**Branch:** `integration/phase-4-ability-system`
-**Ausgearbeitet:** ❌ Nein
+### Phase 5: Ability System
+**Branch:** `integration/phase-5-ability-system`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-5-ability-system/README.md)
 
-**Schritte (vorläufig):**
-- [ ] 4.1 IAbility Interface
-- [ ] 4.2 AbilitySystem Manager
-- [ ] 4.3 JumpAbility
-- [ ] 4.4 SprintAbility
-- [ ] 4.5 Animation Layer Integration
+**Schritte:**
+- [ ] [5.1 Package-Struktur & IAbility Interface](phase-5-ability-system/5.1-package-iability-interface.md)
+- [ ] [5.2 AbilityDefinition & AbilityContext](phase-5-ability-system/5.2-ability-definition-context.md)
+- [ ] [5.3 AbilitySystem Manager](phase-5-ability-system/5.3-ability-system-manager.md)
+- [ ] [5.4 Animation Layer Integration](phase-5-ability-system/5.4-animation-layer-integration.md)
+- [ ] [5.5 PlayerController Integration & Tests](phase-5-ability-system/5.5-integration-tests.md)
 
 ---
 
-### Phase 8: Combat Abilities
-**Branch:** `integration/phase-8-combat-abilities`
+### Phase 9: Combat Abilities
+**Branch:** `integration/phase-9-combat-abilities`
 **Ausgearbeitet:** ❌ Nein
 
 **Schritte (vorläufig):**
-- [ ] 8.1 Combat Package Struktur
-- [ ] 8.2 MeleeAbility (Nahkampf)
-- [ ] 8.3 RangedAbility (Fernkampf/Bogen)
-- [ ] 8.4 SpellAbility (Zauber)
-- [ ] 8.5 Combat Animationen
-- [ ] 8.6 Combat Netzwerk-Sync
+- [ ] 9.1 Combat Package Struktur
+- [ ] 9.2 MeleeAbility (Nahkampf)
+- [ ] 9.3 RangedAbility (Fernkampf/Bogen)
+- [ ] 9.4 SpellAbility (Zauber)
+- [ ] 9.5 Combat Animationen
+- [ ] 9.6 Combat Netzwerk-Sync
 
 ---
 
@@ -203,28 +244,28 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 
 ---
 
-### Phase 5: Netzwerk-Grundstruktur
-**Branch:** `integration/phase-5-network`
+### Phase 6: Netzwerk-Grundstruktur
+**Branch:** `integration/phase-6-network`
 **Ausgearbeitet:** ❌ Nein
 
 **Schritte (vorläufig):**
-- [ ] 5.1 FishNet einbinden
-- [ ] 5.2 NetworkPlayer
-- [ ] 5.3 Input Sync
-- [ ] 5.4 Position/Rotation Sync
-- [ ] 5.5 Client-Side Prediction
+- [ ] 6.1 FishNet einbinden
+- [ ] 6.2 NetworkPlayer
+- [ ] 6.3 Input Sync
+- [ ] 6.4 Position/Rotation Sync
+- [ ] 6.5 Client-Side Prediction
 
 ---
 
-### Phase 6: Netzwerk-Animation
-**Branch:** `integration/phase-6-network-animation`
+### Phase 7: Netzwerk-Animation
+**Branch:** `integration/phase-7-network-animation`
 **Ausgearbeitet:** ❌ Nein
 
 **Schritte (vorläufig):**
-- [ ] 6.1 Animator Sync
-- [ ] 6.2 State Sync
-- [ ] 6.3 Ability Sync
-- [ ] 6.4 Lag Compensation
+- [ ] 7.1 Animator Sync
+- [ ] 7.2 State Sync
+- [ ] 7.3 Ability Sync
+- [ ] 7.4 Lag Compensation
 
 ---
 
@@ -238,17 +279,17 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 
 ---
 
-### Phase 7: IK System
-**Branch:** `integration/phase-7-ik-system`
+### Phase 8: IK System
+**Branch:** `integration/phase-8-ik-system`
 **Ausgearbeitet:** ❌ Nein
 
 **Schritte (vorläufig):**
-- [ ] 7.1 IK Package Struktur
-- [ ] 7.2 IKManager Komponente
-- [ ] 7.3 LookAtIK Implementation
-- [ ] 7.4 FootIK Implementation
-- [ ] 7.5 HandIK Implementation
-- [ ] 7.6 IK Netzwerk-Sync
+- [ ] 8.1 IK Package Struktur
+- [ ] 8.2 IKManager Komponente
+- [ ] 8.3 LookAtIK Implementation
+- [ ] 8.4 FootIK Implementation
+- [ ] 8.5 HandIK Implementation
+- [ ] 8.6 IK Netzwerk-Sync
 
 ---
 
@@ -263,17 +304,17 @@ Alternative Fortbewegungsarten mit eigenen Movement Controllern, Animationen und
 
 ---
 
-### Phase 9: Alternative Movement
-**Branch:** `integration/phase-9-alternative-movement`
+### Phase 10: Alternative Movement
+**Branch:** `integration/phase-10-alternative-movement`
 **Ausgearbeitet:** ❌ Nein
 
 **Schritte (vorläufig):**
-- [ ] 9.1 Movement Controller Abstraktion
-- [ ] 9.2 RidingController (Reiten)
-- [ ] 9.3 GlidingController (Gleiten)
-- [ ] 9.4 SwimmingController (Schwimmen)
-- [ ] 9.5 Movement Animationen
-- [ ] 9.6 Movement Netzwerk-Sync
+- [ ] 10.1 Movement Controller Abstraktion
+- [ ] 10.2 RidingController (Reiten)
+- [ ] 10.3 GlidingController (Gleiten)
+- [ ] 10.4 SwimmingController (Schwimmen)
+- [ ] 10.5 Movement Animationen
+- [ ] 10.6 Movement Netzwerk-Sync
 
 ---
 
@@ -297,27 +338,27 @@ AAA-taugliche Character Platform mit Live-Preview Creator, Equipment System, DNA
 
 ---
 
-### Phase 10: CP Core Data Model & Catalogs
-**Branch:** `integration/phase-10-cp-data-model`
+### Phase 11: CP Core Data Model & Catalogs
+**Branch:** `integration/phase-11-cp-data-model`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** AppearanceDNA-Datenmodell und Katalog-System als Grundlage für alles weitere.
 
 **Vorläufige Schritte:**
-- [ ] 10.1 Package-Struktur anlegen (`Character.Core`, `Character.Content`)
-- [ ] 10.2 `AppearanceDNA` + Sub-DNA-Klassen (Body, Face, Skin, Eye, Equipment) + `SerializableColor`
-- [ ] 10.3 `EquipmentSlot` Enum und Grundtypen
-- [ ] 10.4 ScriptableObject-Kataloge (`HairCatalog`, `EquipmentCatalog`, `FacePresetCatalog`)
-- [ ] 10.5 `CatalogProvider` Service (Katalog-Zugriff zur Runtime)
-- [ ] 10.6 Mapping Layer Grundstruktur (`BlendShapeMap`, `BoneMap`, `MaterialParamMap`)
-- [ ] 10.7 Unit Tests für Datenmodell
+- [ ] 11.1 Package-Struktur anlegen (`Character.Core`, `Character.Content`)
+- [ ] 11.2 `AppearanceDNA` + Sub-DNA-Klassen (Body, Face, Skin, Eye, Equipment) + `SerializableColor`
+- [ ] 11.3 `EquipmentSlot` Enum und Grundtypen
+- [ ] 11.4 ScriptableObject-Kataloge (`HairCatalog`, `EquipmentCatalog`, `FacePresetCatalog`)
+- [ ] 11.5 `CatalogProvider` Service (Katalog-Zugriff zur Runtime)
+- [ ] 11.6 Mapping Layer Grundstruktur (`BlendShapeMap`, `BoneMap`, `MaterialParamMap`)
+- [ ] 11.7 Unit Tests für Datenmodell
 
 **Referenz:** Konsolidierte Spec Kapitel 4, 5, 6
 
 ---
 
-### Phase 11: CP Builder Pipeline & Assembly Graph
-**Branch:** `integration/phase-11-cp-builder`
+### Phase 12: CP Builder Pipeline & Assembly Graph
+**Branch:** `integration/phase-12-cp-builder`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** Assembly Graph mit Dirty Tracking und deterministische Build-Pipeline.
@@ -325,75 +366,75 @@ AAA-taugliche Character Platform mit Live-Preview Creator, Equipment System, DNA
 **Package:** `Character.Runtime`
 
 **Vorläufige Schritte:**
-- [ ] 11.1 `BoneMapCache` (Bone-Name → Transform Lookup)
-- [ ] 11.2 Assembly Graph Grundgerüst (Nodes, Dirty Tracking, Partial Rebuild)
-- [ ] 11.3 `CharacterBuilder` mit Pipeline-Steps
-- [ ] 11.4 Pipeline Step: Resolve Assets
-- [ ] 11.5 Pipeline Step: Ensure Base Character
-- [ ] 11.6 Pipeline Step: Skeleton Mapping
-- [ ] 11.7 Pipeline Step: Post-Fix (Bounds, Validation)
-- [ ] 11.8 Unit Tests für Builder & Graph
+- [ ] 12.1 `BoneMapCache` (Bone-Name → Transform Lookup)
+- [ ] 12.2 Assembly Graph Grundgerüst (Nodes, Dirty Tracking, Partial Rebuild)
+- [ ] 12.3 `CharacterBuilder` mit Pipeline-Steps
+- [ ] 12.4 Pipeline Step: Resolve Assets
+- [ ] 12.5 Pipeline Step: Ensure Base Character
+- [ ] 12.6 Pipeline Step: Skeleton Mapping
+- [ ] 12.7 Pipeline Step: Post-Fix (Bounds, Validation)
+- [ ] 12.8 Unit Tests für Builder & Graph
 
 **Referenz:** Konsolidierte Spec Kapitel 7, 8, 9
 
 ---
 
-### Phase 12: CP Equipment System
-**Branch:** `integration/phase-12-cp-equipment`
+### Phase 13: CP Equipment System
+**Branch:** `integration/phase-13-cp-equipment`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** Slot-basiertes Equipment-System mit SkinnedMesh Bone-Rebind.
 
 **Vorläufige Schritte:**
-- [ ] 12.1 `EquipmentBinder` (Bone Rebind by Name)
-- [ ] 12.2 Pipeline Step: Equip Equipment (EquipmentNode)
-- [ ] 12.3 Body Masking / Hide-Under-Cloth (Hide BlendShapes)
-- [ ] 12.4 Compatibility Metadata + Bone Coverage Validation
-- [ ] 12.5 Integration Tests mit Test-Prefabs
+- [ ] 13.1 `EquipmentBinder` (Bone Rebind by Name)
+- [ ] 13.2 Pipeline Step: Equip Equipment (EquipmentNode)
+- [ ] 13.3 Body Masking / Hide-Under-Cloth (Hide BlendShapes)
+- [ ] 13.4 Compatibility Metadata + Bone Coverage Validation
+- [ ] 13.5 Integration Tests mit Test-Prefabs
 
 **Referenz:** Konsolidierte Spec Kapitel 14
 
 ---
 
-### Phase 13: CP Hair & Material System
-**Branch:** `integration/phase-13-cp-hair-material`
+### Phase 14: CP Hair & Material System
+**Branch:** `integration/phase-14-cp-hair-material`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** Hair-Prefab-System und Runtime-Material-Coloring via MaterialPropertyBlock.
 
 **Vorläufige Schritte:**
-- [ ] 13.1 Pipeline Step: Equip Hair (HairNode, Prefab + Bone Rebind)
-- [ ] 13.2 `HairColorApplier` mit MaterialPropertyBlock
-- [ ] 13.3 `HairShaderAdapter` (Shader-Property-Mapping)
-- [ ] 13.4 Pipeline Step: Apply Materials (MaterialNode, Skin/Eyes/Hair)
-- [ ] 13.5 Skin Melanin Slider + Tattoo Toggle
-- [ ] 13.6 Tests
+- [ ] 14.1 Pipeline Step: Equip Hair (HairNode, Prefab + Bone Rebind)
+- [ ] 14.2 `HairColorApplier` mit MaterialPropertyBlock
+- [ ] 14.3 `HairShaderAdapter` (Shader-Property-Mapping)
+- [ ] 14.4 Pipeline Step: Apply Materials (MaterialNode, Skin/Eyes/Hair)
+- [ ] 14.5 Skin Melanin Slider + Tattoo Toggle
+- [ ] 14.6 Tests
 
 **Referenz:** Konsolidierte Spec Kapitel 13, 15
 
 ---
 
-### Phase 14: CP Body & Face System
-**Branch:** `integration/phase-14-cp-body-face`
+### Phase 15: CP Body & Face System
+**Branch:** `integration/phase-15-cp-body-face`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** Bone-driven Body Sliders (MVP) und Face-Preset-System.
 
 **Vorläufige Schritte:**
-- [ ] 14.1 Pipeline Step: Apply Body (BodyRatioNode, Bone Scaling)
-- [ ] 14.2 Bone-Scaling-Config (Breast, Butt, Leg Length, Height, ShoulderWidth)
-- [ ] 14.3 Safety Rules (Scaling Ranges, Default Restore, keine Twist-Bones)
-- [ ] 14.4 Pipeline Step: Apply Face (FaceMorphNode, Mesh Variant Swap)
-- [ ] 14.5 Face Morph Fallback (optional, wenn BlendShapes vorhanden)
-- [ ] 14.6 Eye System Basis (Iris Color + Pupil Size via MPB)
-- [ ] 14.7 Tests
+- [ ] 15.1 Pipeline Step: Apply Body (BodyRatioNode, Bone Scaling)
+- [ ] 15.2 Bone-Scaling-Config (Breast, Butt, Leg Length, Height, ShoulderWidth)
+- [ ] 15.3 Safety Rules (Scaling Ranges, Default Restore, keine Twist-Bones)
+- [ ] 15.4 Pipeline Step: Apply Face (FaceMorphNode, Mesh Variant Swap)
+- [ ] 15.5 Face Morph Fallback (optional, wenn BlendShapes vorhanden)
+- [ ] 15.6 Eye System Basis (Iris Color + Pupil Size via MPB)
+- [ ] 15.7 Tests
 
 **Referenz:** Konsolidierte Spec Kapitel 10, 11, 12
 
 ---
 
-### Phase 15: CP Creator UI & Scene
-**Branch:** `integration/phase-15-cp-ui`
+### Phase 16: CP Creator UI & Scene
+**Branch:** `integration/phase-16-cp-ui`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** CharacterCreatorScene mit Preview Proxy Pattern, Live-Preview und Tab-basiertem UI.
@@ -401,72 +442,72 @@ AAA-taugliche Character Platform mit Live-Preview Creator, Equipment System, DNA
 **Packages:** `Character.Creator`, `Character.Demo`
 
 **Vorläufige Schritte:**
-- [ ] 15.1 Creator Package-Struktur anlegen
-- [ ] 15.2 Preview Proxy Pattern (Creator vs Gameplay Trennung)
-- [ ] 15.3 `CreatorState` (aktive DNA, Dirty Flags, Undo History, Debounce)
-- [ ] 15.4 `CreatorBootstrapper` + Scene-Hierarchie (Lighting, Environment)
-- [ ] 15.5 FacePanel (Grid mit Presets)
-- [ ] 15.6 BodyPanel (Sliders)
-- [ ] 15.7 HairPanel (Liste + Color Picker)
-- [ ] 15.8 OutfitPanel (Slot-Listen)
-- [ ] 15.9 Camera Focus Logic (Cinemachine)
-- [ ] 15.10 FinalizePanel
+- [ ] 16.1 Creator Package-Struktur anlegen
+- [ ] 16.2 Preview Proxy Pattern (Creator vs Gameplay Trennung)
+- [ ] 16.3 `CreatorState` (aktive DNA, Dirty Flags, Undo History, Debounce)
+- [ ] 16.4 `CreatorBootstrapper` + Scene-Hierarchie (Lighting, Environment)
+- [ ] 16.5 FacePanel (Grid mit Presets)
+- [ ] 16.6 BodyPanel (Sliders)
+- [ ] 16.7 HairPanel (Liste + Color Picker)
+- [ ] 16.8 OutfitPanel (Slot-Listen)
+- [ ] 16.9 Camera Focus Logic (Cinemachine)
+- [ ] 16.10 FinalizePanel
 
 **Referenz:** Konsolidierte Spec Kapitel 18
 
 ---
 
-### Phase 16: CP Save/Load & Integration
-**Branch:** `integration/phase-16-cp-saveload`
+### Phase 17: CP Save/Load & Integration
+**Branch:** `integration/phase-17-cp-saveload`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** JSON-Persistenz, Versionierung und Anbindung an das restliche GameKit.
 
 **Vorläufige Schritte:**
-- [ ] 16.1 JSON Serialisierung/Deserialisierung von `AppearanceDNA`
-- [ ] 16.2 DNA `version` + Migration-Strategie
-- [ ] 16.3 Preset-Management (Custom Presets speichern/laden)
-- [ ] 16.4 Integration: Character aus DNA im Gameplay spawnen
-- [ ] 16.5 Addressables-Vorbereitung (optional)
-- [ ] 16.6 End-to-End Tests
+- [ ] 17.1 JSON Serialisierung/Deserialisierung von `AppearanceDNA`
+- [ ] 17.2 DNA `version` + Migration-Strategie
+- [ ] 17.3 Preset-Management (Custom Presets speichern/laden)
+- [ ] 17.4 Integration: Character aus DNA im Gameplay spawnen
+- [ ] 17.5 Addressables-Vorbereitung (optional)
+- [ ] 17.6 End-to-End Tests
 
 **Referenz:** Konsolidierte Spec Kapitel 19
 
 ---
 
-### Phase 17: CP DNA Space & Constraints (Post-MVP)
-**Branch:** `integration/phase-17-cp-dna-space`
+### Phase 18: CP DNA Space & Constraints (Post-MVP)
+**Branch:** `integration/phase-18-cp-dna-space`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** DNA Space Modell für Preset Mixing, Constraints für Realismus und NPC Variation.
 
 **Vorläufige Schritte:**
-- [ ] 17.1 DNA Space Modell (Parameter-Vektor, Preset als Punkt)
-- [ ] 17.2 Preset Mixing (Lerp/Choose/Blend per Channel-Typ)
-- [ ] 17.3 Constraint System Grundgerüst (Range, Dependency, Soft Correction)
-- [ ] 17.4 Constraint Execution Pipeline (Apply → Clamp → Constrain → Emit)
-- [ ] 17.5 NPC Randomization (Sample Space + Constrain)
-- [ ] 17.6 Tests
+- [ ] 18.1 DNA Space Modell (Parameter-Vektor, Preset als Punkt)
+- [ ] 18.2 Preset Mixing (Lerp/Choose/Blend per Channel-Typ)
+- [ ] 18.3 Constraint System Grundgerüst (Range, Dependency, Soft Correction)
+- [ ] 18.4 Constraint Execution Pipeline (Apply → Clamp → Constrain → Emit)
+- [ ] 18.5 NPC Randomization (Sample Space + Constrain)
+- [ ] 18.6 Tests
 
 **Referenz:** Konsolidierte Spec Kapitel 16
 
 ---
 
-### Phase 18: CP Morph Graph & HD Anatomy (Post-MVP)
-**Branch:** `integration/phase-18-cp-morph-graph`
+### Phase 19: CP Morph Graph & HD Anatomy (Post-MVP)
+**Branch:** `integration/phase-19-cp-morph-graph`
 **Ausgearbeitet:** ❌ Nein
 
 **Ziel:** Morph Graph für AAA-Qualität Body/Face, HD Anatomy BlendShapes und erweiterte Systeme.
 
 **Vorläufige Schritte:**
-- [ ] 18.1 Mapping Layer erweitern (BlendShapeMap, BoneMap, MaterialParamMap als SO)
-- [ ] 18.2 Morph Graph (DNA Channels → Drivers, Curves, Normalization)
-- [ ] 18.3 HD Anatomy BlendShape Integration (BodyMorphNode)
-- [ ] 18.4 Advanced Face Morphs (FaceMorphNode mit BlendShapes)
-- [ ] 18.5 Aging System (strukturell + Material)
-- [ ] 18.6 Eye System erweitert (Shape Sliders, Eyelid Bones)
-- [ ] 18.7 Performance Tuning + LOD Integration
-- [ ] 18.8 Tests
+- [ ] 19.1 Mapping Layer erweitern (BlendShapeMap, BoneMap, MaterialParamMap als SO)
+- [ ] 19.2 Morph Graph (DNA Channels → Drivers, Curves, Normalization)
+- [ ] 19.3 HD Anatomy BlendShape Integration (BodyMorphNode)
+- [ ] 19.4 Advanced Face Morphs (FaceMorphNode mit BlendShapes)
+- [ ] 19.5 Aging System (strukturell + Material)
+- [ ] 19.6 Eye System erweitert (Shape Sliders, Eyelid Bones)
+- [ ] 19.7 Performance Tuning + LOD Integration
+- [ ] 19.8 Tests
 
 **Referenz:** Konsolidierte Spec Kapitel 17
 

@@ -504,6 +504,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Locomotion
             public float HardLandingThreshold { get; set; } = 15f;
             public float SoftLandingDuration { get; set; } = 0.1f;
             public float HardLandingDuration { get; set; } = 0.4f;
+            public GroundDetectionMode GroundDetection { get; set; } = GroundDetectionMode.Motor;
+            public FallDetectionMode FallDetection { get; set; } = FallDetectionMode.Motor;
+            public float GroundToFallRayDistance { get; set; } = 1.0f;
+            public float LightStopDeceleration { get; set; } = 12f;
+            public float MediumStopDeceleration { get; set; } = 10f;
+            public float HardStopDeceleration { get; set; } = 8f;
+            public bool StairSpeedReductionEnabled { get; set; } = true;
+            public float StairSpeedReduction { get; set; } = 0.3f;
+            public float UphillSpeedPenalty { get; set; } = 0.3f;
+            public float DownhillSpeedBonus { get; set; } = 0.1f;
         }
 
         #endregion

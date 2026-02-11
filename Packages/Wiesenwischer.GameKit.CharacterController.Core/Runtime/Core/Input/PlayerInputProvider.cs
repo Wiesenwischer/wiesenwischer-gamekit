@@ -23,9 +23,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         private InputAction _jumpAction;
         private InputAction _sprintAction;
         private InputAction _dashAction;
+        private InputAction _walkToggleAction;
 
         private bool _jumpStarted;
         private bool _dashStarted;
+        private bool _walkToggleStarted;
 
         #region IMovementInputProvider
 
@@ -55,6 +57,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             }
         }
 
+        public bool WalkTogglePressed
+        {
+            get
+            {
+                if (!_isActive || !_walkToggleStarted) return false;
+                _walkToggleStarted = false;
+                return true;
+            }
+        }
+
         public bool IsActive => _isActive && enabled;
 
         public void UpdateInput()
@@ -65,6 +77,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         {
             _jumpStarted = false;
             _dashStarted = false;
+            _walkToggleStarted = false;
         }
 
         #endregion
@@ -93,12 +106,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             _jumpAction = _actionMap.FindAction("Jump");
             _sprintAction = _actionMap.FindAction("Sprint");
             _dashAction = _actionMap.FindAction("Dash");
+            _walkToggleAction = _actionMap.FindAction("WalkToggle");
 
             if (_moveAction == null)
                 Debug.LogError($"[PlayerInputProvider] Move-Action nicht in ActionMap '{_actionMapName}'!");
 
             if (_jumpAction != null) _jumpAction.started += OnJumpStarted;
             if (_dashAction != null) _dashAction.started += OnDashStarted;
+            if (_walkToggleAction != null) _walkToggleAction.started += OnWalkToggleStarted;
 
             _actionMap.Enable();
         }
@@ -107,6 +122,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         {
             if (_jumpAction != null) _jumpAction.started -= OnJumpStarted;
             if (_dashAction != null) _dashAction.started -= OnDashStarted;
+            if (_walkToggleAction != null) _walkToggleAction.started -= OnWalkToggleStarted;
 
             _actionMap?.Disable();
         }
@@ -123,6 +139,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         private void OnDashStarted(InputAction.CallbackContext context)
         {
             _dashStarted = true;
+        }
+
+        private void OnWalkToggleStarted(InputAction.CallbackContext context)
+        {
+            _walkToggleStarted = true;
         }
 
         #endregion
@@ -142,6 +163,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             if (_jumpStarted || JumpHeld) buttons |= InputButtons.Jump;
             if (SprintHeld) buttons |= InputButtons.Sprint;
             if (_dashStarted) buttons |= InputButtons.Dash;
+            if (_walkToggleStarted) buttons |= InputButtons.Walk;
 
             return new InputSnapshot
             {

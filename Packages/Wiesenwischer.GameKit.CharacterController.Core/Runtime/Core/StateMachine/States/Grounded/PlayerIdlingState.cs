@@ -1,3 +1,5 @@
+using Wiesenwischer.GameKit.CharacterController.Core.Animation;
+
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
     /// <summary>
@@ -15,6 +17,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         protected override void OnEnter()
         {
             base.OnEnter();
+            Player.AnimationController?.PlayState(CharacterAnimationState.Locomotion);
             ReusableData.MovementSpeedModifier = 0f;
         }
 

@@ -16,25 +16,29 @@ MonoBehaviour:
   _runSpeed: 6
   _acceleration: 10
   _deceleration: 15
+  _sprintMultiplier: 1.5
   _airControl: 0.3
   _airDrag: 0.8
   _minFallDistance: 0.5
-  _gravity: 70
+  _gravity: 20
   _maxFallSpeed: 50
   _jumpHeight: 2
-  _jumpDuration: 2
+  _jumpDuration: 0.4
   _coyoteTime: 0.15
-  _jumpBufferTime: 1
+  _jumpBufferTime: 0.1
   _useVariableJump: 1
   _groundCheckDistance: 0.2
   _groundCheckRadius: 0.3
   _groundLayers:
     serializedVersion: 2
     m_Bits: 1
-  _maxSlopeAngle: 49.9
+  _maxSlopeAngle: 45
+  _groundDetection: 1
+  _fallDetection: 1
+  _groundToFallRayDistance: 1
   _rotationSpeed: 720
   _rotateTowardsMovement: 1
-  _maxStepHeight: 0.35
+  _maxStepHeight: 0.5
   _minStepDepth: 0.1
   _ledgeDetectionEnabled: 1
   _maxStableDistanceFromLedge: 0.5

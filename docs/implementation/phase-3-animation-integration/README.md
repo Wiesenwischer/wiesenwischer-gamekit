@@ -32,7 +32,7 @@ Die in Phase 2 erstellte AnimatorParameterBridge und den Animator Controller mit
 | 3.1 | [PlayerController Animation-Anbindung](3.1-controller-binding.md) | `feat(phase-3): 3.1 PlayerController Animation-Anbindung` | `feat/animation-controller-binding` | [x] |
 | 3.2 | [State Animation-Trigger](3.2-state-animation-triggers.md) | `feat(phase-3): 3.2 State Animation-Trigger` | `feat/state-animation-triggers` | [x] |
 | 3.3 | [Player Prefab zusammenbauen](3.3-player-prefab.md) | `feat(phase-3): 3.3 Player Prefab zusammenbauen` | `feat/animated-player-prefab` | [x] |
-| 3.4 | [Test-Szene & Verifikation](3.4-test-verification.md) | `test(phase-3): 3.4 Test-Szene und Verifikation` | `test/animation-integration` | [ ] |
+| 3.4 | [Test-Szene & Verifikation](3.4-test-verification.md) | `test(phase-3): 3.4 Test-Szene und Verifikation` | `test/animation-integration` | [x] |
 
 ---
 
@@ -112,16 +112,18 @@ Player (GameObject)
 ## Ergebnis
 
 Nach Abschluss dieser Phase:
-- [ ] PlayerController hat `IAnimationController` Property
-- [ ] States rufen Animation-Trigger auf (Jump, Landing)
-- [ ] AnimatorParameterBridge synchronisiert kontinuierliche Parameter automatisch
-- [ ] Player Prefab mit allen Komponenten funktionsfähig
-- [ ] Locomotion-Animationen (Idle, Walk, Run, Sprint) spielen korrekt
-- [ ] Airborne-Animationen (Jump, Fall, SoftLand, HardLand) spielen korrekt
-- [ ] Alle Dateien kompilieren fehlerfrei
+- [x] PlayerController hat `IAnimationController` Property
+- [x] States rufen Animation-Trigger auf (Jump, Landing)
+- [x] AnimatorParameterBridge synchronisiert kontinuierliche Parameter automatisch
+- [x] Player Prefab mit allen Komponenten funktionsfähig
+- [x] Locomotion-Animationen (Idle, Walk, Run, Sprint) spielen korrekt
+- [x] Airborne-Animationen (Jump, Fall, SoftLand, HardLand) spielen korrekt
+- [x] Alle Dateien kompilieren fehlerfrei
 
 ---
 
-## Nächste Phase
+## Nächste Phasen
 
-[Phase 4: Ability System](../phase-4-ability-system/README.md) (Epic: Fähigkeiten & Action Combat)
+- [Phase 4: Fortgeschrittene Lokomotion](../phase-4-locomotion-features/README.md) — Stopping States, Landing System, Walk Toggle, Slope Speed u.v.m.
+- [Phase 5: Ability System](../phase-5-ability-system/README.md) — Abilities nutzen den Ability-Layer des Animators
+- [Phase 8: IK System](../phase-8-ik-system/README.md) — Inverse Kinematics baut auf dem Animator auf

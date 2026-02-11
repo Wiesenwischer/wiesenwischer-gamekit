@@ -20,6 +20,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         private readonly GroundDetectionModule _groundDetectionModule;
         private readonly GravityModule _gravityModule;
 
+        // Strategies (evaluiert einmal pro Frame in PostGroundingUpdate)
+        private readonly IGroundDetectionStrategy _groundDetectionStrategy;
+        private readonly IFallDetectionStrategy _fallDetectionStrategy;
+
         // Kontinuierlicher Input (latest-value-wins, Overwrite = korrekt)
         private LocomotionInput _currentInput;
 
@@ -39,11 +43,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         private float _targetYaw;
         private float _currentYaw;
 
+        // Stair Detection: Step-Frequenz tracken
+        private float _lastStepTime;
+        private int _recentStepCount;
+        private const float StairDetectionWindow = 0.6f;
+        private const int StairStepThreshold = 2;
+
         // Cached GroundInfo
         private GroundInfo _cachedGroundInfo;
 
-        // Debug: Frames nach Landung loggen
+        // Debug: Hovering-Diagnose
         private int _debugLandingFrames;
+        private int _debugHoverLogCount;
 
         /// <summary>
         /// Erstellt eine neue CharacterLocomotion. Erwartet einen existierenden CharacterMotor.
@@ -58,6 +69,22 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             _accelerationModule = new AccelerationModule();
             _groundDetectionModule = new GroundDetectionModule();
             _gravityModule = new GravityModule();
+
+            // Ground Detection Strategy
+            _groundDetectionStrategy = config.GroundDetection switch
+            {
+                GroundDetectionMode.Collider => new ColliderGroundDetectionStrategy(
+                    config.GroundCheckDistance, config.GroundCheckRadius, config.GroundLayers),
+                _ => new MotorGroundDetectionStrategy()
+            };
+
+            // Fall Detection Strategy
+            _fallDetectionStrategy = config.FallDetection switch
+            {
+                FallDetectionMode.Collider => new ColliderFallDetectionStrategy(
+                    config.GroundToFallRayDistance, config.GroundLayers),
+                _ => new MotorFallDetectionStrategy()
+            };
 
             // Registriere uns als Controller beim Motor
             _motor.CharacterController = this;
@@ -91,11 +118,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public Quaternion Rotation => _motor.TransientRotation;
         public Vector3 Velocity => _motor.Velocity;
 
-        // Ground-State kommt direkt vom Motor
-        public bool IsGrounded => _motor.GroundingStatus.FoundAnyGround;
-        public bool IsStableOnGround => _motor.GroundingStatus.IsStableOnGround;
-        public GroundInfo GroundInfo => _cachedGroundInfo;
+        /// <summary>
+        /// Ob der Character Bodenkontakt hat.
+        /// Kommt von der IGroundDetectionStrategy (einmal pro Frame in PostGroundingUpdate evaluiert).
+        /// </summary>
+        public bool IsGrounded => _groundDetectionStrategy.IsGrounded;
 
+        /// <summary>
+        /// Ob der Character über einer Kante steht und fallen sollte.
+        /// Kommt von der IFallDetectionStrategy.
+        /// </summary>
+        public bool IsOverEdge => _fallDetectionStrategy.IsOverEdge;
+
+        public GroundInfo GroundInfo => _cachedGroundInfo;
+        public bool SnappingPrevented => _motor.GroundingStatus.SnappingPrevented;
         public bool IsSliding => false; // TODO: Implementierung
         public float SlidingTime => 0f;
         public CharacterMotor Motor => _motor;
@@ -159,15 +195,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             // - In der Luft: Letzte berechnete Velocity (Kollisionen mit Hinderniss-Kanten
             //   sollen kein Momentum kosten, Step Handling ist aus)
             Vector3 currentHorizontal;
-            if (_motor.GroundingStatus.IsStableOnGround)
+            if (_groundDetectionStrategy.IsGrounded)
             {
-                // Am Boden: BaseVelocity ist slope-tangent-projiziert → hat Y-Komponente.
-                // Flache Richtung extrahieren, volle Speed beibehalten
-                // (GetDirectionTangentToSurface konserviert die Magnitude).
+                // Am Boden: BaseVelocity ist slope-tangent-projiziert → hat Y-Komponente
+                // vom Slope-Winkel. Flache Richtung extrahieren, volle 3D-Magnitude
+                // beibehalten damit auf Slopes kein Speed verloren geht.
                 Vector3 flatDir = new Vector3(currentVelocity.x, 0f, currentVelocity.z);
                 float flatMag = flatDir.magnitude;
+
+                // Landing Inflation Cap: HandleVelocityProjection im Motor konvertiert beim
+                // Aufkommen auf Rampen die Fallgeschwindigkeit in Surface-Speed (magnitude preservation).
+                // Die 3D-Magnitude darf nie deutlich über dem liegen, was AccelerationModule
+                // im letzten Frame berechnet hat. Auf normalen Slopes sind beide gleich
+                // (Tangent-Projektion erhält die Magnitude). Bei Landung ist die 3D-Magnitude
+                // durch die konvertierte Fallgeschwindigkeit aufgebläht.
+                float mag3D = currentVelocity.magnitude;
+                float lastAccelMag = _lastComputedHorizontal.magnitude;
+                if (lastAccelMag > 0.01f && mag3D > lastAccelMag * 1.1f)
+                {
+                    mag3D = lastAccelMag;
+                }
+
                 currentHorizontal = flatMag > 0.01f
-                    ? flatDir.normalized * currentVelocity.magnitude
+                    ? flatDir.normalized * mag3D
                     : Vector3.zero;
             }
             else
@@ -186,14 +236,35 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                 _config.WalkSpeed,
                 _currentInput.SpeedModifier);
 
+            // Slope Speed Modifier: Target-Velocity bergauf reduzieren, bergab optional erhöhen.
+            // Wirkt auf Target, damit AccelerationModule natürlich zum Ziel hin beschleunigt/bremst.
+            if (_groundDetectionStrategy.IsGrounded &&
+                _motor.GroundingStatus.IsStableOnGround &&
+                targetHorizontal.sqrMagnitude > 0.01f)
+            {
+                float slopeMultiplier = CalculateSlopeSpeedMultiplier(
+                    targetHorizontal, _motor.GroundingStatus.GroundNormal);
+                targetHorizontal *= slopeMultiplier;
+            }
+
+            // Stair Speed Modifier: Auf Treppen (häufige Steps) Target reduzieren.
+            if (IsOnStairs && targetHorizontal.sqrMagnitude > 0.01f)
+            {
+                targetHorizontal *= (1f - _config.StairSpeedReduction);
+            }
+
+            float deceleration = _currentInput.DecelerationOverride > 0f
+                ? _currentInput.DecelerationOverride
+                : _config.Deceleration;
+
             Vector3 newHorizontal = _accelerationModule.CalculateHorizontalVelocity(
                 currentHorizontal,
                 targetHorizontal,
                 _config.Acceleration,
-                _config.Deceleration,
+                deceleration,
                 _config.AirControl,
                 _config.AirDrag,
-                _motor.GroundingStatus.IsStableOnGround,
+                _groundDetectionStrategy.IsGrounded,
                 deltaTime);
 
             _lastComputedHorizontal = newHorizontal;
@@ -227,7 +298,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             // 4. Gravity via GravityModule (Single Source of Truth)
             _verticalVelocity = _gravityModule.CalculateVerticalVelocity(
                 _verticalVelocity,
-                _motor.GroundingStatus.IsStableOnGround,
+                _groundDetectionStrategy.IsGrounded,
                 _config.Gravity,
                 _config.MaxFallSpeed,
                 deltaTime);
@@ -240,37 +311,89 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                 _motor.ForceUnground(0.1f);
             }
 
-            // DEBUG: Landing-Diagnose (5 Frames nach Landung loggen)
-            if (_motor.JustLanded) _debugLandingFrames = 5;
-            if (_debugLandingFrames > 0)
+            // DEBUG: Hovering-Diagnose
+            // Trigger 1: Nach Landung (30 Frames)
+            if (_motor.JustLanded)
             {
-                _debugLandingFrames--;
-                Debug.Log($"[Locomotion] grounded={_motor.GroundingStatus.IsStableOnGround} justLanded={_motor.JustLanded} " +
-                    $"baseVel={currentVelocity:F2} inputH={currentHorizontal.magnitude:F2} " +
-                    $"target={targetHorizontal.magnitude:F2} newH={newHorizontal.magnitude:F2} " +
-                    $"speedMod={_currentInput.SpeedModifier:F2} vert={vertical:F2} " +
-                    $"stepDet={_currentInput.StepDetectionEnabled}");
+                _debugLandingFrames = 30;
+                _debugHoverLogCount = 0;
+            }
+            // Trigger 2: Persistent Gap Monitor — MOVING branch + ungewöhnlicher Gap (> 0.03)
+            {
+                var gs = _motor.GroundingStatus;
+                float charY = _motor.TransientPosition.y;
+                float groundY = gs.GroundPoint.y;
+                float gap = charY - groundY;
+                bool isMovingBranch = gs.IsStableOnGround && vertical <= 0 && newHorizontal.sqrMagnitude > 0.01f;
+                bool shouldLog = _debugLandingFrames > 0 || (isMovingBranch && gap > 0.03f && _debugHoverLogCount < 60);
+
+                if (shouldLog)
+                {
+                    if (_debugLandingFrames > 0) _debugLandingFrames--;
+                    if (isMovingBranch && gap > 0.03f) _debugHoverLogCount++;
+                    string trigger = _debugLandingFrames > 0 ? "LAND" : "GAP";
+                    Debug.Log($"[Hovering:{trigger}] gap={gap:F4} " +
+                        $"branch={(isMovingBranch ? "MOVING" : "else")} " +
+                        $"input=({_currentInput.MoveDirection.x:F2},{_currentInput.MoveDirection.y:F2}) " +
+                        $"speedMod={_currentInput.SpeedModifier:F1} " +
+                        $"motorVelIn=({currentVelocity.x:F2},{currentVelocity.y:F2},{currentVelocity.z:F2}) " +
+                        $"H={newHorizontal.magnitude:F2} V={vertical:F2} " +
+                        $"snap={_motor.GroundSnappingEnabled} stable={gs.IsStableOnGround}");
+                }
             }
 
             // === FINALE VELOCITY ===
-            if (_motor.GroundingStatus.IsStableOnGround && vertical <= 0 && newHorizontal.sqrMagnitude > 0.01f)
+            // Tangentiale Projektion NUR wenn der Motor eine stabile Surface bestätigt.
+            // Die Strategy (Collider-SphereCast) kann "grounded" sagen obwohl der Motor
+            // den Character nicht als stabil betrachtet (z.B. über Kante). Ohne stabile
+            // Surface → else-Branch → vertikale Velocity wird angewendet → Character fällt.
+            bool stableOnSurface = _motor.GroundingStatus.IsStableOnGround;
+            if (stableOnSurface && vertical <= 0 && newHorizontal.sqrMagnitude > 0.01f)
             {
-                // Am Boden: Velocity auf Slope-Oberfläche reorientieren
+                // Am Boden mit Bewegung: Velocity auf Slope-Oberfläche reorientieren.
+                // KEINE GroundingVelocity hier — HandleVelocityProjection nutzt velocity.magnitude
+                // und konvertiert jede Y-Komponente in horizontale Speed-Inflation.
+                // Ground-Snapping übernimmt der Motor via ProbeGround + GroundSnapping.
                 currentVelocity = _motor.GetDirectionTangentToSurface(
                     newHorizontal, _motor.GroundingStatus.GroundNormal) * newHorizontal.magnitude;
             }
             else
             {
-                // In der Luft oder beim Springen: Flache horizontale + vertikale Velocity
+                // In der Luft, beim Springen, oder stehend am Boden:
+                // Flache horizontale + vertikale Velocity (GroundingVelocity -2f zieht
+                // den stehenden Character auf den Boden)
                 currentVelocity = newHorizontal + Vector3.up * vertical;
             }
         }
 
         public void PostGroundingUpdate(float deltaTime)
         {
-            // Nach Ground Probing - hier haben wir den aktuellen Ground-State
+            // Strategies evaluieren (einmal pro Frame, nach Motor's ProbeGround)
+            _groundDetectionStrategy.Evaluate(_motor);
+            _fallDetectionStrategy.Evaluate(_motor);
+
+            // Motor's Ground Snapping deaktivieren wenn Strategy sagt "nicht geerdet"
+            // ProbeGround läuft weiter (Surface-Daten für Slopes etc.), aber kein Snap.
+            _motor.GroundSnappingEnabled = _groundDetectionStrategy.IsGrounded;
+
+            // Landing Velocity Cap wird in UpdateVelocity (grounded branch) behandelt.
+
+            // DEBUG: PostGrounding-Diagnose (gleicher Trigger wie UpdateVelocity)
+            {
+                var gs = _motor.GroundingStatus;
+                float postY = _motor.TransientPosition.y;
+                float postGroundY = gs.GroundPoint.y;
+                float postGap = postY - postGroundY;
+                bool postMoving = _groundDetectionStrategy.IsGrounded && _lastComputedHorizontal.sqrMagnitude > 0.01f;
+                if (_debugLandingFrames > 0 || (postMoving && postGap > 0.03f))
+                {
+                    Debug.Log($"[Hovering-Post] Y={postY:F4} groundY={postGroundY:F4} gap={postGap:F4} " +
+                        $"strategyGrounded={_groundDetectionStrategy.IsGrounded} snapEnabled={_motor.GroundSnappingEnabled} " +
+                        $"lastStable={_motor.LastGroundingStatus.IsStableOnGround} lastSnapPrev={_motor.LastGroundingStatus.SnappingPrevented}");
+                }
+            }
+
             UpdateCachedGroundInfo();
-            // Ground Snapping wird in UpdateVelocity gehandhabt
         }
 
         public void AfterCharacterUpdate(float deltaTime)
@@ -292,8 +415,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void OnMovementHit(Collider hitCollider, Vector3 hitNormal, Vector3 hitPoint, ref HitStabilityReport hitStabilityReport)
         {
-            // Kollisions-Auflösung wird vom Motor in InternalCharacterMove gehandhabt
-            // und fließt über currentVelocity ins nächste UpdateVelocity zurück.
+            // Stair Detection: Steps in OnMovementHit tracken
+            if (hitStabilityReport.ValidStepDetected)
+            {
+                float now = Time.time;
+                if (now - _lastStepTime < StairDetectionWindow)
+                {
+                    _recentStepCount++;
+                }
+                else
+                {
+                    _recentStepCount = 1;
+                }
+                _lastStepTime = now;
+            }
         }
 
         public void ProcessHitStabilityReport(Collider hitCollider, Vector3 hitNormal, Vector3 hitPoint, Vector3 atCharacterPosition, Quaternion atCharacterRotation, ref HitStabilityReport hitStabilityReport)
@@ -322,6 +457,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public Vector3 HorizontalVelocity => _lastComputedHorizontal;
         public float VerticalVelocity => _verticalVelocity;
+
+        /// <summary>
+        /// Ob der Character aktuell auf Treppen läuft (mehrere Steps in kurzer Zeit).
+        /// </summary>
+        public bool IsOnStairs => _config.StairSpeedReductionEnabled
+            && _recentStepCount >= StairStepThreshold
+            && (Time.time - _lastStepTime) < StairDetectionWindow;
 
         public void SetRotation(float yaw)
         {
@@ -360,6 +502,32 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public Vector3 GetDirectionTangentToSurface(Vector3 direction, Vector3 surfaceNormal)
         {
             return _motor.GetDirectionTangentToSurface(direction, surfaceNormal);
+        }
+
+        /// <summary>
+        /// Berechnet den Speed-Multiplikator basierend auf Slope-Winkel und Bewegungsrichtung.
+        /// Bergauf: Reduktion (UphillSpeedPenalty), Bergab: Bonus (DownhillSpeedBonus).
+        /// Skaliert linear mit slopeAngle / MaxSlopeAngle.
+        /// </summary>
+        private float CalculateSlopeSpeedMultiplier(Vector3 moveDirection, Vector3 groundNormal)
+        {
+            float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
+            if (slopeAngle < 0.5f) return 1f; // Nahezu flach → kein Modifier
+
+            float slopeFactor = _config.MaxSlopeAngle > 0f
+                ? Mathf.Clamp01(slopeAngle / _config.MaxSlopeAngle)
+                : 0f;
+
+            // Bergauf/Bergab-Erkennung: Tangent-Projektion der Bewegungsrichtung auf die Slope-Surface.
+            // Wenn die Y-Komponente des Tangent-Vektors positiv ist → bergauf, negativ → bergab.
+            Vector3 tangent = _motor.GetDirectionTangentToSurface(moveDirection.normalized, groundNormal);
+            bool goingUphill = tangent.y > 0.01f;
+
+            float modifier = goingUphill
+                ? -_config.UphillSpeedPenalty * slopeFactor    // Penalty → multiplier < 1
+                : _config.DownhillSpeedBonus * slopeFactor;    // Bonus → multiplier > 1
+
+            return Mathf.Clamp(1f + modifier, 0.1f, 2f);
         }
 
         #endregion

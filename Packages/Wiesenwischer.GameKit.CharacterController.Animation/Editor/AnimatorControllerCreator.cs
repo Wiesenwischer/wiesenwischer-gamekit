@@ -22,6 +22,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             controller.AddParameter(AnimationParameters.SpeedParam, AnimatorControllerParameterType.Float);
             controller.AddParameter(AnimationParameters.IsGroundedParam, AnimatorControllerParameterType.Bool);
             controller.AddParameter(AnimationParameters.VerticalVelocityParam, AnimatorControllerParameterType.Float);
+            controller.AddParameter(AnimationParameters.FallingTimeParam, AnimatorControllerParameterType.Float);
+            controller.AddParameter(AnimationParameters.IsFallingLongParam, AnimatorControllerParameterType.Bool);
             controller.AddParameter(AnimationParameters.JumpTrigger, AnimatorControllerParameterType.Trigger);
             controller.AddParameter(AnimationParameters.LandTrigger, AnimatorControllerParameterType.Trigger);
             controller.AddParameter(AnimationParameters.HardLandingParam, AnimatorControllerParameterType.Bool);

@@ -75,6 +75,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Range(0f, 90f)]
         [SerializeField] private float _maxSlopeAngle = 45.0f;
 
+        [Tooltip("Ground Detection Strategy: Motor = KCC-Standard (IsStableOnGround), Collider = SphereCast von Capsule-Unterseite (Genshin-Style)")]
+        [SerializeField] private GroundDetectionMode _groundDetection = GroundDetectionMode.Motor;
+
+        [Tooltip("Fall Detection Strategy: Motor = SnappingPrevented + IsStable, Collider = Raycast von Capsule-Unterseite (Genshin-Style)")]
+        [SerializeField] private FallDetectionMode _fallDetection = FallDetectionMode.Motor;
+
+        [Tooltip("Raycast-Distanz von Capsule-Unterseite nach unten für Fall-Erkennung (m). " +
+                 "Wenn kein Boden innerhalb dieser Distanz → Character fällt. Nur bei Fall Detection = Collider.")]
+        [SerializeField] private float _groundToFallRayDistance = 1.0f;
+
         [Header("Rotation")]
         [Tooltip("Rotationsgeschwindigkeit (Grad/Sekunde)")]
         [SerializeField] private float _rotationSpeed = 720.0f;
@@ -89,6 +99,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Tooltip("Minimale Stufentiefe für Step-Up (m)")]
         [SerializeField] private float _minStepDepth = 0.1f;
 
+        [Tooltip("Ob Treppen-Erkennung mit automatischer Geschwindigkeitsreduktion aktiviert ist")]
+        [SerializeField] private bool _stairSpeedReductionEnabled = true;
+
+        [Tooltip("Geschwindigkeitsreduktion auf Treppen (0=keine, 1=Stillstand). Wird angewendet wenn mehrere Steps in kurzer Zeit erkannt werden.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _stairSpeedReduction = 0.3f;
+
         [Header("Ledge & Ground Snapping")]
         [Tooltip("Ob Ledge Detection aktiviert ist (zusätzliche Raycasts für Kanten-Erkennung)")]
         [SerializeField] private bool _ledgeDetectionEnabled = true;
@@ -102,6 +119,25 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         [Tooltip("Geschwindigkeit ab der Ground Snapping an Kanten deaktiviert wird (m/s). 0 = immer snappen")]
         [SerializeField] private float _maxVelocityForLedgeSnap = 0f;
+
+        [Header("Stopping")]
+        [Tooltip("Deceleration beim Stoppen aus Walk (m/s²). Niedrigerer Wert = längerer Bremsweg.")]
+        [SerializeField] private float _lightStopDeceleration = 12.0f;
+
+        [Tooltip("Deceleration beim Stoppen aus Run (m/s²). Niedrigerer Wert = längerer Bremsweg.")]
+        [SerializeField] private float _mediumStopDeceleration = 10.0f;
+
+        [Tooltip("Deceleration beim Stoppen aus Sprint (m/s²). Niedrigerer Wert = längerer Bremsweg.")]
+        [SerializeField] private float _hardStopDeceleration = 8.0f;
+
+        [Header("Slope Speed")]
+        [Tooltip("Maximale Speed-Reduktion bergauf bei steilstem begehbaren Winkel (0=keine Reduktion, 1=Stillstand). Skaliert linear mit dem Slope-Winkel.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _uphillSpeedPenalty = 0.3f;
+
+        [Tooltip("Speed-Bonus bergab bei steilstem begehbaren Winkel (positiv=schneller, 0=kein Effekt, negativ=langsamer). Skaliert linear mit dem Slope-Winkel.")]
+        [Range(-0.5f, 0.5f)]
+        [SerializeField] private float _downhillSpeedBonus = 0.1f;
 
         [Header("Slope Sliding")]
         [Tooltip("Geschwindigkeit beim Rutschen auf zu steilen Oberflächen (m/s)")]
@@ -143,14 +179,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float GroundCheckRadius => _groundCheckRadius;
         public LayerMask GroundLayers => _groundLayers;
         public float MaxSlopeAngle => _maxSlopeAngle;
+        public GroundDetectionMode GroundDetection => _groundDetection;
+        public FallDetectionMode FallDetection => _fallDetection;
+        public float GroundToFallRayDistance => _groundToFallRayDistance;
         public float RotationSpeed => _rotationSpeed;
         public bool RotateTowardsMovement => _rotateTowardsMovement;
         public float MaxStepHeight => _maxStepHeight;
         public float MinStepDepth => _minStepDepth;
+        public bool StairSpeedReductionEnabled => _stairSpeedReductionEnabled;
+        public float StairSpeedReduction => _stairSpeedReduction;
         public bool LedgeDetectionEnabled => _ledgeDetectionEnabled;
         public float MaxStableDistanceFromLedge => _maxStableDistanceFromLedge;
         public float MaxStableDenivelationAngle => _maxStableDenivelationAngle;
         public float MaxVelocityForLedgeSnap => _maxVelocityForLedgeSnap;
+        public float LightStopDeceleration => _lightStopDeceleration;
+        public float MediumStopDeceleration => _mediumStopDeceleration;
+        public float HardStopDeceleration => _hardStopDeceleration;
+        public float UphillSpeedPenalty => _uphillSpeedPenalty;
+        public float DownhillSpeedBonus => _downhillSpeedBonus;
         public float SlopeSlideSpeed => _slopeSlideSpeed;
         public bool UseSlopeDependentSlideSpeed => _useSlopeDependentSlideSpeed;
         public float SoftLandingThreshold => _softLandingThreshold;

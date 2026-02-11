@@ -47,6 +47,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         /// <summary>Hard Landing State - nach hartem Fall (Recovery-Zeit).</summary>
         public PlayerHardLandingState HardLandingState { get; }
 
+        /// <summary>Light Stopping State - Stopp nach Walking.</summary>
+        public PlayerLightStoppingState LightStoppingState { get; }
+
+        /// <summary>Medium Stopping State - Stopp nach Running.</summary>
+        public PlayerMediumStoppingState MediumStoppingState { get; }
+
+        /// <summary>Hard Stopping State - Stopp nach Sprinting.</summary>
+        public PlayerHardStoppingState HardStoppingState { get; }
+
         #endregion
 
         #region Airborne State Instances
@@ -89,6 +98,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
             SprintingState = new PlayerSprintingState(this);
             SoftLandingState = new PlayerSoftLandingState(this);
             HardLandingState = new PlayerHardLandingState(this);
+            LightStoppingState = new PlayerLightStoppingState(this);
+            MediumStoppingState = new PlayerMediumStoppingState(this);
+            HardStoppingState = new PlayerHardStoppingState(this);
 
             // Erstelle Airborne States
             JumpingState = new PlayerJumpingState(this);

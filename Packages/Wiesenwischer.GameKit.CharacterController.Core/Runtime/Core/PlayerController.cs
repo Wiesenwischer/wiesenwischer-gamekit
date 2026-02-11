@@ -85,8 +85,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Der aktuelle State-Name.</summary>
         public string CurrentStateName => _movementStateMachine?.CurrentStateName ?? "None";
 
-        /// <summary>Ob der Character auf dem Boden steht (basierend auf Motor's Ground-Probing).</summary>
-        public bool IsGrounded => Locomotion?.Motor?.IsStableOnGround ?? false;
+        /// <summary>Ob der Character auf dem Boden steht (von der IGroundDetectionStrategy).</summary>
+        public bool IsGrounded => Locomotion?.IsGrounded ?? false;
 
         /// <summary>Ob der Character gerade gelandet ist.</summary>
         public bool JustLanded => Locomotion?.Motor?.JustLanded ?? false;
@@ -256,6 +256,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             ReusableData.JumpHeld = InputProvider.JumpHeld;
             ReusableData.SprintHeld = InputProvider.SprintHeld;
             ReusableData.DashPressed = InputProvider.DashPressed;
+
+            // Walk Toggle (MMO-Style: Taste drücken → Walk ein/aus)
+            if (InputProvider.WalkTogglePressed)
+            {
+                ReusableData.ShouldWalk = !ReusableData.ShouldWalk;
+            }
+
+            // Sprint deaktiviert Walk automatisch
+            if (ReusableData.SprintHeld && ReusableData.ShouldWalk)
+            {
+                ReusableData.ShouldWalk = false;
+            }
         }
 
         /// <summary>
@@ -268,14 +280,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             // Update Tick in ReusableData
             ReusableData.CurrentTick = tick;
 
-            // === PHASE 1: Ground Status vom LETZTEN Frame ===
-            // Für State Machine (Coyote Time, Transition-Entscheidungen etc.)
-            // WICHTIG: Der Motor hat den korrekten State erst NACH Move()
-            // Hier verwenden wir Motor.IsStableOnGround (vom vorherigen Move())
-            ReusableData.IsGrounded = Locomotion?.Motor?.IsStableOnGround ?? false;
-            ReusableData.IsSliding = Locomotion?.IsSliding ?? false;
+            // Ground-State wird NICHT in ReusableData synchronisiert.
+            // States befragen Locomotion direkt (Player.Locomotion.IsGrounded etc.)
 
-            // State Machine Physics Update (verwendet Ground-Status vom letzten Frame)
+            // State Machine Physics Update
             _movementStateMachine?.PhysicsUpdate(deltaTime);
 
             // === PHASE 2: Movement ===
@@ -327,6 +335,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 LookDirection = GetCameraForward(),
                 SpeedModifier = ReusableData.MovementSpeedModifier,
                 StepDetectionEnabled = ReusableData.StepDetectionEnabled,
+                DecelerationOverride = ReusableData.DecelerationOverride,
             };
 
             Locomotion.Simulate(input, deltaTime);
@@ -381,7 +390,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void DrawDebugGUI()
         {
-            GUILayout.BeginArea(new Rect(10, 10, 350, 250));
+            GUILayout.BeginArea(new Rect(10, 10, 350, 280));
             GUILayout.BeginVertical("box");
 
             GUILayout.Label($"<b>PlayerController (Genshin Pattern)</b>");
@@ -394,6 +403,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             {
                 GUILayout.Label($"H-Velocity: {ReusableData.HorizontalVelocity.magnitude:F2}");
                 GUILayout.Label($"V-Velocity: {ReusableData.VerticalVelocity:F2}");
+                GUILayout.Label($"Mode: {(ReusableData.ShouldWalk ? "<color=yellow>Walk</color>" : "<color=lime>Run</color>")}");
             }
 
             GUILayout.Label($"Tick: {CurrentTick}");

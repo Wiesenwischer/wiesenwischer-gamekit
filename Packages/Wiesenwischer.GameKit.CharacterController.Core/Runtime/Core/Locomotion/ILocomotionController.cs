@@ -109,6 +109,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float SpeedModifier;
 
         /// <summary>
+        /// Überschreibt die Standard-Deceleration (m/s²). Wenn > 0, wird dieser Wert
+        /// statt Config.Deceleration verwendet. Stopping-States setzen tier-spezifische Werte.
+        /// </summary>
+        public float DecelerationOverride;
+
+        /// <summary>
         /// Erstellt einen leeren Locomotion Input.
         /// </summary>
         public static LocomotionInput Empty => new LocomotionInput
@@ -116,7 +122,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             MoveDirection = Vector2.zero,
             LookDirection = Vector3.forward,
             StepDetectionEnabled = false,
-            SpeedModifier = 1f
+            SpeedModifier = 1f,
+            DecelerationOverride = 0f
         };
     }
 

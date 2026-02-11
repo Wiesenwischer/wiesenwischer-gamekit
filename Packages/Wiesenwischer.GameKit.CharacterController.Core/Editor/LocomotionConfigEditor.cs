@@ -18,6 +18,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private bool _groundDetectionFoldout = true;
         private bool _rotationFoldout = true;
         private bool _stepDetectionFoldout = false;
+        private bool _slopeSpeedFoldout = true;
         private bool _slopeSlidingFoldout = false;
 
         // Serialized Properties
@@ -39,12 +40,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private SerializedProperty _groundCheckRadius;
         private SerializedProperty _groundLayers;
         private SerializedProperty _maxSlopeAngle;
+        private SerializedProperty _groundDetection;
+        private SerializedProperty _fallDetection;
+        private SerializedProperty _groundToFallRayDistance;
 
         private SerializedProperty _rotationSpeed;
         private SerializedProperty _rotateTowardsMovement;
 
         private SerializedProperty _maxStepHeight;
         private SerializedProperty _minStepDepth;
+        private SerializedProperty _stairSpeedReductionEnabled;
+        private SerializedProperty _stairSpeedReduction;
+
+        private SerializedProperty _uphillSpeedPenalty;
+        private SerializedProperty _downhillSpeedBonus;
 
         private SerializedProperty _slopeSlideSpeed;
         private SerializedProperty _useSlopeDependentSlideSpeed;
@@ -73,6 +82,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             _groundCheckRadius = serializedObject.FindProperty("_groundCheckRadius");
             _groundLayers = serializedObject.FindProperty("_groundLayers");
             _maxSlopeAngle = serializedObject.FindProperty("_maxSlopeAngle");
+            _groundDetection = serializedObject.FindProperty("_groundDetection");
+            _fallDetection = serializedObject.FindProperty("_fallDetection");
+            _groundToFallRayDistance = serializedObject.FindProperty("_groundToFallRayDistance");
 
             // Rotation
             _rotationSpeed = serializedObject.FindProperty("_rotationSpeed");
@@ -81,6 +93,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Step Detection
             _maxStepHeight = serializedObject.FindProperty("_maxStepHeight");
             _minStepDepth = serializedObject.FindProperty("_minStepDepth");
+            _stairSpeedReductionEnabled = serializedObject.FindProperty("_stairSpeedReductionEnabled");
+            _stairSpeedReduction = serializedObject.FindProperty("_stairSpeedReduction");
+
+            // Slope Speed
+            _uphillSpeedPenalty = serializedObject.FindProperty("_uphillSpeedPenalty");
+            _downhillSpeedBonus = serializedObject.FindProperty("_downhillSpeedBonus");
 
             // Slope Sliding
             _slopeSlideSpeed = serializedObject.FindProperty("_slopeSlideSpeed");
@@ -142,14 +160,31 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             EditorGUILayout.EndFoldoutHeaderGroup();
 
             // Ground Detection Section
-            _groundDetectionFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_groundDetectionFoldout, "Ground Detection");
+            _groundDetectionFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_groundDetectionFoldout, "Ground & Fall Detection");
             if (_groundDetectionFoldout)
             {
                 EditorGUI.indentLevel++;
-                DrawPropertyWithTooltip(_groundCheckDistance, "Check Distance", "Distance to check for ground (m)");
-                DrawPropertyWithTooltip(_groundCheckRadius, "Check Radius", "Radius of ground check sphere (m)");
+
+                // Strategy Selection
+                EditorGUILayout.LabelField("Strategy", EditorStyles.boldLabel);
+                DrawPropertyWithTooltip(_groundDetection, "Ground Detection", "Motor = KCC-Standard (IsStableOnGround), Collider = SphereCast (Genshin-Style)");
+                DrawPropertyWithTooltip(_fallDetection, "Fall Detection", "Motor = SnappingPrevented + IsStable, Collider = Raycast von Capsule-Unterseite (Genshin-Style)");
+
+                EditorGUILayout.Space(5);
+
+                // Collider Parameters
+                EditorGUILayout.LabelField("Collider Parameters", EditorStyles.boldLabel);
+                DrawPropertyWithTooltip(_groundCheckDistance, "Check Distance", "SphereCast distance for ground detection (m). Nur bei Ground Detection = Collider.");
+                DrawPropertyWithTooltip(_groundCheckRadius, "Check Radius", "SphereCast radius for ground detection (m). Nur bei Ground Detection = Collider.");
+                DrawPropertyWithTooltip(_groundToFallRayDistance, "Fall Ray Distance", "Raycast distance from capsule bottom for fall detection (m). Nur bei Fall Detection = Collider.");
+
+                EditorGUILayout.Space(5);
+
+                // General
+                EditorGUILayout.LabelField("General", EditorStyles.boldLabel);
                 EditorGUILayout.PropertyField(_groundLayers, new GUIContent("Ground Layers"));
                 DrawPropertyWithTooltip(_maxSlopeAngle, "Max Slope Angle", "Maximum walkable slope (degrees)");
+
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
@@ -172,6 +207,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
                 EditorGUI.indentLevel++;
                 DrawPropertyWithTooltip(_maxStepHeight, "Max Step Height", "Maximum climbable step (m)");
                 DrawPropertyWithTooltip(_minStepDepth, "Min Step Depth", "Minimum step surface depth (m)");
+
+                EditorGUILayout.Space(5);
+                EditorGUILayout.LabelField("Stair Speed", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(_stairSpeedReductionEnabled, new GUIContent("Enable Stair Slowdown", "Reduce speed when climbing stairs (multiple steps detected)"));
+                using (new EditorGUI.DisabledScope(!(_stairSpeedReductionEnabled?.boolValue ?? true)))
+                {
+                    DrawPropertyWithTooltip(_stairSpeedReduction, "Speed Reduction", "Speed reduction on stairs (0=none, 1=full stop)");
+                }
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
+            // Slope Speed Section
+            _slopeSpeedFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_slopeSpeedFoldout, "Slope Speed");
+            if (_slopeSpeedFoldout)
+            {
+                EditorGUI.indentLevel++;
+                DrawPropertyWithTooltip(_uphillSpeedPenalty, "Uphill Penalty", "Max speed reduction going uphill at steepest walkable angle (0=none, 1=full stop)");
+                DrawPropertyWithTooltip(_downhillSpeedBonus, "Downhill Bonus", "Speed bonus going downhill at steepest walkable angle (positive=faster, 0=none)");
+
+                // Preview
+                DrawSlopeSpeedPreview();
+
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
@@ -260,6 +318,31 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             EditorGUILayout.EndVertical();
         }
 
+        private void DrawSlopeSpeedPreview()
+        {
+            float uphill = _uphillSpeedPenalty?.floatValue ?? 0.3f;
+            float downhill = _downhillSpeedBonus?.floatValue ?? 0.1f;
+            float maxAngle = _maxSlopeAngle?.floatValue ?? 45f;
+            float runSpeed = _runSpeed?.floatValue ?? 6f;
+
+            EditorGUILayout.Space(3);
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField("Slope Speed Preview", EditorStyles.miniLabel);
+
+            float[] angles = { 15f, 30f, 45f };
+            foreach (float angle in angles)
+            {
+                if (angle > maxAngle) break;
+                float factor = maxAngle > 0f ? angle / maxAngle : 0f;
+                float uphillMul = Mathf.Clamp(1f - uphill * factor, 0.1f, 2f);
+                float downhillMul = Mathf.Clamp(1f + downhill * factor, 0.1f, 2f);
+                EditorGUILayout.LabelField(
+                    $"{angle:F0}°:  ↑ {runSpeed * uphillMul:F1} m/s ({uphillMul:P0})  |  ↓ {runSpeed * downhillMul:F1} m/s ({downhillMul:P0})");
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
         private void ResetToDefaults()
         {
             // Ground Movement
@@ -291,6 +374,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Step Detection
             _maxStepHeight.floatValue = 0.3f;
             _minStepDepth.floatValue = 0.1f;
+            _stairSpeedReductionEnabled.boolValue = true;
+            _stairSpeedReduction.floatValue = 0.3f;
+
+            // Slope Speed
+            _uphillSpeedPenalty.floatValue = 0.3f;
+            _downhillSpeedBonus.floatValue = 0.1f;
 
             // Slope Sliding
             _slopeSlideSpeed.floatValue = 8f;
