@@ -28,7 +28,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 | Epic | Phasen | Status |
 |------|--------|--------|
-| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4 | Abgeschlossen |
+| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20 | In Arbeit |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | Offen |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8 | Offen |
@@ -51,6 +51,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 8 | IK | IK System | — | ❌ | Offen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
+| 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
 | 13 | Character | CP: Equipment System | — | ❌ | Offen |
@@ -76,7 +77,7 @@ MMO-Netzwerk
   Phase 5 ──> Phase 6 ──> Phase 7
 
 Natürliche Bewegung (IK)
-  Phase 4 ──> Phase 8
+  Phase 4 ──> Phase 20 (Grounding Smoother) ──> Phase 8
 
 Reiten, Gleiten & Schwimmen
   Phase 6 ──> Phase 10
@@ -173,6 +174,23 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [x] 4.7 Stair Speed Reduction (Step-Frequenz-Erkennung)
 - [x] 4.8 Ledge & Ground Snapping Config
 - [x] 4.9 Animation CrossFade-System + TransitionConfig
+
+---
+
+### Phase 20: Visual Grounding Smoother
+**Branch:** `integration/phase-20-grounding-smoother`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-20-grounding-smoother/README.md)
+
+**Ziel:** Visuelles Y-Smoothing für Step-Ups (Treppen/Kanten) — Mesh gleitet per SmoothDamp statt diskret zu springen. Voraussetzung für Foot IK (Phase 8).
+
+**Relevante Spezifikationen:**
+- [GroundingSmoother Spezifikation](../specs/GroundingSmoother_Spezifikation.md)
+
+**Schritte:**
+- [ ] [20.1 GroundingSmoother Komponente](phase-20-grounding-smoother/20.1-grounding-smoother-component.md)
+- [ ] [20.2 Unit Tests](phase-20-grounding-smoother/20.2-unit-tests.md)
+- [ ] [20.3 Prefab-Integration](phase-20-grounding-smoother/20.3-prefab-integration.md)
+- [ ] [20.4 Verifikation](phase-20-grounding-smoother/20.4-verification.md)
 
 ---
 
