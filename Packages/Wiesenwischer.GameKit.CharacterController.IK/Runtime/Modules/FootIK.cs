@@ -31,7 +31,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
 
         [Header("Adjustments")]
         [Tooltip("Abstand Fußsohle über dem Boden (verhindert Clipping).")]
-        [SerializeField] private float _footOffset = 0.02f;
+        [SerializeField] private float _footOffset = 0.04f;
 
         [Tooltip("SmoothDamp-Zeit für Body-Offset.")]
         [SerializeField] private float _bodyOffsetSmooth = 0.1f;
@@ -166,7 +166,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
 
             if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, distance, _groundLayers))
             {
-                targetPos = hit.point + Vector3.up * _footOffset;
+                targetPos = hit.point + hit.normal * _footOffset;
                 targetRot = Quaternion.FromToRotation(Vector3.up, hit.normal)
                             * transform.rotation;
                 return true;
