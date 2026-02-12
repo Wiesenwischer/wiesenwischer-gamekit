@@ -23,7 +23,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
         [Header("Settings")]
         [Tooltip("Smooth-Zeit für Y-Offset-Auflösung (Sekunden). Kleinere Werte = schnelleres Nachziehen. " +
                  "Muss kürzer sein als die Zeit zwischen zwei Steps, damit der Offset vor dem nächsten Step auflöst.")]
-        [SerializeField] private float _smoothTime = 0.2f;
+        [SerializeField] private float _smoothTime = 0.075f;
 
         [Tooltip("Maximaler Y-Sprung der als Step-Up erkannt wird (m). Größere Sprünge werden als Teleport behandelt. " +
                  "Sollte >= MaxStepHeight des Motors sein.")]
