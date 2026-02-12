@@ -1,13 +1,15 @@
+using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 using Wiesenwischer.GameKit.CharacterController.Core;
 
 namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 {
     /// <summary>
-    /// EditorWindow zum Austauschen des Character-Modells im Player Prefab.
-    /// Ersetzt das alte Modell, überträgt Animator-Controller und Komponenten,
-    /// und triggert den IK-Wizard falls vorhanden.
+    /// EditorWindow zum Austauschen von Character-Modell und Animationen.
+    /// Konfiguriert FBX-Import-Settings automatisch (Humanoid, Avatar, Root Transform)
+    /// und weist Clips dem Animator Controller zu.
     /// </summary>
     public class CharacterSwapWindow : EditorWindow
     {
@@ -16,131 +18,212 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private const string AnimatorControllerPath =
             "Packages/Wiesenwischer.GameKit.CharacterController.Animation/Resources/AnimatorControllers/CharacterAnimatorController.controller";
 
-        private GameObject _newCharacterFBX;
+        // --- Character Model ---
+        private GameObject _characterModelFBX;
+
+        // --- Animation FBX Slots ---
+        private GameObject _animIdle;
+        private GameObject _animWalk;
+        private GameObject _animRun;
+        private GameObject _animSprint;
+        private GameObject _animJump;
+        private GameObject _animFall;
+        private GameObject _animSoftLand;
+        private GameObject _animHardLand;
+        private GameObject _animLightStop;
+        private GameObject _animMediumStop;
+        private GameObject _animHardStop;
+
+        // --- Options ---
         private bool _runIKSetup = true;
         private bool _adjustCapsule = true;
-        private Vector2 _scrollPos;
 
-        [MenuItem("Wiesenwischer/GameKit/Prefabs/Swap Character Model", false, 202)]
+        // --- UI State ---
+        private Vector2 _scrollPos;
+        private bool _foldLocomotion = true;
+        private bool _foldAirborne = true;
+        private bool _foldStopping = true;
+
+        [MenuItem("Wiesenwischer/GameKit/Prefabs/Character Setup Wizard", false, 202)]
         private static void ShowWindow()
         {
-            var window = GetWindow<CharacterSwapWindow>("Character Swap");
-            window.minSize = new Vector2(350, 280);
+            var window = GetWindow<CharacterSwapWindow>("Character Setup");
+            window.minSize = new Vector2(400, 600);
         }
 
         private void OnGUI()
         {
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
 
-            EditorGUILayout.LabelField("Character Model austauschen", EditorStyles.boldLabel);
-            EditorGUILayout.Space(4);
+            // ========== CHARACTER MODEL ==========
+            EditorGUILayout.LabelField("Character Model", EditorStyles.boldLabel);
+            EditorGUILayout.Space(2);
 
-            EditorGUILayout.HelpBox(
-                "Zieht ein Humanoid-FBX hierher. Das Script ersetzt das alte Modell " +
-                "im Player Prefab und richtet Animator + Komponenten neu ein.",
-                MessageType.Info);
+            _characterModelFBX = (GameObject)EditorGUILayout.ObjectField(
+                "Character FBX", _characterModelFBX, typeof(GameObject), false);
 
-            EditorGUILayout.Space(8);
-
-            // FBX Feld
-            _newCharacterFBX = (GameObject)EditorGUILayout.ObjectField(
-                "Neues Character FBX",
-                _newCharacterFBX,
-                typeof(GameObject),
-                false);
-
-            EditorGUILayout.Space(4);
-
-            // Validierung anzeigen
-            if (_newCharacterFBX != null)
+            if (_characterModelFBX != null)
             {
-                string fbxPath = AssetDatabase.GetAssetPath(_newCharacterFBX);
-                var importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
-
-                if (importer == null)
-                {
-                    EditorGUILayout.HelpBox("Kein gültiges FBX/Model-Asset.", MessageType.Error);
-                }
-                else if (importer.animationType != ModelImporterAnimationType.Human)
+                string path = AssetDatabase.GetAssetPath(_characterModelFBX);
+                var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+                if (importer != null && importer.animationType != ModelImporterAnimationType.Human)
                 {
                     EditorGUILayout.HelpBox(
-                        "Rig ist nicht Humanoid! Bitte im FBX-Import auf 'Humanoid' umstellen.\n" +
-                        $"Aktuell: {importer.animationType}",
+                        $"Rig ist nicht Humanoid (aktuell: {importer.animationType}).\n" +
+                        "Bitte im FBX-Import auf Humanoid umstellen.",
                         MessageType.Error);
-                }
-                else
-                {
-                    EditorGUILayout.HelpBox("Humanoid-Rig erkannt.", MessageType.None);
                 }
             }
 
-            EditorGUILayout.Space(8);
-
-            // Optionen
-            _runIKSetup = EditorGUILayout.Toggle("IK-Komponenten einrichten", _runIKSetup);
+            EditorGUILayout.Space(4);
             _adjustCapsule = EditorGUILayout.Toggle("CapsuleCollider anpassen", _adjustCapsule);
+            _runIKSetup = EditorGUILayout.Toggle("IK-Komponenten einrichten", _runIKSetup);
 
-            EditorGUILayout.Space(12);
+            EditorGUILayout.Space(4);
 
-            // Swap Button
-            GUI.enabled = CanSwap();
-            if (GUILayout.Button("Character austauschen", GUILayout.Height(32)))
+            GUI.enabled = CanSwapModel();
+            if (GUILayout.Button("Character Model austauschen", GUILayout.Height(28)))
             {
-                PerformSwap();
+                PerformModelSwap();
             }
             GUI.enabled = true;
 
+            // ========== ANIMATIONS ==========
+            EditorGUILayout.Space(12);
+            DrawSeparator();
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Animationen", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "FBX-Dateien hier reinziehen. Der Wizard konfiguriert automatisch:\n" +
+                "  - Humanoid Rig + Copy From Other Avatar\n" +
+                "  - Root Transform Settings (Bake Into Pose)\n" +
+                "  - Loop Time (je nach Typ)\n" +
+                "  - Clip-Zuweisung im Animator Controller\n\n" +
+                "Leere Slots werden nicht verändert.",
+                MessageType.Info);
+
+            EditorGUILayout.Space(4);
+
+            // Locomotion
+            _foldLocomotion = EditorGUILayout.Foldout(_foldLocomotion, "Locomotion (Loop)", true, EditorStyles.foldoutHeader);
+            if (_foldLocomotion)
+            {
+                EditorGUI.indentLevel++;
+                _animIdle = DrawAnimSlot("Idle", _animIdle);
+                _animWalk = DrawAnimSlot("Walk", _animWalk);
+                _animRun = DrawAnimSlot("Run", _animRun);
+                _animSprint = DrawAnimSlot("Sprint", _animSprint);
+                EditorGUI.indentLevel--;
+            }
+
+            // Airborne
+            _foldAirborne = EditorGUILayout.Foldout(_foldAirborne, "Airborne & Landing", true, EditorStyles.foldoutHeader);
+            if (_foldAirborne)
+            {
+                EditorGUI.indentLevel++;
+                _animJump = DrawAnimSlot("Jump", _animJump);
+                _animFall = DrawAnimSlot("Fall", _animFall);
+                _animSoftLand = DrawAnimSlot("Soft Land", _animSoftLand);
+                _animHardLand = DrawAnimSlot("Hard Land", _animHardLand);
+                EditorGUI.indentLevel--;
+            }
+
+            // Stopping
+            _foldStopping = EditorGUILayout.Foldout(_foldStopping, "Stopping", true, EditorStyles.foldoutHeader);
+            if (_foldStopping)
+            {
+                EditorGUI.indentLevel++;
+                _animLightStop = DrawAnimSlot("Light Stop (Walk)", _animLightStop);
+                _animMediumStop = DrawAnimSlot("Medium Stop (Run)", _animMediumStop);
+                _animHardStop = DrawAnimSlot("Hard Stop (Sprint)", _animHardStop);
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.Space(8);
+
+            GUI.enabled = HasAnyAnimation();
+            if (GUILayout.Button("Animationen einrichten", GUILayout.Height(28)))
+            {
+                PerformAnimationSetup();
+            }
+            GUI.enabled = true;
+
+            EditorGUILayout.Space(8);
             EditorGUILayout.EndScrollView();
         }
 
-        private bool CanSwap()
-        {
-            if (_newCharacterFBX == null) return false;
+        #region UI Helpers
 
-            string fbxPath = AssetDatabase.GetAssetPath(_newCharacterFBX);
-            var importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
+        private static GameObject DrawAnimSlot(string label, GameObject current)
+        {
+            return (GameObject)EditorGUILayout.ObjectField(label, current, typeof(GameObject), false);
+        }
+
+        private static void DrawSeparator()
+        {
+            var rect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
+        }
+
+        #endregion
+
+        #region Validation
+
+        private bool CanSwapModel()
+        {
+            if (_characterModelFBX == null) return false;
+            string path = AssetDatabase.GetAssetPath(_characterModelFBX);
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
             return importer != null && importer.animationType == ModelImporterAnimationType.Human;
         }
 
-        private void PerformSwap()
+        private bool HasAnyAnimation()
         {
-            // Player Prefab laden
+            return _animIdle || _animWalk || _animRun || _animSprint ||
+                   _animJump || _animFall || _animSoftLand || _animHardLand ||
+                   _animLightStop || _animMediumStop || _animHardStop;
+        }
+
+        #endregion
+
+        #region Model Swap
+
+        private void PerformModelSwap()
+        {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             if (prefab == null)
             {
-                Debug.LogError($"[CharacterSwap] Player Prefab nicht gefunden: {PlayerPrefabPath}");
+                Debug.LogError($"[CharacterSetup] Player Prefab nicht gefunden: {PlayerPrefabPath}");
                 return;
             }
 
             var animatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AnimatorControllerPath);
             if (animatorController == null)
             {
-                Debug.LogError($"[CharacterSwap] Animator Controller nicht gefunden: {AnimatorControllerPath}");
+                Debug.LogError($"[CharacterSetup] Animator Controller nicht gefunden: {AnimatorControllerPath}");
                 return;
             }
 
-            // Prefab zum Bearbeiten öffnen
             var prefabRoot = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
             var playerController = prefabRoot.GetComponent<PlayerController>();
 
-            // === Altes Modell finden und entfernen ===
+            // Altes Modell entfernen
             var oldAnimator = prefabRoot.GetComponentInChildren<Animator>();
             if (oldAnimator != null)
             {
                 string oldName = oldAnimator.gameObject.name;
                 Object.DestroyImmediate(oldAnimator.gameObject);
-                Debug.Log($"[CharacterSwap] Altes Modell entfernt: {oldName}");
+                Debug.Log($"[CharacterSetup] Altes Modell entfernt: {oldName}");
             }
 
-            // === Neues Modell einfügen ===
-            var newModel = (GameObject)PrefabUtility.InstantiatePrefab(_newCharacterFBX);
+            // Neues Modell einfügen
+            var newModel = (GameObject)PrefabUtility.InstantiatePrefab(_characterModelFBX);
             newModel.name = "CharacterModel";
             newModel.transform.SetParent(prefabRoot.transform);
             newModel.transform.localPosition = Vector3.zero;
             newModel.transform.localRotation = Quaternion.identity;
             newModel.transform.localScale = Vector3.one;
 
-            // Animator konfigurieren
             var newAnimator = newModel.GetComponent<Animator>();
             if (newAnimator == null)
                 newAnimator = newModel.AddComponent<Animator>();
@@ -150,68 +233,47 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             newAnimator.updateMode = AnimatorUpdateMode.Normal;
             newAnimator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
 
-            // AnimatorParameterBridge hinzufügen
+            // AnimatorParameterBridge
             var bridge = newModel.AddComponent<AnimatorParameterBridge>();
             var bridgeSo = new SerializedObject(bridge);
             bridgeSo.FindProperty("_playerController").objectReferenceValue = playerController;
             bridgeSo.ApplyModifiedProperties();
 
-            // CapsuleCollider an neue Mesh-Größe anpassen
             if (_adjustCapsule)
-            {
                 AdjustCapsule(prefabRoot, newModel);
-            }
 
-            // Prefab speichern
             PrefabUtility.SaveAsPrefabAsset(prefabRoot, PlayerPrefabPath);
             PrefabUtility.UnloadPrefabContents(prefabRoot);
 
-            Debug.Log($"[CharacterSwap] Neues Modell eingesetzt: {_newCharacterFBX.name}");
-            Debug.Log("[CharacterSwap] Animator Controller + AnimatorParameterBridge konfiguriert.");
+            Debug.Log($"[CharacterSetup] Neues Modell eingesetzt: {_characterModelFBX.name}");
 
-            // IK Setup (separater Wizard, arbeitet auf dem gespeicherten Prefab)
+            // IK Setup
             if (_runIKSetup)
             {
-                // IKSetupWizard über MenuItems triggern (vermeidet Assembly-Abhängigkeit)
-                if (EditorApplication.ExecuteMenuItem("Wiesenwischer/GameKit/Prefabs/Setup IK on Player Prefab"))
+                if (!EditorApplication.ExecuteMenuItem("Wiesenwischer/GameKit/Prefabs/Setup IK on Player Prefab"))
                 {
-                    Debug.Log("[CharacterSwap] IK-Komponenten eingerichtet.");
-                }
-                else
-                {
-                    Debug.LogWarning("[CharacterSwap] IK-Wizard nicht gefunden. " +
-                                     "IK-Paket installiert? Manuell ausführen: " +
+                    Debug.LogWarning("[CharacterSetup] IK-Wizard nicht gefunden. Manuell ausführen: " +
                                      "Wiesenwischer > GameKit > Prefabs > Setup IK on Player Prefab");
                 }
             }
 
-            // Prefab selektieren
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             EditorGUIUtility.PingObject(Selection.activeObject);
-
-            Debug.Log("=== Character Swap abgeschlossen! ===");
+            Debug.Log("=== Character Model Swap abgeschlossen! ===");
         }
 
-        /// <summary>
-        /// Passt den CapsuleCollider an die Bounds des neuen Meshes an.
-        /// </summary>
         private static void AdjustCapsule(GameObject prefabRoot, GameObject model)
         {
-            // Bounds aus allen Renderern berechnen
             var renderers = model.GetComponentsInChildren<Renderer>();
             if (renderers.Length == 0) return;
 
             var bounds = renderers[0].bounds;
             for (int i = 1; i < renderers.Length; i++)
-            {
                 bounds.Encapsulate(renderers[i].bounds);
-            }
 
-            // Höhe und Radius aus Bounds ableiten
             float height = bounds.size.y;
             float radius = Mathf.Max(bounds.extents.x, bounds.extents.z);
 
-            // Capsule-Werte über SerializedObject setzen (private fields im Motor)
             var motor = prefabRoot.GetComponent<Core.Motor.CharacterMotor>();
             if (motor == null) return;
 
@@ -221,8 +283,243 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             motorSo.FindProperty("CapsuleYOffset").floatValue = height * 0.5f;
             motorSo.ApplyModifiedProperties();
 
-            Debug.Log($"[CharacterSwap] CapsuleCollider angepasst: " +
-                      $"Height={height:F2}m, Radius={radius:F2}m");
+            Debug.Log($"[CharacterSetup] CapsuleCollider: Height={height:F2}m, Radius={radius:F2}m");
         }
+
+        #endregion
+
+        #region Animation Setup
+
+        private void PerformAnimationSetup()
+        {
+            // Avatar vom Character Model holen (für "Copy From Other Avatar")
+            Avatar sourceAvatar = null;
+            if (_characterModelFBX != null)
+            {
+                string modelPath = AssetDatabase.GetAssetPath(_characterModelFBX);
+                sourceAvatar = AssetDatabase.LoadAllAssetsAtPath(modelPath)
+                    .OfType<Avatar>().FirstOrDefault();
+            }
+
+            if (sourceAvatar == null)
+            {
+                // Fallback: Avatar vom aktuellen Prefab-Modell
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+                if (prefab != null)
+                {
+                    var animator = prefab.GetComponentInChildren<Animator>();
+                    sourceAvatar = animator != null ? animator.avatar : null;
+                }
+            }
+
+            if (sourceAvatar == null)
+            {
+                Debug.LogError("[CharacterSetup] Kein Avatar gefunden. Bitte Character Model FBX zuweisen " +
+                               "oder sicherstellen dass das Player Prefab ein Humanoid-Modell hat.");
+                return;
+            }
+
+            int configured = 0;
+
+            // Locomotion (loop, grounded → Feet)
+            configured += ConfigureAnim(_animIdle, sourceAvatar, true, false, "Idle");
+            configured += ConfigureAnim(_animWalk, sourceAvatar, true, false, "Walk");
+            configured += ConfigureAnim(_animRun, sourceAvatar, true, false, "Run");
+            configured += ConfigureAnim(_animSprint, sourceAvatar, true, false, "Sprint");
+
+            // Airborne (airborne → Original für Y)
+            configured += ConfigureAnim(_animJump, sourceAvatar, false, true, "Jump");
+            configured += ConfigureAnim(_animFall, sourceAvatar, true, true, "Fall");
+            configured += ConfigureAnim(_animSoftLand, sourceAvatar, false, true, "SoftLand");
+            configured += ConfigureAnim(_animHardLand, sourceAvatar, false, true, "HardLand");
+
+            // Stopping (no loop, grounded → Feet)
+            configured += ConfigureAnim(_animLightStop, sourceAvatar, false, false, "LightStop");
+            configured += ConfigureAnim(_animMediumStop, sourceAvatar, false, false, "MediumStop");
+            configured += ConfigureAnim(_animHardStop, sourceAvatar, false, false, "HardStop");
+
+            if (configured > 0)
+            {
+                AssetDatabase.Refresh();
+                AssignClipsToController();
+            }
+
+            Debug.Log($"=== {configured} Animation(en) eingerichtet! ===");
+        }
+
+        /// <summary>
+        /// Konfiguriert die Import-Settings einer Animation-FBX.
+        /// </summary>
+        /// <returns>1 wenn konfiguriert, 0 wenn übersprungen.</returns>
+        private static int ConfigureAnim(GameObject fbx, Avatar sourceAvatar, bool loop, bool airborne, string label)
+        {
+            if (fbx == null) return 0;
+
+            string path = AssetDatabase.GetAssetPath(fbx);
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning($"[CharacterSetup] {label}: Kein gültiges FBX-Asset.");
+                return 0;
+            }
+
+            // Rig: Humanoid + Copy From Other Avatar
+            importer.animationType = ModelImporterAnimationType.Human;
+            importer.sourceAvatar = sourceAvatar;
+
+            // Clip Settings: Root Transform + Loop
+            var clips = importer.defaultClipAnimations;
+            if (clips.Length == 0)
+            {
+                // Reimport als Humanoid nötig, damit Clips verfügbar werden
+                importer.SaveAndReimport();
+                clips = importer.defaultClipAnimations;
+            }
+
+            if (clips.Length > 0)
+            {
+                var clip = clips[0];
+
+                // Root Transform Rotation: Bake Into Pose, Body Orientation
+                clip.lockRootRotation = true;
+                clip.keepOriginalOrientation = false;
+
+                // Root Transform Position Y: Bake Into Pose
+                clip.lockRootHeightY = true;
+                if (airborne)
+                {
+                    // Airborne (Jump/Fall/Land): Based Upon = Original
+                    clip.keepOriginalPositionY = true;
+                }
+                else
+                {
+                    // Grounded: Based Upon = Feet
+                    clip.keepOriginalPositionY = false;
+                    clip.heightFromFeet = true;
+                }
+
+                // Root Transform Position XZ: Bake Into Pose, Original
+                clip.lockRootPositionXZ = true;
+                clip.keepOriginalPositionXZ = true;
+
+                // Loop Time
+                clip.loopTime = loop;
+
+                importer.clipAnimations = clips;
+            }
+
+            importer.SaveAndReimport();
+            Debug.Log($"[CharacterSetup] {label}: Import konfiguriert " +
+                      $"(Loop={loop}, {(airborne ? "Airborne/Original" : "Grounded/Feet")})");
+            return 1;
+        }
+
+        /// <summary>
+        /// Weist die konfigurierten Clips den Animator Controller States zu.
+        /// </summary>
+        private void AssignClipsToController()
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+            if (controller == null)
+            {
+                Debug.LogError("[CharacterSetup] Animator Controller nicht gefunden.");
+                return;
+            }
+
+            var rootSM = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
+            bool dirty = false;
+
+            // === Locomotion Blend Tree ===
+            var locomotionState = FindState(rootSM, "Locomotion");
+            if (locomotionState != null && locomotionState.motion is BlendTree blendTree)
+            {
+                var children = blendTree.children;
+                // Blend Tree Reihenfolge: [0]=Idle, [1]=Walk, [2]=Run, [3]=Sprint
+                if (children.Length >= 4)
+                {
+                    dirty |= TryAssignBlendTreeChild(ref children, 0, _animIdle, "Idle");
+                    dirty |= TryAssignBlendTreeChild(ref children, 1, _animWalk, "Walk");
+                    dirty |= TryAssignBlendTreeChild(ref children, 2, _animRun, "Run");
+                    dirty |= TryAssignBlendTreeChild(ref children, 3, _animSprint, "Sprint");
+                    blendTree.children = children;
+                }
+            }
+
+            // === Einzelne States ===
+            dirty |= TryAssignStateMotion(rootSM, "Jump", _animJump);
+            dirty |= TryAssignStateMotion(rootSM, "Fall", _animFall);
+            dirty |= TryAssignStateMotion(rootSM, "SoftLand", _animSoftLand);
+            dirty |= TryAssignStateMotion(rootSM, "HardLand", _animHardLand);
+            dirty |= TryAssignStateMotion(rootSM, "LightStop", _animLightStop);
+            dirty |= TryAssignStateMotion(rootSM, "MediumStop", _animMediumStop);
+            dirty |= TryAssignStateMotion(rootSM, "HardStop", _animHardStop);
+
+            if (dirty)
+            {
+                EditorUtility.SetDirty(controller);
+                AssetDatabase.SaveAssets();
+                Debug.Log("[CharacterSetup] Animator Controller Clips aktualisiert.");
+            }
+        }
+
+        private static bool TryAssignBlendTreeChild(ref ChildMotion[] children, int index, GameObject fbx, string label)
+        {
+            if (fbx == null) return false;
+
+            var clip = LoadClipFromFBX(fbx);
+            if (clip == null)
+            {
+                Debug.LogWarning($"[CharacterSetup] {label}: Kein AnimationClip im FBX gefunden.");
+                return false;
+            }
+
+            children[index].motion = clip;
+            Debug.Log($"[CharacterSetup] Blend Tree: {label} → {clip.name}");
+            return true;
+        }
+
+        private static bool TryAssignStateMotion(AnimatorStateMachine sm, string stateName, GameObject fbx)
+        {
+            if (fbx == null) return false;
+
+            var state = FindState(sm, stateName);
+            if (state == null)
+            {
+                Debug.LogWarning($"[CharacterSetup] State '{stateName}' nicht im Animator Controller gefunden.");
+                return false;
+            }
+
+            var clip = LoadClipFromFBX(fbx);
+            if (clip == null)
+            {
+                Debug.LogWarning($"[CharacterSetup] {stateName}: Kein AnimationClip im FBX gefunden.");
+                return false;
+            }
+
+            state.motion = clip;
+            Debug.Log($"[CharacterSetup] State: {stateName} → {clip.name}");
+            return true;
+        }
+
+        #endregion
+
+        #region Utilities
+
+        private static AnimatorState FindState(AnimatorStateMachine sm, string name)
+        {
+            return sm.states
+                .Select(s => s.state)
+                .FirstOrDefault(s => s.name == name);
+        }
+
+        private static AnimationClip LoadClipFromFBX(GameObject fbx)
+        {
+            string path = AssetDatabase.GetAssetPath(fbx);
+            return AssetDatabase.LoadAllAssetsAtPath(path)
+                .OfType<AnimationClip>()
+                .FirstOrDefault(c => !c.name.StartsWith("__preview__"));
+        }
+
+        #endregion
     }
 }
