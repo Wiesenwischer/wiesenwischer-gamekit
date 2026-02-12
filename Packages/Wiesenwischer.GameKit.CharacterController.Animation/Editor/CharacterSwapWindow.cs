@@ -365,6 +365,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
             // Rig: Humanoid + Copy From Other Avatar
             importer.animationType = ModelImporterAnimationType.Human;
+            importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
             importer.sourceAvatar = sourceAvatar;
 
             // Clip Settings: Root Transform + Loop
