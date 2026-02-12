@@ -183,6 +183,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
 
             // Redundante CrossFade-Aufrufe vermeiden (z.B. Idle→Running bleiben beide in Locomotion)
             if (_currentAnimStateHash == hash) return;
+
+            // Prüfen ob der State im Animator existiert, bevor CrossFade aufgerufen wird.
+            // Fehlende States (z.B. LightStop ohne zugewiesenen Clip) verursachen
+            // "Animator.GotoState: State could not be found" + "Invalid Layer Index '-1'"
+            // was den gesamten Animator korrumpiert und andere Animationen stört.
+            if (!_animator.HasState(AnimationParameters.BaseLayerIndex, hash))
+            {
+                Debug.LogWarning($"[AnimatorParameterBridge] State '{state}' nicht im Animator Controller gefunden. " +
+                                 "Bitte Wizard erneut ausführen: Wiesenwischer > GameKit > Prefabs > Character Setup Wizard");
+                return;
+            }
+
             _currentAnimStateHash = hash;
             _canExitAnimation = false;
             _animator.CrossFade(hash, transitionDuration);

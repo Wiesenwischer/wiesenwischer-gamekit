@@ -515,7 +515,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 blendTree.children = children;
             }
 
-            // === Einzelne States: finden oder erstellen + Clips zuweisen ===
+            // === Einzelne States: IMMER erstellen (auch ohne Clip), damit CrossFade nie fehlschlägt ===
+            string[] requiredStates = { "Jump", "Fall", "SoftLand", "HardLand", "LightStop", "MediumStop", "HardStop" };
+            foreach (string stateName in requiredStates)
+            {
+                EnsureStateExists(rootSM, stateName);
+            }
+
+            // Clips zuweisen (nur wenn FBX vorhanden)
             TryAssignStateMotion(rootSM, "Jump", _animJump);
             TryAssignStateMotion(rootSM, "Fall", _animFall);
             TryAssignStateMotion(rootSM, "SoftLand", _animSoftLand);
@@ -544,6 +551,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             Debug.Log($"[CharacterSetup] Blend Tree: {label} → {clip.name}");
         }
 
+        private static void EnsureStateExists(AnimatorStateMachine sm, string stateName)
+        {
+            var state = FindState(sm, stateName);
+            if (state == null)
+            {
+                state = sm.AddState(stateName);
+                state.writeDefaultValues = false;
+                state.iKOnFeet = true;
+                Debug.Log($"[CharacterSetup] State '{stateName}' erstellt (leer — Clip kann später zugewiesen werden).");
+            }
+        }
+
         private static void TryAssignStateMotion(AnimatorStateMachine sm, string stateName, GameObject fbx)
         {
             if (fbx == null) return;
@@ -558,10 +577,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var state = FindState(sm, stateName);
             if (state == null)
             {
+                // Sollte nach EnsureStateExists nie passieren, aber Fallback:
                 state = sm.AddState(stateName);
                 state.writeDefaultValues = false;
                 state.iKOnFeet = true;
-                Debug.Log($"[CharacterSetup] State '{stateName}' erstellt.");
             }
 
             state.motion = clip;
