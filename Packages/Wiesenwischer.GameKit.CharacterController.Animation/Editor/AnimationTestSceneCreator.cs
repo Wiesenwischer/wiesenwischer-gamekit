@@ -58,8 +58,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             highPlatform.transform.localScale = new Vector3(4f, 0.3f, 4f);
             highPlatform.GetComponent<Renderer>().sharedMaterial = platformMat;
 
-            // Treppe zur hohen Plattform
-            CreateStaircase(new Vector3(-10f, 0f, 5f), 10f, 20, stepMat);
+            // Steile Treppe zur hohen Plattform (0.5m Stufen — extrem)
+            CreateStaircase(new Vector3(-10f, 0f, 5f), 10f, 20, 0.5f, 3f, stepMat, "Staircase_Steep");
+
+            // === Realistische Innentreppe (18cm Stufen, 28cm Tiefe) ===
+            CreateStaircase(new Vector3(-5f, 0f, 5f), 1.44f, 8, 0.28f, 1.2f, stepMat, "Staircase_Realistic");
+
+            // Plattform oben an der realistischen Treppe
+            var realisticTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            realisticTop.name = "Platform_Realistic_Top";
+            realisticTop.transform.position = new Vector3(-5f, 1.44f, 5f - 8 * 0.28f - 1f);
+            realisticTop.transform.localScale = new Vector3(2f, 0.2f, 2.5f);
+            realisticTop.GetComponent<Renderer>().sharedMaterial = platformMat;
+
+            // === Bergweg (unebene Steine, verschiedene Höhen/Breiten) ===
+            CreateMountainPath(new Vector3(5f, 0f, 8f), stepMat, slopeMat);
 
             // === Sehr hohe Plattform (Extreme Hard Landing, ~20m) ===
             var veryHighPlatform = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -118,13 +131,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             Debug.Log("  4. Von Plattformen fallen für Landing-Tests");
         }
 
-        private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps, Material stepMat)
+        private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps,
+            float stepDepth, float stepWidth, Material stepMat, string name)
         {
             float stepHeight = totalHeight / steps;
-            float stepDepth = 0.5f;
-            float stepWidth = 3f;
 
-            var parent = new GameObject("Staircase");
+            var parent = new GameObject(name);
             parent.transform.position = startPos;
 
             for (int i = 0; i < steps; i++)
@@ -135,6 +147,42 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 step.transform.localPosition = new Vector3(0f, stepHeight * (i + 0.5f), -stepDepth * i);
                 step.transform.localScale = new Vector3(stepWidth, stepHeight, stepDepth);
                 step.GetComponent<Renderer>().sharedMaterial = stepMat;
+            }
+        }
+
+        private static void CreateMountainPath(Vector3 startPos, Material rockMat, Material slopeMat)
+        {
+            var parent = new GameObject("MountainPath");
+            parent.transform.position = startPos;
+
+            // Unregelmäßige Steine — verschiedene Höhen, Breiten, leicht verdreht
+            var segments = new[]
+            {
+                // (xOff, yHeight, zOff, xScale, zScale, yRotation)
+                (0f,    0.08f, 0f,     1.5f, 0.8f, 0f),
+                (0.2f,  0.14f, -0.9f,  1.2f, 0.7f, 5f),
+                (-0.1f, 0.22f, -1.7f,  1.8f, 0.9f, -8f),
+                (0.3f,  0.18f, -2.7f,  1.0f, 0.6f, 12f),
+                (-0.2f, 0.30f, -3.5f,  1.6f, 1.0f, -3f),
+                (0.1f,  0.25f, -4.5f,  1.3f, 0.7f, 7f),
+                (-0.3f, 0.38f, -5.3f,  1.4f, 0.8f, -10f),
+                (0.4f,  0.35f, -6.2f,  1.1f, 0.6f, 15f),
+                (-0.1f, 0.45f, -7.0f,  1.7f, 0.9f, -5f),
+                (0.2f,  0.42f, -7.9f,  1.3f, 0.7f, 8f),
+                (-0.4f, 0.55f, -8.7f,  1.5f, 1.0f, -12f),
+                (0.0f,  0.50f, -9.7f,  1.8f, 0.8f, 3f),
+            };
+
+            for (int i = 0; i < segments.Length; i++)
+            {
+                var (xOff, yHeight, zOff, xScale, zScale, yRot) = segments[i];
+                var rock = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                rock.name = $"Rock_{i + 1}";
+                rock.transform.SetParent(parent.transform);
+                rock.transform.localPosition = new Vector3(xOff, yHeight * 0.5f, zOff);
+                rock.transform.localScale = new Vector3(xScale, yHeight + 0.1f, zScale);
+                rock.transform.localRotation = Quaternion.Euler(0f, yRot, 0f);
+                rock.GetComponent<Renderer>().sharedMaterial = (i % 3 == 0) ? slopeMat : rockMat;
             }
         }
 

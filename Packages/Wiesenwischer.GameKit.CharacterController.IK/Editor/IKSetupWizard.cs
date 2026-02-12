@@ -68,6 +68,12 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Editor
 
             // === CameraTargetProvider ===
             var cameraProvider = modelGO.AddComponent<CameraTargetProvider>();
+            var cameraSo = new SerializedObject(cameraProvider);
+            cameraSo.FindProperty("_playerController").objectReferenceValue = playerController;
+            cameraSo.FindProperty("_lookDistance").floatValue = 10f;
+            cameraSo.FindProperty("_idleThreshold").floatValue = 0.1f;
+            cameraSo.FindProperty("_blendSpeed").floatValue = 3f;
+            cameraSo.ApplyModifiedProperties();
 
             // === LookAtIK ===
             var lookAtIK = modelGO.AddComponent<LookAtIK>();
