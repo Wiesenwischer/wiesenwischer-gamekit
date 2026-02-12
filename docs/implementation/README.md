@@ -48,7 +48,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Offen |
 | 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
-| 8 | IK | IK System | — | ❌ | Offen |
+| 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | In Arbeit |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
@@ -281,15 +281,18 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 
 ### Phase 8: IK System
 **Branch:** `integration/phase-8-ik-system`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-8-ik-system/README.md)
 
-**Schritte (vorläufig):**
-- [ ] 8.1 IK Package Struktur
-- [ ] 8.2 IKManager Komponente
-- [ ] 8.3 LookAtIK Implementation
-- [ ] 8.4 FootIK Implementation
-- [ ] 8.5 HandIK Implementation
-- [ ] 8.6 IK Netzwerk-Sync
+**Relevante Spezifikationen:**
+- [GameKit IK Spezifikation](../specs/GameKit_IK_Spezifikation.md)
+- [Animationskonzept LayeredAbilities](../specs/Animationskonzept_LayeredAbilities.md)
+
+**Schritte:**
+- [x] [8.1 Package-Struktur & IIKModule Interface](phase-8-ik-system/8.1-package-interfaces.md)
+- [x] [8.2 IKManager Komponente](phase-8-ik-system/8.2-ik-manager.md)
+- [ ] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
+- [ ] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
+- [ ] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
 
 ---
 
