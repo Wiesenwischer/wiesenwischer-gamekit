@@ -52,10 +52,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         // Cached GroundInfo
         private GroundInfo _cachedGroundInfo;
 
-        // Debug: Hovering-Diagnose
-        private int _debugLandingFrames;
-        private int _debugHoverLogCount;
-
         /// <summary>
         /// Erstellt eine neue CharacterLocomotion. Erwartet einen existierenden CharacterMotor.
         /// </summary>
@@ -235,7 +231,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                     {
                         currentHorizontal = _lastComputedHorizontal;
                         _motor.ForceUnground(0.1f);
-                        Debug.Log($"[Locomotion] Edge Momentum Preservation: slope={slopeAngle:F1}° lastVel={_lastComputedHorizontal.magnitude:F2}");
                     }
                 }
             }
@@ -330,37 +325,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                 _motor.ForceUnground(0.1f);
             }
 
-            // DEBUG: Hovering-Diagnose
-            // Trigger 1: Nach Landung (30 Frames)
-            if (_motor.JustLanded)
-            {
-                _debugLandingFrames = 30;
-                _debugHoverLogCount = 0;
-            }
-            // Trigger 2: Persistent Gap Monitor — MOVING branch + ungewöhnlicher Gap (> 0.03)
-            {
-                var gs = _motor.GroundingStatus;
-                float charY = _motor.TransientPosition.y;
-                float groundY = gs.GroundPoint.y;
-                float gap = charY - groundY;
-                bool isMovingBranch = gs.IsStableOnGround && vertical <= 0 && newHorizontal.sqrMagnitude > 0.01f;
-                bool shouldLog = _debugLandingFrames > 0 || (isMovingBranch && gap > 0.03f && _debugHoverLogCount < 60);
-
-                if (shouldLog)
-                {
-                    if (_debugLandingFrames > 0) _debugLandingFrames--;
-                    if (isMovingBranch && gap > 0.03f) _debugHoverLogCount++;
-                    string trigger = _debugLandingFrames > 0 ? "LAND" : "GAP";
-                    Debug.Log($"[Hovering:{trigger}] gap={gap:F4} " +
-                        $"branch={(isMovingBranch ? "MOVING" : "else")} " +
-                        $"input=({_currentInput.MoveDirection.x:F2},{_currentInput.MoveDirection.y:F2}) " +
-                        $"speedMod={_currentInput.SpeedModifier:F1} " +
-                        $"motorVelIn=({currentVelocity.x:F2},{currentVelocity.y:F2},{currentVelocity.z:F2}) " +
-                        $"H={newHorizontal.magnitude:F2} V={vertical:F2} " +
-                        $"snap={_motor.GroundSnappingEnabled} stable={gs.IsStableOnGround}");
-                }
-            }
-
             // === FINALE VELOCITY ===
             // Tangentiale Projektion NUR wenn der Motor eine stabile Surface bestätigt.
             // Die Strategy (Collider-SphereCast) kann "grounded" sagen obwohl der Motor
@@ -396,21 +360,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             _motor.GroundSnappingEnabled = _groundDetectionStrategy.IsGrounded;
 
             // Landing Velocity Cap wird in UpdateVelocity (grounded branch) behandelt.
-
-            // DEBUG: PostGrounding-Diagnose (gleicher Trigger wie UpdateVelocity)
-            {
-                var gs = _motor.GroundingStatus;
-                float postY = _motor.TransientPosition.y;
-                float postGroundY = gs.GroundPoint.y;
-                float postGap = postY - postGroundY;
-                bool postMoving = _groundDetectionStrategy.IsGrounded && _lastComputedHorizontal.sqrMagnitude > 0.01f;
-                if (_debugLandingFrames > 0 || (postMoving && postGap > 0.03f))
-                {
-                    Debug.Log($"[Hovering-Post] Y={postY:F4} groundY={postGroundY:F4} gap={postGap:F4} " +
-                        $"strategyGrounded={_groundDetectionStrategy.IsGrounded} snapEnabled={_motor.GroundSnappingEnabled} " +
-                        $"lastStable={_motor.LastGroundingStatus.IsStableOnGround} lastSnapPrev={_motor.LastGroundingStatus.SnappingPrevented}");
-                }
-            }
 
             UpdateCachedGroundInfo();
         }

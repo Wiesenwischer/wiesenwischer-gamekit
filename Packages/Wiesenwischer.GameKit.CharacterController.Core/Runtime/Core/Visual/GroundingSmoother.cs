@@ -33,7 +33,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
         [SerializeField] private bool _onlyWhenGrounded = true;
 
         [Header("Debug")]
-        [SerializeField] private bool _debugLog = true;
+        [SerializeField] private bool _debugLog = false;
 
         // Step-Threshold: Filtert Slopes (kontinuierliche kleine Deltas) von echten Steps.
         // 1cm ist hoch genug, um Slopes bei normaler Geschwindigkeit zu ignorieren,
@@ -49,7 +49,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
         private void Awake()
         {
             _motor = GetComponent<CharacterMotor>();
-            Debug.Log($"[GS] Awake — motor={_motor != null} modelTransform={_modelTransform != null}");
+            if (_debugLog) Debug.Log($"[GS] Awake — motor={_motor != null} modelTransform={_modelTransform != null}");
         }
 
         private void OnEnable()
@@ -74,7 +74,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             // Teleport-Check: Zu großer Sprung → kein Smoothing
             if (Mathf.Abs(deltaY) > _maxStepDelta)
             {
-                Debug.Log($"[GS] TELEPORT deltaY={deltaY:F4} > max={_maxStepDelta}");
+                if (_debugLog) Debug.Log($"[GS] TELEPORT deltaY={deltaY:F4} > max={_maxStepDelta}");
                 _smoothOffset = 0f;
                 _smoothVelocity = 0f;
                 ApplyOffset();
@@ -84,7 +84,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             // Airborne-Check: In der Luft → Offset sofort auflösen
             if (_onlyWhenGrounded && !_motor.GroundingStatus.IsStableOnGround)
             {
-                if (_smoothOffset != 0f)
+                if (_debugLog && _smoothOffset != 0f)
                     Debug.Log($"[GS] AIRBORNE reset offset={_smoothOffset:F4}");
                 _smoothOffset = 0f;
                 _smoothVelocity = 0f;
@@ -95,7 +95,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             // Landing-Check: Gerade gelandet → kein Offset aufbauen
             if (_motor.JustLanded)
             {
-                Debug.Log($"[GS] LANDED reset offset={_smoothOffset:F4}");
+                if (_debugLog) Debug.Log($"[GS] LANDED reset offset={_smoothOffset:F4}");
                 _smoothOffset = 0f;
                 _smoothVelocity = 0f;
                 ApplyOffset();
@@ -105,7 +105,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             // Step-Up erkannt: Offset aufbauen (Threshold filtert Slopes)
             if (Mathf.Abs(deltaY) > StepThreshold)
             {
-                Debug.Log($"[GS] STEP deltaY={deltaY:F4} offset {_smoothOffset:F4} → {_smoothOffset - deltaY:F4} | transformY={currentY:F4} transientY={transientY:F4} diff={transientY - currentY:F4}");
+                if (_debugLog) Debug.Log($"[GS] STEP deltaY={deltaY:F4} offset {_smoothOffset:F4} → {_smoothOffset - deltaY:F4} | transformY={currentY:F4} transientY={transientY:F4} diff={transientY - currentY:F4}");
                 _smoothOffset -= deltaY;
                 // Offset clampen: maximal eine Stufenhöhe Versatz, verhindert
                 // unbegrenztes Akkumulieren bei schnellem Treppenlaufen
@@ -115,7 +115,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             // Offset über Zeit zu 0 auflösen
             _smoothOffset = Mathf.SmoothDamp(_smoothOffset, 0f, ref _smoothVelocity, _smoothTime);
 
-            if (Mathf.Abs(_smoothOffset) > SnapThreshold)
+            if (_debugLog && Mathf.Abs(_smoothOffset) > SnapThreshold)
                 Debug.Log($"[GS] RESOLVE offset={_smoothOffset:F4} vel={_smoothVelocity:F4} modelLocalY={_modelTransform.localPosition.y:F4}");
 
             // Snap bei Minimal-Offset (kein ewiges Micro-Smoothing)

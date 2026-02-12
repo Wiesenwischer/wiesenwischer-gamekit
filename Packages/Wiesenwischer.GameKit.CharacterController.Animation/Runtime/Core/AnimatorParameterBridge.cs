@@ -39,10 +39,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private int _currentAnimStateHash;
         private bool _canExitAnimation;
 
-#if UNITY_EDITOR
-        private int _prevAnimStateHash;
-#endif
-
         private void Awake()
         {
             _animator = GetComponent<Animator>();
@@ -116,8 +112,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 ? movementSpeed / config.RunSpeed
                 : 0f;
 
-            Debug.Log($"[AnimBridge] speed={movementSpeed:F2} norm={normalizedSpeed:F3} stairs={stairCompensated} horizVel={data.HorizontalVelocity.magnitude:F2}");
-
             _animator.SetFloat(
                 AnimationParameters.SpeedHash,
                 normalizedSpeed,
@@ -130,24 +124,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 _verticalVelocityDampTime,
                 Time.deltaTime);
 
-#if UNITY_EDITOR
-            var stateInfo = _animator.GetCurrentAnimatorStateInfo(0);
-            if (stateInfo.fullPathHash != _prevAnimStateHash)
-            {
-                string stateName = "?";
-                if (stateInfo.IsName("Locomotion")) stateName = "Locomotion";
-                else if (stateInfo.IsName("Jump")) stateName = "Jump";
-                else if (stateInfo.IsName("Fall")) stateName = "Fall";
-                else if (stateInfo.IsName("SoftLand")) stateName = "SoftLand";
-                else if (stateInfo.IsName("HardLand")) stateName = "HardLand";
-                else if (stateInfo.IsName("LightStop")) stateName = "LightStop";
-                else if (stateInfo.IsName("MediumStop")) stateName = "MediumStop";
-                else if (stateInfo.IsName("HardStop")) stateName = "HardStop";
-
-                Debug.Log($"[AnimBridge] Animator → {stateName} | Y={transform.position.y:F2}");
-                _prevAnimStateHash = stateInfo.fullPathHash;
-            }
-#endif
         }
 
         #region IAnimationController
