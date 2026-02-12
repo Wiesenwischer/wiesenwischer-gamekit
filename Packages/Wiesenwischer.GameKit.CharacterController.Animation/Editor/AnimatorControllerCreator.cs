@@ -28,6 +28,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             controller.AddParameter(AnimationParameters.LandTrigger, AnimatorControllerParameterType.Trigger);
             controller.AddParameter(AnimationParameters.HardLandingParam, AnimatorControllerParameterType.Bool);
 
+            // Base Layer: IK Pass aktivieren (benötigt für FootIK, LookAtIK)
+            var layers = controller.layers;
+            if (layers.Length > 0)
+            {
+                layers[0].iKPass = true;
+                controller.layers = layers;
+            }
+
             // Layer 1: Abilities (Layer 0 existiert bereits als "Base Layer")
             var upperBodyMask = AssetDatabase.LoadAssetAtPath<AvatarMask>(
                 MaskPath + "Mask_UpperBody.mask");
