@@ -48,7 +48,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Offen |
 | 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
-| 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | In Arbeit |
+| 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
@@ -292,7 +292,7 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [x] [8.2 IKManager Komponente](phase-8-ik-system/8.2-ik-manager.md)
 - [x] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
 - [x] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
-- [ ] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
+- [x] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
 
 ---
 
