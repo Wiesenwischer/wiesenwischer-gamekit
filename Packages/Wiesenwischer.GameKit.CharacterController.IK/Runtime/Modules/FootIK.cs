@@ -39,6 +39,16 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         [Tooltip("Maximaler Fuß-Versatz (verhindert Überdehnung).")]
         [SerializeField] private float _maxFootAdjustment = 0.4f;
 
+        [Header("Locomotion Blend")]
+        [Tooltip("Ab dieser Geschwindigkeit wird FootIK ausgeblendet (m/s).")]
+        [SerializeField] private float _speedBlendStart = 0.1f;
+
+        [Tooltip("Bei dieser Geschwindigkeit ist FootIK komplett aus (m/s).")]
+        [SerializeField] private float _speedBlendEnd = 0.5f;
+
+        [Tooltip("SmoothDamp-Zeit für IK-Weight-Blending.")]
+        [SerializeField] private float _weightBlendSmooth = 0.15f;
+
         private bool _isEnabled = true;
         private IKManager _ikManager;
 
@@ -53,6 +63,11 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         // Body Offset
         private float _currentBodyOffset;
         private float _bodyOffsetVelocity;
+
+        // Locomotion Blend: IK-Weight wird bei Bewegung ausgeblendet,
+        // damit die Walk/Run-Animation die Beine steuert (nicht IK).
+        private float _locomotionBlendWeight = 1f;
+        private float _locomotionBlendVelocity;
 
         // IIKModule
         public string Name => "FootIK";
@@ -78,6 +93,18 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
 
         public void PrepareIK()
         {
+            // Locomotion Blend: Bei Bewegung IK ausblenden, damit Walk/Run-Animation
+            // die Beine steuert. Bei Idle volles IK für Terrain-Anpassung.
+            float horizontalSpeed = _playerController.ReusableData?.HorizontalVelocity.magnitude ?? 0f;
+            float targetBlend = 1f;
+            if (horizontalSpeed > _speedBlendEnd)
+                targetBlend = 0f;
+            else if (horizontalSpeed > _speedBlendStart)
+                targetBlend = 1f - Mathf.InverseLerp(_speedBlendStart, _speedBlendEnd, horizontalSpeed);
+
+            _locomotionBlendWeight = Mathf.SmoothDamp(
+                _locomotionBlendWeight, targetBlend, ref _locomotionBlendVelocity, _weightBlendSmooth);
+
             if (!_playerController.IsGrounded)
             {
                 _leftFootHit = false;
@@ -102,7 +129,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             _leftFootHit = CastFoot(leftFoot, out _leftFootTarget, out _leftFootRotation);
             _rightFootHit = CastFoot(rightFoot, out _rightFootTarget, out _rightFootRotation);
 
-            // Body Offset berechnen
+            // Body Offset berechnen (auch mit Locomotion Blend skaliert)
             float targetBodyOffset = 0f;
             if (_leftFootHit && _rightFootHit)
             {
@@ -120,13 +147,14 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         {
             if (layerIndex != 0) return;
 
-            float effectiveWeight = _weight;
+            // IK-Weight × Locomotion-Blend: Bei Bewegung → 0, bei Idle → _weight
+            float effectiveWeight = _weight * _locomotionBlendWeight;
 
-            // Body Offset anwenden (Hüfte absenken)
-            if (Mathf.Abs(_currentBodyOffset) > 0.001f)
+            // Body Offset anwenden (Hüfte absenken), auch mit Blend skaliert
+            if (Mathf.Abs(_currentBodyOffset * _locomotionBlendWeight) > 0.001f)
             {
                 Vector3 bodyPos = animator.bodyPosition;
-                bodyPos.y += _currentBodyOffset;
+                bodyPos.y += _currentBodyOffset * _locomotionBlendWeight;
                 animator.bodyPosition = bodyPos;
             }
 
