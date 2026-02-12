@@ -290,8 +290,8 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 **Schritte:**
 - [x] [8.1 Package-Struktur & IIKModule Interface](phase-8-ik-system/8.1-package-interfaces.md)
 - [x] [8.2 IKManager Komponente](phase-8-ik-system/8.2-ik-manager.md)
-- [ ] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
-- [ ] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
+- [x] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
+- [x] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
 - [ ] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
 
 ---
