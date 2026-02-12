@@ -438,93 +438,130 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         }
 
         /// <summary>
-        /// Weist die konfigurierten Clips den Animator Controller States zu.
+        /// Baut den Animator Controller vollständig auf (Controller, Parameter, Blend Tree, States)
+        /// und weist die Clips zu. Idempotent — kann beliebig oft aufgerufen werden.
         /// </summary>
         private void AssignClipsToController()
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+
+            // === Controller erstellen falls nicht vorhanden ===
             if (controller == null)
             {
-                Debug.LogError("[CharacterSetup] Animator Controller nicht gefunden.");
-                return;
-            }
-
-            var rootSM = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
-            bool dirty = false;
-
-            // === Locomotion Blend Tree ===
-            var locomotionState = FindState(rootSM, "Locomotion");
-            if (locomotionState != null && locomotionState.motion is BlendTree blendTree)
-            {
-                var children = blendTree.children;
-                // Blend Tree Reihenfolge: [0]=Idle, [1]=Walk, [2]=Run, [3]=Sprint
-                if (children.Length >= 4)
+                Debug.Log("[CharacterSetup] Animator Controller nicht vorhanden — wird erstellt...");
+                AnimatorControllerCreator.CreateController();
+                controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+                if (controller == null)
                 {
-                    dirty |= TryAssignBlendTreeChild(ref children, 0, _animIdle, "Idle");
-                    dirty |= TryAssignBlendTreeChild(ref children, 1, _animWalk, "Walk");
-                    dirty |= TryAssignBlendTreeChild(ref children, 2, _animRun, "Run");
-                    dirty |= TryAssignBlendTreeChild(ref children, 3, _animSprint, "Sprint");
-                    blendTree.children = children;
+                    Debug.LogError("[CharacterSetup] Animator Controller konnte nicht erstellt werden.");
+                    return;
                 }
             }
 
-            // === Einzelne States ===
-            dirty |= TryAssignStateMotion(rootSM, "Jump", _animJump);
-            dirty |= TryAssignStateMotion(rootSM, "Fall", _animFall);
-            dirty |= TryAssignStateMotion(rootSM, "SoftLand", _animSoftLand);
-            dirty |= TryAssignStateMotion(rootSM, "HardLand", _animHardLand);
-            dirty |= TryAssignStateMotion(rootSM, "LightStop", _animLightStop);
-            dirty |= TryAssignStateMotion(rootSM, "MediumStop", _animMediumStop);
-            dirty |= TryAssignStateMotion(rootSM, "HardStop", _animHardStop);
+            var rootSM = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
 
-            if (dirty)
+            // === Locomotion Blend Tree: finden oder erstellen ===
+            var locomotionState = FindState(rootSM, "Locomotion");
+            BlendTree blendTree = null;
+
+            if (locomotionState != null && locomotionState.motion is BlendTree existingTree)
             {
-                EditorUtility.SetDirty(controller);
-                AssetDatabase.SaveAssets();
-                Debug.Log("[CharacterSetup] Animator Controller Clips aktualisiert.");
+                blendTree = existingTree;
             }
+            else
+            {
+                // Locomotion State + Blend Tree neu erstellen
+                if (locomotionState != null)
+                    rootSM.RemoveState(locomotionState);
+
+                blendTree = new BlendTree
+                {
+                    name = "Locomotion",
+                    blendType = BlendTreeType.Simple1D,
+                    blendParameter = AnimationParameters.SpeedParam,
+                    useAutomaticThresholds = false
+                };
+
+                // 4 leere Plätze mit korrekten Thresholds: Idle=0, Walk=0.5, Run=1.0, Sprint=1.5
+                var emptyClip = new AnimationClip { name = "_empty" };
+                blendTree.AddChild(emptyClip, 0.0f);
+                blendTree.AddChild(emptyClip, 0.5f);
+                blendTree.AddChild(emptyClip, 1.0f);
+                blendTree.AddChild(emptyClip, 1.5f);
+
+                AssetDatabase.AddObjectToAsset(blendTree, controller);
+
+                locomotionState = rootSM.AddState("Locomotion");
+                locomotionState.motion = blendTree;
+                locomotionState.iKOnFeet = true;
+                locomotionState.writeDefaultValues = false;
+                rootSM.defaultState = locomotionState;
+
+                Debug.Log("[CharacterSetup] Locomotion Blend Tree erstellt.");
+            }
+
+            // === Locomotion Clips zuweisen ===
+            var children = blendTree.children;
+            if (children.Length >= 4)
+            {
+                TryAssignBlendTreeChild(ref children, 0, _animIdle, "Idle");
+                TryAssignBlendTreeChild(ref children, 1, _animWalk, "Walk");
+                TryAssignBlendTreeChild(ref children, 2, _animRun, "Run");
+                TryAssignBlendTreeChild(ref children, 3, _animSprint, "Sprint");
+                blendTree.children = children;
+            }
+
+            // === Einzelne States: finden oder erstellen + Clips zuweisen ===
+            TryAssignStateMotion(rootSM, "Jump", _animJump);
+            TryAssignStateMotion(rootSM, "Fall", _animFall);
+            TryAssignStateMotion(rootSM, "SoftLand", _animSoftLand);
+            TryAssignStateMotion(rootSM, "HardLand", _animHardLand);
+            TryAssignStateMotion(rootSM, "LightStop", _animLightStop);
+            TryAssignStateMotion(rootSM, "MediumStop", _animMediumStop);
+            TryAssignStateMotion(rootSM, "HardStop", _animHardStop);
+
+            EditorUtility.SetDirty(controller);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CharacterSetup] Animator Controller vollständig aufgebaut.");
         }
 
-        private static bool TryAssignBlendTreeChild(ref ChildMotion[] children, int index, GameObject fbx, string label)
+        private static void TryAssignBlendTreeChild(ref ChildMotion[] children, int index, GameObject fbx, string label)
         {
-            if (fbx == null) return false;
+            if (fbx == null) return;
 
             var clip = LoadClipFromFBX(fbx);
             if (clip == null)
             {
                 Debug.LogWarning($"[CharacterSetup] {label}: Kein AnimationClip im FBX gefunden.");
-                return false;
+                return;
             }
 
             children[index].motion = clip;
             Debug.Log($"[CharacterSetup] Blend Tree: {label} → {clip.name}");
-            return true;
         }
 
-        private static bool TryAssignStateMotion(AnimatorStateMachine sm, string stateName, GameObject fbx)
+        private static void TryAssignStateMotion(AnimatorStateMachine sm, string stateName, GameObject fbx)
         {
-            if (fbx == null) return false;
+            if (fbx == null) return;
 
             var clip = LoadClipFromFBX(fbx);
             if (clip == null)
             {
                 Debug.LogWarning($"[CharacterSetup] {stateName}: Kein AnimationClip im FBX gefunden.");
-                return false;
+                return;
             }
 
             var state = FindState(sm, stateName);
             if (state == null)
             {
-                // State existiert nicht → automatisch erstellen
                 state = sm.AddState(stateName);
                 state.writeDefaultValues = false;
                 state.iKOnFeet = true;
-                Debug.Log($"[CharacterSetup] State '{stateName}' neu erstellt.");
+                Debug.Log($"[CharacterSetup] State '{stateName}' erstellt.");
             }
 
             state.motion = clip;
             Debug.Log($"[CharacterSetup] State: {stateName} → {clip.name}");
-            return true;
         }
 
         #endregion
