@@ -101,6 +101,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 normalizedSpeed /= terrainMultiplier;
             }
 
+            // Minimum Animation Speed: Wenn der Character sich physisch bewegt, muss
+            // der Speed-Parameter hoch genug sein um sichtbare Bein-Animation im Blend Tree
+            // auszulösen. Ohne dieses Minimum gleitet der Character bei niedrigen
+            // Geschwindigkeiten mit Idle-Pose über den Boden ("Ice Skating").
+            if (horizontalSpeed > 0.3f && normalizedSpeed < 0.35f)
+            {
+                normalizedSpeed = 0.35f;
+            }
+
             _animator.SetFloat(
                 AnimationParameters.SpeedHash,
                 normalizedSpeed,
