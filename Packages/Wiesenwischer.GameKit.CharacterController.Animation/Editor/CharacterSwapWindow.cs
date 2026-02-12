@@ -341,10 +341,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             configured += ConfigureAnim(_animSoftLand, sourceAvatar, false, true, "SoftLand");
             configured += ConfigureAnim(_animHardLand, sourceAvatar, false, true, "HardLand");
 
-            // Stopping (no loop, grounded → Feet)
-            configured += ConfigureAnim(_animLightStop, sourceAvatar, false, false, "LightStop");
-            configured += ConfigureAnim(_animMediumStop, sourceAvatar, false, false, "MediumStop");
-            configured += ConfigureAnim(_animHardStop, sourceAvatar, false, false, "HardStop");
+            // Stopping (no loop, grounded → Feet, kein Bake XZ)
+            configured += ConfigureAnim(_animLightStop, sourceAvatar, false, false, "LightStop", bakePositionXZ: false);
+            configured += ConfigureAnim(_animMediumStop, sourceAvatar, false, false, "MediumStop", bakePositionXZ: false);
+            configured += ConfigureAnim(_animHardStop, sourceAvatar, false, false, "HardStop", bakePositionXZ: false);
 
             if (configured > 0)
             {
@@ -360,7 +360,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         /// Zwei-Schritt-Import: erst Humanoid-Rig erstellen, dann CopyFromOther + Clip-Settings.
         /// </summary>
         /// <returns>1 wenn konfiguriert, 0 wenn übersprungen.</returns>
-        private static int ConfigureAnim(GameObject fbx, Avatar sourceAvatar, bool loop, bool airborne, string label)
+        private static int ConfigureAnim(GameObject fbx, Avatar sourceAvatar, bool loop, bool airborne, string label,
+            bool bakePositionXZ = true)
         {
             if (fbx == null) return 0;
 
@@ -411,9 +412,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                     clip.heightFromFeet = true;
                 }
 
-                // Root Transform Position XZ: Bake Into Pose, Original
-                clip.lockRootPositionXZ = true;
-                clip.keepOriginalPositionXZ = true;
+                // Root Transform Position XZ
+                // Locomotion: Bake Into Pose (In-Place Animations)
+                // Stopping: NICHT baken — Root Motion wird verworfen (applyRootMotion=false),
+                //           sonst läuft das Mesh vom Collider weg auf Rampen.
+                clip.lockRootPositionXZ = bakePositionXZ;
+                clip.keepOriginalPositionXZ = bakePositionXZ;
 
                 // Loop Time
                 clip.loopTime = loop;

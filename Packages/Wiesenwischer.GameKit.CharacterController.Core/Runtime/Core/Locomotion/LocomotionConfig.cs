@@ -130,6 +130,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Tooltip("Deceleration beim Stoppen aus Sprint (m/s²). Niedrigerer Wert = längerer Bremsweg.")]
         [SerializeField] private float _hardStopDeceleration = 8.0f;
 
+        [Header("Slope Animation")]
+        [Tooltip("Animation auf Rampen/Treppen immer mit voller Geschwindigkeit abspielen (kompensiert geometrische Speed-Reduktion durch Steigung).")]
+        [SerializeField] private bool _fullAnimSpeedOnTerrain = true;
+
         [Header("Slope Speed")]
         [Tooltip("Maximale Speed-Reduktion bergauf bei steilstem begehbaren Winkel (0=keine Reduktion, 1=Stillstand). Skaliert linear mit dem Slope-Winkel.")]
         [Range(0f, 1f)]
@@ -196,6 +200,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float MediumStopDeceleration => _mediumStopDeceleration;
         public float HardStopDeceleration => _hardStopDeceleration;
         public float UphillSpeedPenalty => _uphillSpeedPenalty;
+        public bool FullAnimSpeedOnTerrain => _fullAnimSpeedOnTerrain;
         public float DownhillSpeedBonus => _downhillSpeedBonus;
         public float SlopeSlideSpeed => _slopeSlideSpeed;
         public bool UseSlopeDependentSlideSpeed => _useSlopeDependentSlideSpeed;
