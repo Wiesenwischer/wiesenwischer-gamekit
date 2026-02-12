@@ -50,6 +50,22 @@ Begründung: IK ist ein optionaler visueller Layer. Ohne Package kein IK — kei
 
 ---
 
+## IK-Backend Entscheidung
+
+**Gewählt: Backend-agnostisch (Interface-First)**
+
+Das `IIKModule`-Interface ist so designed, dass das konkrete IK-Backend austauschbar ist. Phase 8 startet mit **Unity Built-in IK** (`Animator.SetIKPosition`, `SetLookAtPosition`) als MVP — einfach, kostenlos, keine Abhängigkeiten. Falls die Qualität nicht ausreicht, kann später auf ein stärkeres Backend gewechselt werden, ohne die Architektur zu ändern:
+
+| Backend | Wann upgraden? |
+|---------|---------------|
+| Unity Built-in IK | **MVP (Phase 8)** — Foot + LookAt |
+| Animation Rigging (Unity) | Wenn Constraint-basierte IK nötig wird (z.B. Waffen-Aim) |
+| Final IK (RootMotion) | Wenn Full-Body IK / AAA-Grounding nötig wird |
+
+**Upgrade-Pfad:** Neues `IIKModule` implementieren (z.B. `FinalIKFootModule`), beim `IKManager` registrieren, altes Modul entfernen. Kein Code außerhalb des IK-Packages muss sich ändern.
+
+---
+
 ## Schritte
 
 | Schritt | Beschreibung | Branch | Commit-Message |

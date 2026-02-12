@@ -72,9 +72,13 @@ Lebendige Charaktere (Animation)
 
 Fähigkeiten & Action Combat
   Phase 4 ──> Phase 5 ──> Phase 9
+                             ↑
+                          Phase 8 (Hand IK benötigt IK-Infrastruktur)
 
 MMO-Netzwerk
   Phase 5 ──> Phase 6 ──> Phase 7
+                             ↑
+                          Phase 8 (IK Target Sync benötigt IK-Module)
 
 Natürliche Bewegung (IK)
   Phase 4 ──> Phase 20 (Grounding Smoother) ──> Phase 8
@@ -228,7 +232,8 @@ Modulares Ability-Framework als Infrastruktur für Nahkampf, Fernkampf, Zauber u
 - [ ] 9.3 RangedAbility (Fernkampf/Bogen)
 - [ ] 9.4 SpellAbility (Zauber)
 - [ ] 9.5 Combat Animationen
-- [ ] 9.6 Combat Netzwerk-Sync
+- [ ] 9.6 Hand IK Integration (Waffen-/Zauber-Ziele, IIKTargetProvider für Abilities)
+- [ ] 9.7 Combat Netzwerk-Sync
 
 ---
 
@@ -265,7 +270,8 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [ ] 7.1 Animator Sync
 - [ ] 7.2 State Sync
 - [ ] 7.3 Ability Sync
-- [ ] 7.4 Lag Compensation
+- [ ] 7.4 IK Target Sync (LookAt-/Hand-Ziele über Netzwerk, nur wenn Spieler sichtbar)
+- [ ] 7.5 Lag Compensation
 
 ---
 
