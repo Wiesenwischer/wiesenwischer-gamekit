@@ -80,10 +80,10 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Editor
             var lookAtSo = new SerializedObject(lookAtIK);
             lookAtSo.FindProperty("_targetProvider").objectReferenceValue = cameraProvider;
             lookAtSo.FindProperty("_weight").floatValue = 1f;
-            lookAtSo.FindProperty("_bodyWeight").floatValue = 0.2f;
-            lookAtSo.FindProperty("_headWeight").floatValue = 0.8f;
+            lookAtSo.FindProperty("_bodyWeight").floatValue = 0.05f;
+            lookAtSo.FindProperty("_headWeight").floatValue = 0.5f;
             lookAtSo.FindProperty("_eyesWeight").floatValue = 0f;
-            lookAtSo.FindProperty("_clampWeight").floatValue = 0.6f;
+            lookAtSo.FindProperty("_clampWeight").floatValue = 0.5f;
             lookAtSo.FindProperty("_smoothSpeed").floatValue = 5f;
             lookAtSo.ApplyModifiedProperties();
 

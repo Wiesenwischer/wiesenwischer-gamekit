@@ -18,21 +18,21 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         [Range(0f, 1f)]
         [SerializeField] private float _weight = 1f;
 
-        [Tooltip("Wie stark sich der Oberkörper mitdreht.")]
+        [Tooltip("Wie stark sich der Oberkörper mitdreht (niedrig halten!).")]
         [Range(0f, 1f)]
-        [SerializeField] private float _bodyWeight = 0.2f;
+        [SerializeField] private float _bodyWeight = 0.05f;
 
         [Tooltip("Kopf-Rotations-Stärke.")]
         [Range(0f, 1f)]
-        [SerializeField] private float _headWeight = 0.8f;
+        [SerializeField] private float _headWeight = 0.5f;
 
         [Tooltip("Augen-Rotation (deaktiviert für CC-Modelle).")]
         [Range(0f, 1f)]
         [SerializeField] private float _eyesWeight = 0f;
 
-        [Tooltip("Begrenzt extreme Drehwinkel.")]
+        [Tooltip("Begrenzt extreme Drehwinkel (höher = mehr Clamping).")]
         [Range(0f, 1f)]
-        [SerializeField] private float _clampWeight = 0.6f;
+        [SerializeField] private float _clampWeight = 0.5f;
 
         [Tooltip("Wie schnell der LookAt-Weight sich ändert.")]
         [SerializeField] private float _smoothSpeed = 5f;
