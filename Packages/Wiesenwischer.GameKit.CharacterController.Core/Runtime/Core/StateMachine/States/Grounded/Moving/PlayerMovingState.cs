@@ -11,6 +11,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
     {
         public override string StateName => "Moving";
 
+        // Grace Period: Verhindert Animation-Oszillation bei schnellem Tasten-Tippen.
+        // Ohne diese Toleranz wechselt die Animation bei jedem kurzen Loslassen sofort
+        // zu CrossFade(StopAnim), wodurch der Animator permanent in unvollständigen
+        // Transitions hängt und keine Bein-Animation sichtbar wird.
+        private const float InputGracePeriod = 0.1f;
+        private float _noInputTimer;
+
         public PlayerMovingState(PlayerMovementStateMachine stateMachine) : base(stateMachine)
         {
         }
@@ -18,6 +25,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         protected override void OnEnter()
         {
             base.OnEnter();
+            _noInputTimer = 0f;
             Player.AnimationController?.PlayState(CharacterAnimationState.Locomotion);
         }
 
@@ -25,11 +33,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         {
             base.OnUpdate();
 
-            // Transition zu Stopping-State wenn kein Input
             if (!HasMovementInput())
             {
-                ChangeState(GetStoppingState());
-                return;
+                _noInputTimer += Time.deltaTime;
+                if (_noInputTimer >= InputGracePeriod)
+                {
+                    ChangeState(GetStoppingState());
+                    return;
+                }
+            }
+            else
+            {
+                _noInputTimer = 0f;
             }
         }
 
