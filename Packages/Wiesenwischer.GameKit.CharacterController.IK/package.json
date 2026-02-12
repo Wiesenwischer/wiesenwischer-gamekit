@@ -1,0 +1,26 @@
+{
+  "name": "wiesenwischer.gamekit.charactercontroller.ik",
+  "displayName": "GameKit Character Controller - IK",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Modulares IK-System für Character-Animation (Foot IK, LookAt IK, Hand IK)",
+  "keywords": [
+    "ik",
+    "inverse-kinematics",
+    "foot-ik",
+    "lookat",
+    "character",
+    "animation"
+  ],
+  "author": {
+    "name": "Wiesenwischer",
+    "url": "https://github.com/Wiesenwischer"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wiesenwischer/wiesenwischer-gamekit-charactercontroller.git"
+  },
+  "dependencies": {
+    "wiesenwischer.gamekit.charactercontroller.core": "0.1.0"
+  }
+}

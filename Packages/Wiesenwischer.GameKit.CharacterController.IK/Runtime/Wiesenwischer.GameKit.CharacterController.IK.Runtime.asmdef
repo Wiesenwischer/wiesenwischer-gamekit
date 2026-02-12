@@ -1,0 +1,16 @@
+{
+  "name": "Wiesenwischer.GameKit.CharacterController.IK.Runtime",
+  "rootNamespace": "Wiesenwischer.GameKit.CharacterController.IK",
+  "references": [
+    "Wiesenwischer.GameKit.CharacterController.Core.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
