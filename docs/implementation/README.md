@@ -51,7 +51,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Offen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
-| 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | In Arbeit |
+| 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
 | 13 | Character | CP: Equipment System | — | ❌ | Offen |
@@ -194,7 +194,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [x] [20.1 GroundingSmoother Komponente](phase-20-grounding-smoother/20.1-grounding-smoother-component.md)
 - [x] [20.2 Unit Tests](phase-20-grounding-smoother/20.2-unit-tests.md)
 - [x] [20.3 Prefab-Integration](phase-20-grounding-smoother/20.3-prefab-integration.md)
-- [ ] [20.4 Verifikation](phase-20-grounding-smoother/20.4-verification.md)
+- [x] [20.4 Verifikation](phase-20-grounding-smoother/20.4-verification.md)
 
 ---
 
