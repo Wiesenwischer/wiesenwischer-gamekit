@@ -406,6 +406,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 GUILayout.Label($"Mode: {(ReusableData.ShouldWalk ? "<color=yellow>Walk</color>" : "<color=lime>Run</color>")}");
             }
 
+            if (Locomotion != null)
+            {
+                GUILayout.Label($"Stairs: {Locomotion.IsOnStairs} | Terrain: {Locomotion.CurrentTerrainSpeedMultiplier:F2}x");
+            }
             GUILayout.Label($"Tick: {CurrentTick}");
 
             var gi = GroundInfo;

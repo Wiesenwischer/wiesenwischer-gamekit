@@ -52,6 +52,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         // Cached GroundInfo
         private GroundInfo _cachedGroundInfo;
 
+        // Terrain Speed Multiplier: Kombination aus Slope + Stair Modifier.
+        // Wird in UpdateVelocity berechnet, damit AnimatorParameterBridge kompensieren kann.
+        private float _currentTerrainSpeedMultiplier = 1f;
+
         // Debug: Hovering-Diagnose
         private int _debugLandingFrames;
         private int _debugHoverLogCount;
@@ -238,20 +242,26 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
             // Slope Speed Modifier: Target-Velocity bergauf reduzieren, bergab optional erhöhen.
             // Wirkt auf Target, damit AccelerationModule natürlich zum Ziel hin beschleunigt/bremst.
+            float terrainMultiplier = 1f;
             if (_groundDetectionStrategy.IsGrounded &&
                 _motor.GroundingStatus.IsStableOnGround &&
                 targetHorizontal.sqrMagnitude > 0.01f)
             {
                 float slopeMultiplier = CalculateSlopeSpeedMultiplier(
                     targetHorizontal, _motor.GroundingStatus.GroundNormal);
+                terrainMultiplier *= slopeMultiplier;
                 targetHorizontal *= slopeMultiplier;
             }
 
             // Stair Speed Modifier: Auf Treppen (häufige Steps) Target reduzieren.
             if (IsOnStairs && targetHorizontal.sqrMagnitude > 0.01f)
             {
-                targetHorizontal *= (1f - _config.StairSpeedReduction);
+                float stairMultiplier = 1f - _config.StairSpeedReduction;
+                terrainMultiplier *= stairMultiplier;
+                targetHorizontal *= stairMultiplier;
             }
+
+            _currentTerrainSpeedMultiplier = terrainMultiplier;
 
             float deceleration = _currentInput.DecelerationOverride > 0f
                 ? _currentInput.DecelerationOverride
@@ -464,6 +474,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool IsOnStairs => _config.StairSpeedReductionEnabled
             && _recentStepCount >= StairStepThreshold
             && (Time.time - _lastStepTime) < StairDetectionWindow;
+
+        /// <summary>
+        /// Kombinierter Terrain-Speed-Multiplikator (Slope + Stair). 1.0 = flacher Boden.
+        /// AnimatorParameterBridge kann damit die Animations-Geschwindigkeit kompensieren,
+        /// damit die Fußbewegung zur visuellen Displacement-Rate passt.
+        /// </summary>
+        public float CurrentTerrainSpeedMultiplier => _currentTerrainSpeedMultiplier;
 
         public void SetRotation(float yaw)
         {

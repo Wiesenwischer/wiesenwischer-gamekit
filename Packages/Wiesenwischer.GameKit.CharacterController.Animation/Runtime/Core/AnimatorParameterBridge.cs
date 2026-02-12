@@ -92,6 +92,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 ? horizontalSpeed / config.RunSpeed
                 : 0f;
 
+            // Terrain-Kompensation: Auf Treppen/Slopes wird die physische Geschwindigkeit
+            // reduziert, aber die Animation soll im "Flachboden-Tempo" laufen, damit
+            // die Fußbewegung zur visuellen Displacement-Rate passt.
+            float terrainMultiplier = _playerController.Locomotion?.CurrentTerrainSpeedMultiplier ?? 1f;
+            if (terrainMultiplier > 0.01f && terrainMultiplier < 1f)
+            {
+                normalizedSpeed /= terrainMultiplier;
+            }
+
             _animator.SetFloat(
                 AnimationParameters.SpeedHash,
                 normalizedSpeed,
