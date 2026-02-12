@@ -195,6 +195,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 return;
             }
 
+            // Prüfen ob der Animator bereits im Ziel-State ist (auch wenn _currentAnimStateHash
+            // abweicht, z.B. nach Walking→LightStopping→Walking Cycling).
+            // Ohne diesen Check wird die Locomotion-Animation bei jedem Zyklus neu gestartet
+            // (CrossFade setzt die BlendTree-Clips auf Frame 0), was dazu führt, dass
+            // die Walk-Animation nur wenige Frames lang sichtbar ist.
+            var currentStateInfo = _animator.GetCurrentAnimatorStateInfo(AnimationParameters.BaseLayerIndex);
+            if (currentStateInfo.shortNameHash == hash && !_animator.IsInTransition(AnimationParameters.BaseLayerIndex))
+            {
+                _currentAnimStateHash = hash;
+                return;
+            }
+
             _currentAnimStateHash = hash;
             _canExitAnimation = false;
             _animator.CrossFade(hash, transitionDuration);
