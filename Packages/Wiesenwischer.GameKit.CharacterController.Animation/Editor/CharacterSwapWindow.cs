@@ -505,18 +505,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         {
             if (fbx == null) return false;
 
-            var state = FindState(sm, stateName);
-            if (state == null)
-            {
-                Debug.LogWarning($"[CharacterSetup] State '{stateName}' nicht im Animator Controller gefunden.");
-                return false;
-            }
-
             var clip = LoadClipFromFBX(fbx);
             if (clip == null)
             {
                 Debug.LogWarning($"[CharacterSetup] {stateName}: Kein AnimationClip im FBX gefunden.");
                 return false;
+            }
+
+            var state = FindState(sm, stateName);
+            if (state == null)
+            {
+                // State existiert nicht → automatisch erstellen
+                state = sm.AddState(stateName);
+                state.writeDefaultValues = false;
+                state.iKOnFeet = true;
+                Debug.Log($"[CharacterSetup] State '{stateName}' neu erstellt.");
             }
 
             state.motion = clip;
