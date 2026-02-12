@@ -220,9 +220,26 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                     mag3D = lastAccelMag;
                 }
 
-                currentHorizontal = flatMag > 0.01f
-                    ? flatDir.normalized * mag3D
-                    : Vector3.zero;
+                if (flatMag > 0.01f)
+                {
+                    currentHorizontal = flatDir.normalized * mag3D;
+                }
+                else if (_lastComputedHorizontal.sqrMagnitude > 0.1f &&
+                         _motor.GroundingStatus.IsStableOnGround)
+                {
+                    // Slope-Transition Fallback: Der Motor's Kollisions-Auflösung an
+                    // Rampen-/Boden-Übergängen (konvexe Kanten) kann die horizontale
+                    // Velocity auf 0 projizieren (Crease Resolution zwischen zwei
+                    // Oberflächen). Wenn der Character stabil am Boden steht und sich
+                    // im letzten Frame bewegt hat, behalten wir die geplante Velocity
+                    // bei. Der Motor löst die Kollision physisch auf (keine Penetration),
+                    // aber das Momentum bleibt erhalten → flüssiger Übergang.
+                    currentHorizontal = _lastComputedHorizontal;
+                }
+                else
+                {
+                    currentHorizontal = Vector3.zero;
+                }
             }
             else
             {
@@ -443,7 +460,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void ProcessHitStabilityReport(Collider hitCollider, Vector3 hitNormal, Vector3 hitPoint, Vector3 atCharacterPosition, Quaternion atCharacterRotation, ref HitStabilityReport hitStabilityReport)
         {
-            // Stabilität nachbearbeiten
+            // Slope-Edge Fix: An scharfen Kanten von Rampen/BoxCollidern erkennt die
+            // Ledge-Detection den Übergang als unstable, obwohl die Hit-Normal im
+            // begehbaren Bereich liegt (< MaxSlopeAngle). Das führt dazu, dass der
+            // Motor die Kante als Wand behandelt und die Bewegung blockt.
+            // Fix: Wenn die Hit-Normal stabil wäre aber Ledge-Detection sie überschreibt,
+            // erzwingen wir Stabilität → Character kann über Kanten gehen.
+            if (!hitStabilityReport.IsStable && hitStabilityReport.LedgeDetected)
+            {
+                float angleFromUp = Vector3.Angle(hitNormal, Vector3.up);
+                if (angleFromUp <= _config.MaxSlopeAngle)
+                {
+                    hitStabilityReport.IsStable = true;
+                }
+            }
         }
 
         public void OnDiscreteCollisionDetected(Collider hitCollider)

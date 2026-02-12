@@ -117,8 +117,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Range(1f, 180f)]
         [SerializeField] private float _maxStableDenivelationAngle = 60f;
 
-        [Tooltip("Geschwindigkeit ab der Ground Snapping an Kanten deaktiviert wird (m/s). 0 = immer snappen")]
-        [SerializeField] private float _maxVelocityForLedgeSnap = 0f;
+        [Tooltip("Geschwindigkeit ab der Ground Snapping an Kanten deaktiviert wird (m/s). " +
+                 "Unter diesem Wert snappt der Character am Boden; darüber löst er sich von der Kante. " +
+                 "Sollte höher als Sprint-Speed sein, damit normale Bewegung immer snappt.")]
+        [SerializeField] private float _maxVelocityForLedgeSnap = 10f;
 
         [Header("Stopping")]
         [Tooltip("Deceleration beim Stoppen aus Walk (m/s²). Niedrigerer Wert = längerer Bremsweg.")]

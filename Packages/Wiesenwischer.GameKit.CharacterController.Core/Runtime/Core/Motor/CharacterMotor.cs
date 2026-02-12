@@ -253,7 +253,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Motor
         /// Prevents snapping to ground on ledges beyond a certain velocity
         /// </summary>
         [Tooltip("Prevents snapping to ground on ledges beyond a certain velocity")]
-        public float MaxVelocityForLedgeSnap = 0f;
+        public float MaxVelocityForLedgeSnap = 10f;
         /// <summary>
         /// The maximun downward slope angle change that the character can be subjected to and still be snapping to the ground
         /// </summary>
