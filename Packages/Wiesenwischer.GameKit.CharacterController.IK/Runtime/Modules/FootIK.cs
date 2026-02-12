@@ -88,9 +88,16 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             }
 
             var animator = GetComponent<Animator>();
+            if (animator == null || !animator.isHuman || animator.avatar == null)
+                return;
 
-            Vector3 leftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot).position;
-            Vector3 rightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot).position;
+            var leftFootBone = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            var rightFootBone = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+            if (leftFootBone == null || rightFootBone == null)
+                return;
+
+            Vector3 leftFoot = leftFootBone.position;
+            Vector3 rightFoot = rightFootBone.position;
 
             _leftFootHit = CastFoot(leftFoot, out _leftFootTarget, out _leftFootRotation);
             _rightFootHit = CastFoot(rightFoot, out _rightFootTarget, out _rightFootRotation);

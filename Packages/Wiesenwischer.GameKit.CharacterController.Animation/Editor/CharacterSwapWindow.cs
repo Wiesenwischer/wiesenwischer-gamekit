@@ -299,6 +299,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 string modelPath = AssetDatabase.GetAssetPath(_characterModelFBX);
                 sourceAvatar = AssetDatabase.LoadAllAssetsAtPath(modelPath)
                     .OfType<Avatar>().FirstOrDefault();
+
+                if (sourceAvatar == null)
+                {
+                    Debug.LogWarning($"[CharacterSetup] Kein Avatar im Character Model gefunden: {modelPath}. " +
+                                     "Ist das Modell als Humanoid importiert?");
+                }
             }
 
             if (sourceAvatar == null)
@@ -315,9 +321,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             if (sourceAvatar == null)
             {
                 Debug.LogError("[CharacterSetup] Kein Avatar gefunden. Bitte Character Model FBX zuweisen " +
-                               "oder sicherstellen dass das Player Prefab ein Humanoid-Modell hat.");
+                               "und sicherstellen dass es als Humanoid importiert ist.");
                 return;
             }
+
+            Debug.Log($"[CharacterSetup] Source Avatar: {sourceAvatar.name} (isHuman={sourceAvatar.isHuman})");
 
             int configured = 0;
 
@@ -349,6 +357,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         /// <summary>
         /// Konfiguriert die Import-Settings einer Animation-FBX.
+        /// Zwei-Schritt-Import: erst Humanoid-Rig erstellen, dann CopyFromOther + Clip-Settings.
         /// </summary>
         /// <returns>1 wenn konfiguriert, 0 wenn übersprungen.</returns>
         private static int ConfigureAnim(GameObject fbx, Avatar sourceAvatar, bool loop, bool airborne, string label)
@@ -363,20 +372,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 return 0;
             }
 
-            // Rig: Humanoid + Copy From Other Avatar
-            importer.animationType = ModelImporterAnimationType.Human;
+            // === Schritt 1: Erst als Humanoid importieren ===
+            // Unity muss die FBX einmal als Humanoid verarbeiten, bevor
+            // CopyFromOther + sourceAvatar gesetzt werden können.
+            if (importer.animationType != ModelImporterAnimationType.Human)
+            {
+                importer.animationType = ModelImporterAnimationType.Human;
+                importer.SaveAndReimport();
+                // Importer neu laden nach Reimport
+                importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            }
+
+            // === Schritt 2: CopyFromOther + Clip Settings ===
             importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
             importer.sourceAvatar = sourceAvatar;
 
             // Clip Settings: Root Transform + Loop
             var clips = importer.defaultClipAnimations;
-            if (clips.Length == 0)
-            {
-                // Reimport als Humanoid nötig, damit Clips verfügbar werden
-                importer.SaveAndReimport();
-                clips = importer.defaultClipAnimations;
-            }
-
             if (clips.Length > 0)
             {
                 var clip = clips[0];
@@ -410,8 +422,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             }
 
             importer.SaveAndReimport();
+
+            // Verify
+            var verifyImporter = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (verifyImporter != null && verifyImporter.sourceAvatar == null)
+            {
+                Debug.LogWarning($"[CharacterSetup] {label}: sourceAvatar nach Reimport verloren! " +
+                                 "Bitte manuell unter Rig → Copy From Other Avatar zuweisen.");
+            }
+
             Debug.Log($"[CharacterSetup] {label}: Import konfiguriert " +
-                      $"(Loop={loop}, {(airborne ? "Airborne/Original" : "Grounded/Feet")})");
+                      $"(CopyFrom={sourceAvatar.name}, Loop={loop}, " +
+                      $"{(airborne ? "Airborne/Original" : "Grounded/Feet")})");
             return 1;
         }
 
