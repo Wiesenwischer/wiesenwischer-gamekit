@@ -219,6 +219,25 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                 currentHorizontal = flatMag > 0.01f
                     ? flatDir.normalized * mag3D
                     : Vector3.zero;
+
+                // Edge Momentum Preservation: Der KCC Motor nullt Velocity an konvexen
+                // Slope-Kanten (Blocking Crease Detection in InternalHandleVelocityProjection).
+                // Wenn der Motor die Velocity gezeroed hat, wir aber vorher Momentum hatten
+                // und der Spieler noch Input gibt, übernehmen wir die letzte berechnete
+                // Velocity und force-ungrounden kurz, damit der Character die Kante überquert.
+                if (currentHorizontal.sqrMagnitude < 0.01f
+                    && _lastComputedHorizontal.sqrMagnitude > 0.5f
+                    && _currentInput.MoveDirection.sqrMagnitude > 0.01f)
+                {
+                    float slopeAngle = Vector3.Angle(
+                        _motor.GroundingStatus.GroundNormal, Vector3.up);
+                    if (slopeAngle > 5f)
+                    {
+                        currentHorizontal = _lastComputedHorizontal;
+                        _motor.ForceUnground(0.1f);
+                        Debug.Log($"[Locomotion] Edge Momentum Preservation: slope={slopeAngle:F1}° lastVel={_lastComputedHorizontal.magnitude:F2}");
+                    }
+                }
             }
             else
             {

@@ -8,7 +8,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
     [TestFixture]
     public class GroundingSmootherTests
     {
-        private const float DefaultSmoothTime = 0.075f;
+        private const float DefaultSmoothTime = 0.2f;
         private const float DefaultMaxStepDelta = 0.5f;
         private const float DeltaTime = 1f / 60f;
 
@@ -109,7 +109,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
         {
             _state = Calculate(deltaY: 0.2f);
 
-            // 60 Frames (1 Sekunde) — mehr als genug für smoothTime 0.075
+            // 60 Frames (1 Sekunde) — mehr als genug für smoothTime 0.2
             for (int i = 0; i < 60; i++)
             {
                 _state = CalculateOffset(

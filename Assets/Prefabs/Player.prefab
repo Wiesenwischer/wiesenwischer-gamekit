@@ -146,7 +146,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   _modelTransform: {fileID: 4523652827095139177}
-  _smoothTime: 0.075
+  _smoothTime: 0.2
   _maxStepDelta: 0.5
   _onlyWhenGrounded: 1
 --- !u!1001 &4129105116958549122

@@ -190,17 +190,17 @@ Player (Root)
 
 | Parameter | Default | Bereich | Beschreibung |
 |-----------|---------|---------|-------------|
-| `_smoothTime` | 0.075s | 0.03–0.2s | Kürzere Werte = snappiger, längere = weicher |
-| `_maxStepDelta` | 0.5m | 0.3–1.0m | Sollte >= `LocomotionConfig.MaxStepHeight` sein |
+| `_smoothTime` | 0.2s | 0.05–0.3s | Kürzere Werte = snappiger, längere = weicher/cinematischer |
+| `_maxStepDelta` | 0.5m | 0.3–1.0m | Sollte >= `CharacterMotor.MaxStepHeight` sein (Motor: 0.5m) |
 | `_onlyWhenGrounded` | true | bool | false = auch in der Luft smoothen (selten sinnvoll) |
 
 ### Tuning-Guide
 
 | Treppen-Feeling | smoothTime | Effekt |
 |-----------------|------------|--------|
-| Snappy (responsiv) | 0.04s | Kaum Smoothing, fast sofort |
-| Balanced | 0.075s | Guter Kompromiss |
-| Weich (cinematisch) | 0.15s | Sehr flüssig, leicht verzögert |
+| Snappy (responsiv) | 0.05s | Kaum Smoothing, fast sofort |
+| Balanced | 0.1s | Guter Kompromiss |
+| Weich (cinematisch) | 0.2s | Sehr flüssig, weicher Übergang |
 
 ---
 

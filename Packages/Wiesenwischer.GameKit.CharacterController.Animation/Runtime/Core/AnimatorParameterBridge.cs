@@ -27,6 +27,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         [Tooltip("Wie schnell der VerticalVelocity-Parameter sich annähert.")]
         [SerializeField] private float _verticalVelocityDampTime = 0.05f;
 
+        [Header("Stair Animation")]
+        [Tooltip("Zusätzlicher Speed-Multiplikator auf Treppen. Kompensiert dass die Walk-Animation " +
+                 "für flachen Boden designed ist, der Character auf Treppen aber visuell schneller läuft. " +
+                 "1.0 = nur StairSpeedReduction-Kompensation, 1.5 = 50% schneller, 2.0 = doppelt so schnell.")]
+        [Range(1f, 3f)]
+        [SerializeField] private float _stairAnimSpeedMultiplier = 1.5f;
+
         private Animator _animator;
         private bool _isValid;
         private int _currentAnimStateHash;
@@ -87,10 +94,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             var config = _playerController.LocomotionConfig;
 
             // Speed: Normalisiert auf RunSpeed (0=Idle, 0.5=Walk, 1.0=Run, 1.5=Sprint)
-            float horizontalSpeed = data.HorizontalVelocity.magnitude;
+            float movementSpeed = data.HorizontalVelocity.magnitude;
+
+            // Treppen-Kompensation: StairSpeedReduction verlangsamt den Motor auf Treppen
+            // (Gameplay-Entscheidung), aber visuell bewegt sich der Character durch die
+            // Step-Up-Teleportationen mit annähernd normaler Geschwindigkeit. Ohne Kompensation
+            // läuft die Walk-Animation deutlich langsamer als die sichtbare Körperbewegung.
+            bool stairCompensated = false;
+            if (_playerController.IsGrounded && _playerController.Locomotion.IsOnStairs)
+            {
+                float reduction = config.StairSpeedReduction;
+                if (reduction > 0f && reduction < 1f)
+                {
+                    movementSpeed /= (1f - reduction);
+                }
+                movementSpeed *= _stairAnimSpeedMultiplier;
+                stairCompensated = true;
+            }
+
             float normalizedSpeed = config.RunSpeed > 0f
-                ? horizontalSpeed / config.RunSpeed
+                ? movementSpeed / config.RunSpeed
                 : 0f;
+
+            Debug.Log($"[AnimBridge] speed={movementSpeed:F2} norm={normalizedSpeed:F3} stairs={stairCompensated} horizVel={data.HorizontalVelocity.magnitude:F2}");
 
             _animator.SetFloat(
                 AnimationParameters.SpeedHash,

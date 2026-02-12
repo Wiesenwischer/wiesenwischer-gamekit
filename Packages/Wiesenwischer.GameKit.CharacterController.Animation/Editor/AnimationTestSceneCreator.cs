@@ -58,8 +58,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             highPlatform.transform.localScale = new Vector3(4f, 0.3f, 4f);
             highPlatform.GetComponent<Renderer>().sharedMaterial = platformMat;
 
-            // Treppe zur hohen Plattform
-            CreateStaircase(new Vector3(-10f, 0f, 5f), 10f, 20, stepMat);
+            // Treppe zur hohen Plattform (Extrem-Test: 0.5m Stufen, 45°)
+            CreateStaircase(new Vector3(-10f, 0f, 5f), 10f, 20, 0.5f, stepMat);
+
+            // Realistische Treppe (Standard-Wohntreppe: 0.18m Stufen, 0.28m Tiefe)
+            CreateRealisticStaircase(new Vector3(-5f, 0f, 5f), 15, stepMat);
 
             // === Sehr hohe Plattform (Extreme Hard Landing, ~20m) ===
             var veryHighPlatform = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -118,13 +121,32 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             Debug.Log("  4. Von Plattformen fallen für Landing-Tests");
         }
 
-        private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps, Material stepMat)
+        private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps, float stepDepth, Material stepMat)
         {
             float stepHeight = totalHeight / steps;
-            float stepDepth = 0.5f;
             float stepWidth = 3f;
 
             var parent = new GameObject("Staircase");
+            parent.transform.position = startPos;
+
+            for (int i = 0; i < steps; i++)
+            {
+                var step = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                step.name = $"Step_{i + 1}";
+                step.transform.SetParent(parent.transform);
+                step.transform.localPosition = new Vector3(0f, stepHeight * (i + 0.5f), -stepDepth * i);
+                step.transform.localScale = new Vector3(stepWidth, stepHeight, stepDepth);
+                step.GetComponent<Renderer>().sharedMaterial = stepMat;
+            }
+        }
+
+        private static void CreateRealisticStaircase(Vector3 startPos, int steps, Material stepMat)
+        {
+            const float stepHeight = 0.18f;
+            const float stepDepth = 0.28f;
+            const float stepWidth = 3f;
+
+            var parent = new GameObject("Staircase_Realistic");
             parent.transform.position = startPos;
 
             for (int i = 0; i < steps; i++)
