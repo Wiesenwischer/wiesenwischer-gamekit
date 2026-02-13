@@ -225,5 +225,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
         public float StairSpeedReduction { get; set; } = 0.3f;
         public float UphillSpeedPenalty { get; set; } = 0.3f;
         public float DownhillSpeedBonus { get; set; } = 0.1f;
+        public float SlideAcceleration { get; set; } = 15f;
+        public float SlideSteerStrength { get; set; } = 0.3f;
+        public float SlideExitHysteresis { get; set; } = 3f;
+        public bool CanJumpFromSlide { get; set; } = true;
+        public float SlideJumpForceMultiplier { get; set; } = 0.7f;
+        public float MinSlideTime { get; set; } = 0.2f;
     }
 }

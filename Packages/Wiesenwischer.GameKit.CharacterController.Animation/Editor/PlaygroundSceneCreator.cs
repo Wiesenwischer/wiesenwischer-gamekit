@@ -1,22 +1,20 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 {
     /// <summary>
-    /// Editor-Tool zum Erstellen der Animation-Test-Szene.
-    /// Menü: Wiesenwischer > GameKit > Create Animation Test Scene
+    /// Editor-Tool zum Erstellen der Playground-Szene (Umgebung ohne Player).
+    /// Menü: Wiesenwischer > GameKit > Scenes > Create Playground
     /// </summary>
-    public static class AnimationTestSceneCreator
+    public static class PlaygroundSceneCreator
     {
-        private const string PlayerPrefabPath = "Assets/Prefabs/Player.prefab";
-        private const string ScenePath = "Assets/Scenes/AnimationTestScene.unity";
+        private const string ScenePath = "Assets/Scenes/Playground.unity";
         private const string MaterialFolder = "Assets/Materials/TestScene";
 
-        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Animation Test Scene", false, 300)]
-        public static void CreateTestScene()
+        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Playground", false, 300)]
+        public static void CreatePlayground()
         {
             // Materials erstellen/laden
             EnsureMaterialFolder();
@@ -89,46 +87,36 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             slope.transform.rotation = Quaternion.Euler(30f, 0f, 0f);
             slope.GetComponent<Renderer>().sharedMaterial = slopeMat;
 
-            // === Steile Slope (60°) für Rutsch-Tests ===
+            // === Steile Slope (60°) für Sliding-Test ===
             var steepSlope = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            steepSlope.name = "Slope_60deg";
+            steepSlope.name = "Slope_60deg_Slide";
             steepSlope.transform.position = new Vector3(0f, 4f, -10f);
             steepSlope.transform.localScale = new Vector3(5f, 0.3f, 10f);
             steepSlope.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
             steepSlope.GetComponent<Renderer>().sharedMaterial = slopeMat;
 
-            // === Player Prefab platzieren ===
-            var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
-            if (playerPrefab != null)
-            {
-                var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
-                player.transform.position = new Vector3(0f, 1f, 0f);
-            }
-            else
-            {
-                Debug.LogWarning($"[AnimationTestScene] Player Prefab nicht gefunden: {PlayerPrefabPath}. " +
-                                 "Bitte zuerst 'Create Player Prefab' ausführen.");
-            }
+            // === Grenzwinkel-Slope (47°) für Hysterese-Test ===
+            var borderSlope = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            borderSlope.name = "Slope_47deg_Hysteresis";
+            borderSlope.transform.position = new Vector3(10f, 3f, -10f);
+            borderSlope.transform.localScale = new Vector3(5f, 0.3f, 10f);
+            borderSlope.transform.rotation = Quaternion.Euler(47f, 0f, 0f);
+            borderSlope.GetComponent<Renderer>().sharedMaterial = slopeMat;
 
-            // === Kamera positionieren ===
-            var mainCamera = Camera.main;
-            if (mainCamera != null)
-            {
-                mainCamera.transform.position = new Vector3(0f, 3f, -8f);
-                mainCamera.transform.rotation = Quaternion.Euler(15f, 0f, 0f);
-            }
+            // === Erhöhte Plattform über steilem Hang (Fall→Slide Test) ===
+            var slidePlatform = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slidePlatform.name = "Platform_Above_SteepSlope";
+            slidePlatform.transform.position = new Vector3(0f, 8f, -8f);
+            slidePlatform.transform.localScale = new Vector3(3f, 0.3f, 3f);
+            slidePlatform.GetComponent<Renderer>().sharedMaterial = platformMat;
 
             // === Szene speichern ===
             if (!AssetDatabase.IsValidFolder("Assets/Scenes"))
                 AssetDatabase.CreateFolder("Assets", "Scenes");
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            Debug.Log($"[AnimationTestScene] Test-Szene erstellt: {ScenePath}");
-            Debug.Log("[AnimationTestScene] Test-Checkliste:");
-            Debug.Log("  1. Play Mode starten");
-            Debug.Log("  2. Window > Animation > Animator öffnen");
-            Debug.Log("  3. WASD = Laufen, Shift = Sprint, Space = Jump");
-            Debug.Log("  4. Von Plattformen fallen für Landing-Tests");
+            Debug.Log($"[Playground] Playground-Szene erstellt: {ScenePath}");
+            Debug.Log("[Playground] Enthält nur Umgebung — Player wird über 'Create Test Scene' hinzugefügt.");
         }
 
         private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps,
@@ -223,7 +211,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var shader = Shader.Find("HDRP/Lit");
             if (shader == null)
             {
-                Debug.LogWarning($"[AnimationTestScene] HDRP/Lit Shader nicht gefunden — verwende Standard-Shader.");
+                Debug.LogWarning("[Playground] HDRP/Lit Shader nicht gefunden — verwende Standard-Shader.");
                 shader = Shader.Find("Standard");
             }
 
@@ -234,8 +222,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             return mat;
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Animation Test Scene", true)]
-        private static bool ValidateCreateTestScene()
+        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Playground", true)]
+        private static bool ValidateCreatePlayground()
         {
             return !Application.isPlaying;
         }

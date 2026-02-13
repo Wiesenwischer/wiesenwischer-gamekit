@@ -208,12 +208,12 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 
 **Schritte:**
 - [ ] [21.1 Slide-Animation beschaffen + importieren](phase-21-slope-sliding/21.1-slide-animation-asset.md)
-- [ ] [21.2 Config-Erweiterung (Sliding-Parameter)](phase-21-slope-sliding/21.2-config-erweiterung.md)
-- [ ] [21.3 Slide-Intent in CharacterLocomotion](phase-21-slope-sliding/21.3-locomotion-slide-intent.md)
-- [ ] [21.4 PlayerSlidingState implementieren](phase-21-slope-sliding/21.4-sliding-state.md)
-- [ ] [21.5 Entry/Exit-Transitions (Grounded, Falling)](phase-21-slope-sliding/21.5-entry-exit-transitions.md)
-- [ ] [21.6 Animation-Integration (Enum, Animator, CrossFade)](phase-21-slope-sliding/21.6-animation-integration.md)
-- [ ] [21.7 Unit Tests](phase-21-slope-sliding/21.7-unit-tests.md)
+- [x] [21.2 Config-Erweiterung (Sliding-Parameter)](phase-21-slope-sliding/21.2-config-erweiterung.md)
+- [x] [21.3 Slide-Intent in CharacterLocomotion](phase-21-slope-sliding/21.3-locomotion-slide-intent.md)
+- [x] [21.4 PlayerSlidingState implementieren](phase-21-slope-sliding/21.4-sliding-state.md)
+- [x] [21.5 Entry/Exit-Transitions (Grounded, Falling)](phase-21-slope-sliding/21.5-entry-exit-transitions.md)
+- [x] [21.6 Animation-Integration (Enum, Animator, CrossFade)](phase-21-slope-sliding/21.6-animation-integration.md)
+- [x] [21.7 Unit Tests](phase-21-slope-sliding/21.7-unit-tests.md)
 - [ ] [21.8 Play Mode Verifikation](phase-21-slope-sliding/21.8-play-mode-verifikation.md)
 
 ---

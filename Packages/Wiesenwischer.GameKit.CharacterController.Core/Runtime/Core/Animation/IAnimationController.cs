@@ -13,7 +13,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Animation
         HardLand,
         LightStop,
         MediumStop,
-        HardStop
+        HardStop,
+        Slide
     }
 
     /// <summary>
