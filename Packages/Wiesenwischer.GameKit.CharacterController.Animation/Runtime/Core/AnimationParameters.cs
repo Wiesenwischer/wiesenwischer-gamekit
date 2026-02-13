@@ -37,6 +37,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         public static readonly int LightStopStateHash = Animator.StringToHash("LightStop");
         public static readonly int MediumStopStateHash = Animator.StringToHash("MediumStop");
         public static readonly int HardStopStateHash = Animator.StringToHash("HardStop");
+        public static readonly int SlideStateHash = Animator.StringToHash("Slide");
 
         // Layer-Indizes
         public const int BaseLayerIndex = 0;

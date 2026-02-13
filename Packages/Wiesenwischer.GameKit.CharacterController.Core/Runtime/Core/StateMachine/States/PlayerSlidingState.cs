@@ -1,4 +1,5 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Animation;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
@@ -26,7 +27,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             // Step Detection deaktivieren (keine Steps auf steilen Slopes)
             ReusableData.StepDetectionEnabled = false;
 
-            // TODO (21.6): Animation — Player.AnimationController?.PlayState(CharacterAnimationState.Slide);
+            Player.AnimationController?.PlayState(CharacterAnimationState.Slide);
 
             // Rotation in Rutsch-Richtung
             UpdateRotationToSlideDirection();
