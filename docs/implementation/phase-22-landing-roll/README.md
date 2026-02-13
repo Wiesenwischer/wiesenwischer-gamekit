@@ -70,6 +70,9 @@ Nach Abschluss dieser Phase:
 | `Core/Runtime/Core/Locomotion/LocomotionConfig.cs` | Erweitern (Felder + Properties) |
 | `Core/Runtime/Core/Animation/IAnimationController.cs` | Erweitern (Roll im Enum) |
 | `Animation/Runtime/AnimatorParameterBridge.cs` | Erweitern (Roll CrossFade Mapping) |
+| `Animation/Runtime/AnimationTransitionConfig.cs` | Erweitern (RollTransition) |
+| `Animation/Editor/AnimatorControllerCreator.cs` | Erweitern (Roll State programmatisch) |
+| `Animation/Editor/AnimationWizard.cs` | Erweitern (Roll FBX-Slot, Auto-Detect, Zähler 12→13) |
 | `Animation/Resources/AnimatorControllers/CharacterAnimatorController.controller` | Erweitern (Roll State) |
 | `Core/Runtime/Core/StateMachine/States/Grounded/PlayerRollingState.cs` | Neu |
 | `Core/Runtime/Core/StateMachine/PlayerMovementStateMachine.cs` | Erweitern (RollingState Property) |

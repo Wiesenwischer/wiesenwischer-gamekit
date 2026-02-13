@@ -99,7 +99,35 @@ Prüfe ob die neue Phase Auswirkungen auf **bereits ausgearbeitete oder in Arbei
    - Falls eine Auswirkung bereits implementierte Schritte brechen könnte → User explizit warnen
    - Empfehlung geben: Erst aktive Phase abschließen, oder Anpassung jetzt einbauen
 
-**Falls keine Auswirkungen:** Weiter mit Schritt 6.
+**Falls keine Auswirkungen:** Weiter mit Schritt 5c.
+
+### 5c. Editor-UI-Analyse (PFLICHT)
+
+Prüfe ob die neue Phase Auswirkungen auf **bestehende Editor-Tools und Wizards** hat.
+
+**Relevante Editor-Tools im Projekt:**
+- `AnimationWizard` — FBX-Slot-Liste, Auto-Erkennung, Animator-Controller-Zuweisung
+- `CharacterControllerSetupWizard` — Character Model Setup, Prefab-Erstellung
+- `AnimatorControllerCreator` — Programmatische Animator-State-Erstellung
+- `PlaygroundSceneCreator` — Test-Szene mit Umgebung
+- `TestSceneCreator` — Player in aktuelle Szene platzieren
+- `IKSetupWizard` — IK-Komponenten auf Player Prefab
+- `CameraSetupEditor` — Third-Person Camera Setup
+
+**Prüfschritte:**
+1. Erweitert die Phase ein **Enum** (z.B. `CharacterAnimationState`)? → AnimationWizard, AnimatorControllerCreator betroffen
+2. Fügt die Phase neue **Animationen** hinzu? → AnimationWizard braucht neue FBX-Slots, Auto-Erkennung, Clip-Zuweisung
+3. Fügt die Phase neue **Components** hinzu? → Setup-Wizards ggf. erweitern
+4. Ändert die Phase **Config-Parameter**? → Inspector-Darstellung prüfen
+5. Braucht die Phase ein **eigenes Editor-Tool** (neuer Wizard/Inspector)?
+
+**Falls Editor-UI betroffen:**
+- Einen expliziten Schritt in der Phase einplanen für Editor-UI-Anpassungen
+- Im Schritt dokumentieren: Welche Dateien, welche Änderungen (neue Slots, neue States, neue Menüpunkte)
+- Bei AnimationWizard: Slot-Feld, Auto-Detect, ConfigureAnim-Aufruf, AssignClipsToController, CountAnimSlots/HasAnyAnimation aktualisieren
+- Bei AnimatorControllerCreator: Neuen State + Transitions programmatisch anlegen
+
+**Falls keine Editor-UI betroffen:** Weiter mit Schritt 6.
 
 ### 6. Phase-Dokumentation erstellen
 
