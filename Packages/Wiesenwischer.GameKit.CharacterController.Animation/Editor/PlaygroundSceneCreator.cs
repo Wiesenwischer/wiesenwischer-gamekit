@@ -116,7 +116,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             Debug.Log($"[Playground] Playground-Szene erstellt: {ScenePath}");
-            Debug.Log("[Playground] Enthält nur Umgebung — Player wird über 'Create Test Scene' hinzugefügt.");
+            Debug.Log("[Playground] Enthält nur Umgebung — Player über 'Place Player in Scene' hinzufügen.");
         }
 
         private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps,

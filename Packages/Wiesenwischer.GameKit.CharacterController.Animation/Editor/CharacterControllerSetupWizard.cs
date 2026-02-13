@@ -7,7 +7,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
     /// <summary>
     /// One-Click Wizard zum Einrichten des kompletten Character Controller Systems.
     /// Erstellt Configs, Animator Controller und Player Prefab.
-    /// Test-Szenen werden separat über "Scenes/Create Animation Test Scene" erstellt.
+    /// Player wird separat über "Scenes/Place Player in Scene" platziert.
     /// Menü: Wiesenwischer > GameKit > Setup Character Controller
     /// </summary>
     public static class CharacterControllerSetupWizard
@@ -92,7 +92,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 "Nächste Schritte:\n" +
                 "• Character & Animation Wizard: Character Model + Clips zuweisen\n" +
                 "• Scenes > Create Playground: Testumgebung erstellen\n" +
-                "• Scenes > Create Test Scene: Player-Szene erstellen\n" +
+                "• Scenes > Place Player in Scene: Player in aktuelle Szene platzieren\n" +
                 "• Play Mode starten und testen",
                 "OK");
         }
