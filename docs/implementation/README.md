@@ -1,6 +1,6 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-11
+> **Letzte Aktualisierung:** 2026-02-13
 > **Status:** In Entwicklung
 
 ---
@@ -28,7 +28,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 | Epic | Phasen | Status |
 |------|--------|--------|
-| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–22 | In Arbeit |
+| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | In Arbeit |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | Offen |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8 | Offen |
@@ -54,6 +54,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
 | 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Abgeschlossen |
 | 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ✅ | Offen |
+| 23 | Animation | Crouching | [Features](phase-23-crouching/README.md) | ✅ | Offen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
 | 13 | Character | CP: Equipment System | — | ❌ | Offen |
@@ -71,7 +72,8 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 ```
 Lebendige Charaktere (Animation)
   Phase 1 ──> Phase 2 ──> Phase 3 ──> Phase 4 ──> Phase 21 (Slope Sliding)
-                                                └──> Phase 22 (Landing Roll)
+                                                ├──> Phase 22 (Landing Roll)
+                                                └──> Phase 23 (Crouching)
 
 Fähigkeiten & Action Combat
   Phase 4 ──> Phase 5 ──> Phase 9
@@ -235,6 +237,28 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [ ] [22.5 StateMachine + FallingState Transition](phase-22-landing-roll/22.5-statemachine-transition.md)
 - [ ] [22.6 Unit Tests](phase-22-landing-roll/22.6-unit-tests.md)
 - [ ] [22.7 Play Mode Verifikation](phase-22-landing-roll/22.7-play-mode-verifikation.md)
+
+---
+
+### Phase 23: Crouching
+**Branch:** `integration/phase-23-crouching`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-23-crouching/README.md)
+
+**Ziel:** Toggle-basiertes Crouching-System mit C-Taste — Capsule-Höhen-Transition, Ceiling-Detection (CanStandUp), reduzierte Geschwindigkeit und Crouch Idle/Walk Blend Tree.
+
+**Relevante Spezifikationen:**
+- [Crouching Spezifikation](../specs/Crouching_Spezifikation.md)
+
+**Schritte:**
+- [ ] [23.1 Crouch-Animationen beschaffen + importieren](phase-23-crouching/23.1-crouch-animation-assets.md)
+- [ ] [23.2 ILocomotionConfig + LocomotionConfig erweitern](phase-23-crouching/23.2-config-erweiterung.md)
+- [ ] [23.3 Input-Integration (CrouchTogglePressed)](phase-23-crouching/23.3-input-integration.md)
+- [ ] [23.4 Animation-Integration (Crouch Blend Tree)](phase-23-crouching/23.4-animation-integration.md)
+- [ ] [23.5 Capsule-Höhen-Transition in CharacterLocomotion](phase-23-crouching/23.5-capsule-transition.md)
+- [ ] [23.6 PlayerCrouchingState implementieren](phase-23-crouching/23.6-crouching-state.md)
+- [ ] [23.7 StateMachine + GroundedState Transition](phase-23-crouching/23.7-statemachine-transition.md)
+- [ ] [23.8 Unit Tests](phase-23-crouching/23.8-unit-tests.md)
+- [ ] [23.9 Play Mode Verifikation](phase-23-crouching/23.9-play-mode-verifikation.md)
 
 ---
 
