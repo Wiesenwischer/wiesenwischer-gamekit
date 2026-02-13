@@ -13,7 +13,6 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Editor
     {
         private const string PlayerPrefabPath = "Assets/Prefabs/Player.prefab";
 
-        [MenuItem("Wiesenwischer/GameKit/Prefabs/Setup IK on Player Prefab", false, 201)]
         public static void SetupIKOnPrefab()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
@@ -100,10 +99,5 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Editor
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Prefabs/Setup IK on Player Prefab", true)]
-        private static bool ValidateSetupIK()
-        {
-            return !Application.isPlaying;
-        }
     }
 }

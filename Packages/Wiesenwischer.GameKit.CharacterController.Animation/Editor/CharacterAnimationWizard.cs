@@ -2,53 +2,55 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core;
 
 namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 {
     /// <summary>
-    /// EditorWindow zum Erstellen und Anpassen von Character Models und Animationen.
-    /// Kernfeature: FBX-Model wählen, Animation-Clips individuell zuweisen,
-    /// Player Prefab + Animator Controller erstellen/aktualisieren.
+    /// Zentraler Wizard zum Einrichten von Character Model und Animationen.
+    /// Kombiniert: FBX-Model-Wahl, FBX-Import-Konfiguration (Humanoid, Root Transform),
+    /// Clip-Zuweisung, Animator Controller Aufbau, IK-Setup, CapsuleCollider-Anpassung.
     /// Menü: Wiesenwischer > GameKit > Character & Animation Wizard
     /// </summary>
     public class CharacterAnimationWizard : EditorWindow
     {
+        private const string PlayerPrefabPath = "Assets/Prefabs/Player.prefab";
+
         private const string AnimatorControllerPath =
             "Packages/Wiesenwischer.GameKit.CharacterController.Animation/Resources/AnimatorControllers/CharacterAnimatorController.controller";
 
         private const string ClipBasePath = "Assets/Animations/Locomotion/";
 
         // --- Character Model ---
-        private GameObject _characterModel;
+        private GameObject _characterModelFBX;
+        private bool _adjustCapsule = true;
+        private bool _runIKSetup = true;
 
-        // --- Animation Clips ---
-        private AnimationClip _idleClip;
-        private AnimationClip _walkClip;
-        private AnimationClip _runClip;
-        private AnimationClip _sprintClip;
-        private AnimationClip _jumpClip;
-        private AnimationClip _fallClip;
-        private AnimationClip _softLandClip;
-        private AnimationClip _hardLandClip;
-        private AnimationClip _lightStopClip;
-        private AnimationClip _mediumStopClip;
-        private AnimationClip _hardStopClip;
-        private AnimationClip _slideClip;
+        // --- Animation FBX Slots ---
+        private GameObject _animIdle;
+        private GameObject _animWalk;
+        private GameObject _animRun;
+        private GameObject _animSprint;
+        private GameObject _animJump;
+        private GameObject _animFall;
+        private GameObject _animSoftLand;
+        private GameObject _animHardLand;
+        private GameObject _animLightStop;
+        private GameObject _animMediumStop;
+        private GameObject _animHardStop;
+        private GameObject _animSlide;
 
         // --- UI State ---
-        private Vector2 _scrollPosition;
-        private bool _stylesInitialized;
-        private GUIStyle _headerStyle;
-        private GUIStyle _sectionStyle;
-        private bool _showLocomotionClips = true;
-        private bool _showAirborneClips = true;
-        private bool _showStoppingClips = true;
+        private Vector2 _scrollPos;
+        private bool _foldLocomotion = true;
+        private bool _foldAirborne = true;
+        private bool _foldStopping = true;
 
         [MenuItem("Wiesenwischer/GameKit/Character & Animation Wizard", false, 1)]
         public static void ShowWindow()
         {
             var window = GetWindow<CharacterAnimationWizard>("Character & Animation");
-            window.minSize = new Vector2(450, 600);
+            window.minSize = new Vector2(420, 650);
             window.Show();
         }
 
@@ -60,207 +62,136 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private void OnEnable()
         {
-            AutoDetectClips();
             AutoDetectCharacterModel();
-        }
-
-        private void InitStyles()
-        {
-            if (_stylesInitialized) return;
-
-            _headerStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 14,
-                margin = new RectOffset(0, 0, 10, 5)
-            };
-
-            _sectionStyle = new GUIStyle(EditorStyles.helpBox)
-            {
-                padding = new RectOffset(10, 10, 10, 10),
-                margin = new RectOffset(0, 0, 5, 5)
-            };
-
-            _stylesInitialized = true;
+            AutoDetectAnimationFBXs();
         }
 
         private void OnGUI()
         {
-            InitStyles();
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
 
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
+            // ========== CHARACTER MODEL ==========
+            EditorGUILayout.LabelField("Character Model", EditorStyles.boldLabel);
+            EditorGUILayout.Space(2);
 
-            EditorGUILayout.LabelField("Character & Animation Wizard", _headerStyle);
-            EditorGUILayout.HelpBox(
-                "Character Model wählen, Animation-Clips zuweisen und Player Prefab erstellen. " +
-                "Clips werden automatisch aus Assets/Animations/Locomotion/ erkannt.",
-                MessageType.Info);
+            _characterModelFBX = (GameObject)EditorGUILayout.ObjectField(
+                "Character FBX", _characterModelFBX, typeof(GameObject), false);
 
-            EditorGUILayout.Space(10);
-
-            DrawCharacterModelSection();
-            DrawAnimationClipsSection();
-            DrawActionsSection();
-            DrawStatusSection();
-
-            EditorGUILayout.EndScrollView();
-        }
-
-        #region Character Model
-
-        private void DrawCharacterModelSection()
-        {
-            EditorGUILayout.LabelField("Character Model", _headerStyle);
-            EditorGUILayout.BeginVertical(_sectionStyle);
-
-            EditorGUI.BeginChangeCheck();
-            _characterModel = (GameObject)EditorGUILayout.ObjectField(
-                "FBX Model", _characterModel, typeof(GameObject), false);
-
-            if (EditorGUI.EndChangeCheck() && _characterModel != null)
+            if (_characterModelFBX != null)
             {
-                var path = AssetDatabase.GetAssetPath(_characterModel);
-                if (!path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase) &&
-                    !path.EndsWith(".FBX", System.StringComparison.OrdinalIgnoreCase))
+                string path = AssetDatabase.GetAssetPath(_characterModelFBX);
+                var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+                if (importer != null && importer.animationType != ModelImporterAnimationType.Human)
                 {
-                    Debug.LogWarning("[CharacterAnimationWizard] Bitte eine FBX-Datei wählen.");
+                    EditorGUILayout.HelpBox(
+                        $"Rig ist nicht Humanoid (aktuell: {importer.animationType}).\n" +
+                        "Bitte im FBX-Import auf Humanoid umstellen.",
+                        MessageType.Error);
                 }
             }
 
-            if (_characterModel == null)
+            EditorGUILayout.Space(4);
+            _adjustCapsule = EditorGUILayout.Toggle("CapsuleCollider anpassen", _adjustCapsule);
+            _runIKSetup = EditorGUILayout.Toggle("IK-Komponenten einrichten", _runIKSetup);
+
+            EditorGUILayout.Space(4);
+
+            GUI.enabled = CanSwapModel();
+            if (GUILayout.Button("Character Model austauschen", GUILayout.Height(28)))
             {
-                EditorGUILayout.HelpBox(
-                    "Kein Character Model zugewiesen. Ziehe eine FBX-Datei in das Feld oben.",
-                    MessageType.Warning);
+                PerformModelSwap();
+            }
+            GUI.enabled = true;
+
+            // ========== ANIMATIONEN ==========
+            EditorGUILayout.Space(12);
+            DrawSeparator();
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Animationen", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "FBX-Dateien hier reinziehen. Der Wizard konfiguriert automatisch:\n" +
+                "  - Humanoid Rig + Copy From Other Avatar\n" +
+                "  - Root Transform Settings (Bake Into Pose)\n" +
+                "  - Loop Time (je nach Typ)\n" +
+                "  - Clip-Zuweisung im Animator Controller\n\n" +
+                "Leere Slots werden nicht verändert.",
+                MessageType.Info);
+
+            EditorGUILayout.Space(2);
+
+            if (GUILayout.Button("Auto-Erkennung (Assets/Animations/Locomotion/)", GUILayout.Height(22)))
+            {
+                AutoDetectAnimationFBXs();
             }
 
-            EditorGUILayout.EndVertical();
-        }
-
-        #endregion
-
-        #region Animation Clips
-
-        private void DrawAnimationClipsSection()
-        {
-            EditorGUILayout.LabelField("Animation Clips", _headerStyle);
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Auto-Erkennung", GUILayout.Width(120)))
-            {
-                AutoDetectClips();
-            }
-            EditorGUILayout.HelpBox("Sucht Clips in Assets/Animations/Locomotion/", MessageType.None);
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(4);
 
             // Locomotion
-            _showLocomotionClips = EditorGUILayout.Foldout(_showLocomotionClips, "Locomotion", true);
-            if (_showLocomotionClips)
+            _foldLocomotion = EditorGUILayout.Foldout(_foldLocomotion, "Locomotion (Loop)", true, EditorStyles.foldoutHeader);
+            if (_foldLocomotion)
             {
-                EditorGUILayout.BeginVertical(_sectionStyle);
-                _idleClip = ClipField("Idle", _idleClip);
-                _walkClip = ClipField("Walk", _walkClip);
-                _runClip = ClipField("Run", _runClip);
-                _sprintClip = ClipField("Sprint", _sprintClip);
-                EditorGUILayout.EndVertical();
+                EditorGUI.indentLevel++;
+                _animIdle = FbxSlot("Idle", _animIdle);
+                _animWalk = FbxSlot("Walk", _animWalk);
+                _animRun = FbxSlot("Run", _animRun);
+                _animSprint = FbxSlot("Sprint", _animSprint);
+                EditorGUI.indentLevel--;
             }
 
             // Airborne + Slide
-            _showAirborneClips = EditorGUILayout.Foldout(_showAirborneClips, "Airborne + Slide", true);
-            if (_showAirborneClips)
+            _foldAirborne = EditorGUILayout.Foldout(_foldAirborne, "Airborne + Slide", true, EditorStyles.foldoutHeader);
+            if (_foldAirborne)
             {
-                EditorGUILayout.BeginVertical(_sectionStyle);
-                _jumpClip = ClipField("Jump", _jumpClip);
-                _fallClip = ClipField("Fall", _fallClip);
-                _softLandClip = ClipField("SoftLand", _softLandClip);
-                _hardLandClip = ClipField("HardLand", _hardLandClip);
-                _slideClip = ClipField("Slide", _slideClip);
-                EditorGUILayout.EndVertical();
+                EditorGUI.indentLevel++;
+                _animJump = FbxSlot("Jump", _animJump);
+                _animFall = FbxSlot("Fall", _animFall);
+                _animSoftLand = FbxSlot("Soft Land", _animSoftLand);
+                _animHardLand = FbxSlot("Hard Land", _animHardLand);
+                _animSlide = FbxSlot("Slide", _animSlide);
+                EditorGUI.indentLevel--;
             }
 
             // Stopping
-            _showStoppingClips = EditorGUILayout.Foldout(_showStoppingClips, "Stopping", true);
-            if (_showStoppingClips)
+            _foldStopping = EditorGUILayout.Foldout(_foldStopping, "Stopping", true, EditorStyles.foldoutHeader);
+            if (_foldStopping)
             {
-                EditorGUILayout.BeginVertical(_sectionStyle);
-                _lightStopClip = ClipField("LightStop", _lightStopClip);
-                _mediumStopClip = ClipField("MediumStop", _mediumStopClip);
-                _hardStopClip = ClipField("HardStop", _hardStopClip);
-                EditorGUILayout.EndVertical();
+                EditorGUI.indentLevel++;
+                _animLightStop = FbxSlot("Light Stop (Walk)", _animLightStop);
+                _animMediumStop = FbxSlot("Medium Stop (Run)", _animMediumStop);
+                _animHardStop = FbxSlot("Hard Stop (Sprint)", _animHardStop);
+                EditorGUI.indentLevel--;
             }
+
+            EditorGUILayout.Space(8);
+
+            GUI.enabled = HasAnyAnimation();
+            if (GUILayout.Button("Animationen einrichten", GUILayout.Height(28)))
+            {
+                PerformAnimationSetup();
+            }
+            GUI.enabled = true;
+
+            // ========== STATUS ==========
+            EditorGUILayout.Space(12);
+            DrawSeparator();
+            EditorGUILayout.Space(4);
+            DrawStatusSection();
+
+            EditorGUILayout.Space(8);
+            EditorGUILayout.EndScrollView();
         }
 
-        private static AnimationClip ClipField(string label, AnimationClip current)
+        #region UI Helpers
+
+        private static GameObject FbxSlot(string label, GameObject current)
         {
-            EditorGUILayout.BeginHorizontal();
-
-            var clip = (AnimationClip)EditorGUILayout.ObjectField(
-                label, current, typeof(AnimationClip), false);
-
-            // Status-Indikator
-            var color = clip != null ? new Color(0.2f, 0.8f, 0.2f) : new Color(0.8f, 0.4f, 0.2f);
-            var style = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = color } };
-            EditorGUILayout.LabelField(clip != null ? "OK" : "—", style, GUILayout.Width(25));
-
-            EditorGUILayout.EndHorizontal();
-            return clip;
+            return (GameObject)EditorGUILayout.ObjectField(label, current, typeof(GameObject), false);
         }
 
-        #endregion
-
-        #region Actions
-
-        private void DrawActionsSection()
+        private static void DrawSeparator()
         {
-            EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("Aktionen", _headerStyle);
-            EditorGUILayout.BeginVertical(_sectionStyle);
-
-            // Player Prefab erstellen
-            using (new EditorGUI.DisabledGroupScope(_characterModel == null))
-            {
-                if (GUILayout.Button("Player Prefab erstellen / aktualisieren", GUILayout.Height(32)))
-                {
-                    CreatePlayerPrefabWithModel();
-                }
-            }
-
-            EditorGUILayout.Space(5);
-
-            // Animator Controller neu erstellen
-            bool hasMinClips = _idleClip != null && _walkClip != null && _runClip != null;
-            using (new EditorGUI.DisabledGroupScope(!hasMinClips))
-            {
-                if (GUILayout.Button("Animator Controller neu erstellen", GUILayout.Height(28)))
-                {
-                    if (EditorUtility.DisplayDialog(
-                        "Animator Controller neu erstellen?",
-                        "Der bestehende Animator Controller wird gelöscht und mit den " +
-                        "aktuell zugewiesenen Clips neu erstellt.\n\nFortfahren?",
-                        "Neu erstellen", "Abbrechen"))
-                    {
-                        RebuildAnimatorWithClips();
-                    }
-                }
-            }
-
-            if (!hasMinClips)
-            {
-                EditorGUILayout.HelpBox(
-                    "Mindestens Idle, Walk und Run Clips werden benötigt.",
-                    MessageType.Info);
-            }
-
-            EditorGUILayout.Space(5);
-
-            // Clips umbenennen
-            if (GUILayout.Button("Animation Clips in FBX umbenennen"))
-            {
-                AnimationClipRenamer.RenameAllClips();
-            }
-
-            EditorGUILayout.EndVertical();
+            var rect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
         }
 
         #endregion
@@ -269,34 +200,32 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private void DrawStatusSection()
         {
-            EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("Status", _headerStyle);
-            EditorGUILayout.BeginVertical(_sectionStyle);
+            EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
 
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
-            DrawStatusRow("Animator Controller:", controller != null,
+            StatusRow("Animator Controller",
+                controller != null,
                 controller != null ? $"{controller.layers[0].stateMachine.states.Length} States" : null);
 
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
-            DrawStatusRow("Player Prefab:", prefab != null);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            StatusRow("Player Prefab", prefab != null);
 
-            DrawStatusRow("Character Model:", _characterModel != null,
-                _characterModel != null ? _characterModel.name : null);
+            StatusRow("Character Model",
+                _characterModelFBX != null,
+                _characterModelFBX != null ? _characterModelFBX.name : null);
 
-            int clipCount = CountAssignedClips();
-            DrawStatusRow("Animation Clips:", clipCount > 0, $"{clipCount}/12 zugewiesen");
-
-            EditorGUILayout.EndVertical();
+            int count = CountAnimSlots();
+            StatusRow("Animation FBXs", count > 0, $"{count}/12 zugewiesen");
         }
 
-        private static void DrawStatusRow(string label, bool ok, string details = null)
+        private static void StatusRow(string label, bool ok, string details = null)
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(label, GUILayout.Width(160));
+            EditorGUILayout.LabelField(label, GUILayout.Width(150));
 
             var color = ok ? new Color(0.2f, 0.8f, 0.2f) : new Color(0.8f, 0.3f, 0.3f);
             var style = new GUIStyle(EditorStyles.label) { normal = { textColor = color } };
-            EditorGUILayout.LabelField(ok ? "OK" : "—", style, GUILayout.Width(30));
+            EditorGUILayout.LabelField(ok ? "OK" : "\u2014", style, GUILayout.Width(30));
 
             if (!string.IsNullOrEmpty(details))
                 EditorGUILayout.LabelField(details, EditorStyles.miniLabel);
@@ -304,92 +233,183 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             EditorGUILayout.EndHorizontal();
         }
 
-        private int CountAssignedClips()
+        #endregion
+
+        #region Validation
+
+        private bool CanSwapModel()
         {
-            int count = 0;
-            if (_idleClip != null) count++;
-            if (_walkClip != null) count++;
-            if (_runClip != null) count++;
-            if (_sprintClip != null) count++;
-            if (_jumpClip != null) count++;
-            if (_fallClip != null) count++;
-            if (_softLandClip != null) count++;
-            if (_hardLandClip != null) count++;
-            if (_lightStopClip != null) count++;
-            if (_mediumStopClip != null) count++;
-            if (_hardStopClip != null) count++;
-            if (_slideClip != null) count++;
-            return count;
+            if (_characterModelFBX == null) return false;
+            string path = AssetDatabase.GetAssetPath(_characterModelFBX);
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            return importer != null && importer.animationType == ModelImporterAnimationType.Human;
+        }
+
+        private bool HasAnyAnimation()
+        {
+            return _animIdle || _animWalk || _animRun || _animSprint ||
+                   _animJump || _animFall || _animSoftLand || _animHardLand ||
+                   _animLightStop || _animMediumStop || _animHardStop || _animSlide;
+        }
+
+        private int CountAnimSlots()
+        {
+            int c = 0;
+            if (_animIdle) c++;
+            if (_animWalk) c++;
+            if (_animRun) c++;
+            if (_animSprint) c++;
+            if (_animJump) c++;
+            if (_animFall) c++;
+            if (_animSoftLand) c++;
+            if (_animHardLand) c++;
+            if (_animLightStop) c++;
+            if (_animMediumStop) c++;
+            if (_animHardStop) c++;
+            if (_animSlide) c++;
+            return c;
         }
 
         #endregion
 
-        #region Logic
-
-        private void AutoDetectClips()
-        {
-            _idleClip = LoadClipFromFbx("Anim_Idle");
-            _walkClip = LoadClipFromFbx("Anim_Walk");
-            _runClip = LoadClipFromFbx("Anim_Run");
-            _sprintClip = LoadClipFromFbx("Anim_Sprint");
-            _jumpClip = LoadClipFromFbx("Anim_Jump");
-            _fallClip = LoadClipFromFbx("Anim_Fall");
-            _softLandClip = LoadClipFromFbx("Anim_SoftLand");
-            _hardLandClip = LoadClipFromFbx("Anim_HardLand");
-            _lightStopClip = LoadClipFromFbx("Anim_LightStop");
-            _mediumStopClip = LoadClipFromFbx("Anim_MediumStop");
-            _hardStopClip = LoadClipFromFbx("Anim_HardStop");
-            _slideClip = LoadClipFromFbx("Anim_Slide");
-
-            // Fallback: Anim_Land als SoftLand
-            if (_softLandClip == null)
-                _softLandClip = LoadClipFromFbx("Anim_Land");
-
-            int count = CountAssignedClips();
-            Debug.Log($"[CharacterAnimationWizard] Auto-Erkennung: {count}/12 Clips gefunden.");
-        }
+        #region Auto-Detect
 
         private void AutoDetectCharacterModel()
         {
-            // Versuche bestehenden Pfad aus PlayerPrefabCreator
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Characters/Song/Song.Fbx");
-            if (model != null)
+            // Existierendes Prefab prüfen — Model daraus lesen
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            if (prefab != null)
             {
-                _characterModel = model;
-                return;
+                var animator = prefab.GetComponentInChildren<Animator>();
+                if (animator != null)
+                {
+                    var source = PrefabUtility.GetCorrespondingObjectFromSource(animator.gameObject);
+                    if (source != null)
+                    {
+                        _characterModelFBX = source;
+                        return;
+                    }
+                }
             }
 
-            // Fallback: Suche nach FBX in Assets/Characters/
+            // Fallback: Erste FBX in Assets/Characters/
+            if (!AssetDatabase.IsValidFolder("Assets/Characters")) return;
             var guids = AssetDatabase.FindAssets("t:Model", new[] { "Assets/Characters" });
             foreach (var guid in guids)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    _characterModel = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                    if (_characterModel != null)
-                    {
-                        Debug.Log($"[CharacterAnimationWizard] Character Model erkannt: {path}");
-                        return;
-                    }
+                    _characterModelFBX = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    if (_characterModelFBX != null) return;
                 }
             }
         }
 
-        private void CreatePlayerPrefabWithModel()
+        private void AutoDetectAnimationFBXs()
         {
-            if (_characterModel == null)
+            _animIdle = LoadFbxAsset("Anim_Idle");
+            _animWalk = LoadFbxAsset("Anim_Walk");
+            _animRun = LoadFbxAsset("Anim_Run");
+            _animSprint = LoadFbxAsset("Anim_Sprint");
+            _animJump = LoadFbxAsset("Anim_Jump");
+            _animFall = LoadFbxAsset("Anim_Fall");
+            _animSoftLand = LoadFbxAsset("Anim_SoftLand");
+            _animHardLand = LoadFbxAsset("Anim_HardLand");
+            _animLightStop = LoadFbxAsset("Anim_LightStop");
+            _animMediumStop = LoadFbxAsset("Anim_MediumStop");
+            _animHardStop = LoadFbxAsset("Anim_HardStop");
+            _animSlide = LoadFbxAsset("Anim_Slide");
+
+            // Fallback: Anim_Land als SoftLand
+            if (_animSoftLand == null)
+                _animSoftLand = LoadFbxAsset("Anim_Land");
+
+            Debug.Log($"[CharacterAnimationWizard] Auto-Erkennung: {CountAnimSlots()}/12 FBXs gefunden.");
+        }
+
+        private static GameObject LoadFbxAsset(string fbxName)
+        {
+            var path = ClipBasePath + fbxName + ".fbx";
+            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+
+        #endregion
+
+        #region Model Swap
+
+        private void PerformModelSwap()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+
+            // Kein Prefab? → Neu erstellen
+            if (prefab == null)
             {
-                Debug.LogError("[CharacterAnimationWizard] Kein Character Model zugewiesen.");
+                CreatePlayerPrefab();
                 return;
             }
 
-            // PlayerPrefabCreator nutzt einen hardcodierten Pfad.
-            // Wir aktualisieren den Pfad über Reflection oder erstellen das Prefab direkt.
-            var modelPath = AssetDatabase.GetAssetPath(_characterModel);
+            var animatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AnimatorControllerPath);
+            if (animatorController == null)
+            {
+                Debug.LogError("[CharacterAnimationWizard] Animator Controller nicht gefunden. " +
+                               "Bitte zuerst 'Setup Character Controller' ausführen.");
+                return;
+            }
 
-            EditorUtility.DisplayProgressBar("Player Prefab erstellen", "Lade Assets...", 0.2f);
+            var prefabRoot = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
+            var playerController = prefabRoot.GetComponent<PlayerController>();
 
+            // Altes Modell entfernen
+            var oldAnimator = prefabRoot.GetComponentInChildren<Animator>();
+            if (oldAnimator != null)
+            {
+                string oldName = oldAnimator.gameObject.name;
+                DestroyImmediate(oldAnimator.gameObject);
+                Debug.Log($"[CharacterAnimationWizard] Altes Modell entfernt: {oldName}");
+            }
+
+            // Neues Modell einfügen
+            var newModel = (GameObject)PrefabUtility.InstantiatePrefab(_characterModelFBX);
+            newModel.name = "CharacterModel";
+            newModel.transform.SetParent(prefabRoot.transform);
+            newModel.transform.localPosition = Vector3.zero;
+            newModel.transform.localRotation = Quaternion.identity;
+            newModel.transform.localScale = Vector3.one;
+
+            var newAnimator = newModel.GetComponent<Animator>();
+            if (newAnimator == null)
+                newAnimator = newModel.AddComponent<Animator>();
+
+            newAnimator.runtimeAnimatorController = animatorController;
+            newAnimator.applyRootMotion = false;
+            newAnimator.updateMode = AnimatorUpdateMode.Normal;
+            newAnimator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+
+            // AnimatorParameterBridge
+            var bridge = newModel.AddComponent<AnimatorParameterBridge>();
+            var bridgeSo = new SerializedObject(bridge);
+            bridgeSo.FindProperty("_playerController").objectReferenceValue = playerController;
+            bridgeSo.ApplyModifiedProperties();
+
+            if (_adjustCapsule)
+                AdjustCapsule(prefabRoot, newModel);
+
+            PrefabUtility.SaveAsPrefabAsset(prefabRoot, PlayerPrefabPath);
+            PrefabUtility.UnloadPrefabContents(prefabRoot);
+
+            Debug.Log($"[CharacterAnimationWizard] Character Model ausgetauscht: {_characterModelFBX.name}");
+
+            // IK Setup (Reflection — IK-Package ist optional)
+            if (_runIKSetup)
+                RunIKSetup();
+
+            Selection.activeObject = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            EditorGUIUtility.PingObject(Selection.activeObject);
+        }
+
+        private void CreatePlayerPrefab()
+        {
             var animatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AnimatorControllerPath);
             var locomotionConfig = AssetDatabase.LoadAssetAtPath<Core.Locomotion.LocomotionConfig>(
                 "Assets/Config/DefaultLocomotionConfig.asset");
@@ -398,15 +418,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
             if (animatorController == null)
             {
-                EditorUtility.ClearProgressBar();
                 Debug.LogError("[CharacterAnimationWizard] Animator Controller nicht gefunden. " +
                                "Bitte zuerst 'Setup Character Controller' ausführen.");
                 return;
             }
 
-            EditorUtility.DisplayProgressBar("Player Prefab erstellen", "Erstelle Prefab...", 0.5f);
-
-            // === Root GameObject ===
             var root = new GameObject("Player");
 
             var motor = root.AddComponent<Core.Motor.CharacterMotor>();
@@ -423,7 +439,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             motor.MaxStableDistanceFromLedge = 0.5f;
             motor.InteractiveRigidbodyHandling = true;
 
-            var playerController = root.AddComponent<Core.PlayerController>();
+            var playerController = root.AddComponent<PlayerController>();
             if (locomotionConfig != null)
             {
                 var pcSo = new SerializedObject(playerController);
@@ -439,10 +455,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 ipSo.ApplyModifiedProperties();
             }
 
-            // === Character Model (Child) ===
-            EditorUtility.DisplayProgressBar("Player Prefab erstellen", "Character Model...", 0.7f);
-
-            var model = (GameObject)PrefabUtility.InstantiatePrefab(_characterModel);
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(_characterModelFBX);
             model.name = "CharacterModel";
             model.transform.SetParent(root.transform);
             model.transform.localPosition = Vector3.zero;
@@ -458,119 +471,347 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             animator.updateMode = AnimatorUpdateMode.Normal;
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
 
-            model.AddComponent<AnimatorParameterBridge>();
+            var bridge = model.AddComponent<AnimatorParameterBridge>();
+            var bridgeSo = new SerializedObject(bridge);
+            bridgeSo.FindProperty("_playerController").objectReferenceValue = playerController;
+            bridgeSo.ApplyModifiedProperties();
 
-            // === Als Prefab speichern ===
+            if (_adjustCapsule)
+                AdjustCapsule(root, model);
+
             if (!AssetDatabase.IsValidFolder("Assets/Prefabs"))
                 AssetDatabase.CreateFolder("Assets", "Prefabs");
 
-            var prefab = PrefabUtility.SaveAsPrefabAsset(root, "Assets/Prefabs/Player.prefab");
-            Object.DestroyImmediate(root);
-
-            EditorUtility.ClearProgressBar();
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
+            DestroyImmediate(root);
 
             if (prefab != null)
             {
-                Debug.Log($"[CharacterAnimationWizard] Player Prefab erstellt mit Model: {modelPath}");
+                Debug.Log($"[CharacterAnimationWizard] Player Prefab erstellt: {_characterModelFBX.name}");
+
+                if (_runIKSetup)
+                    RunIKSetup();
+
                 Selection.activeObject = prefab;
                 EditorGUIUtility.PingObject(prefab);
             }
         }
 
-        private void RebuildAnimatorWithClips()
+        private static void AdjustCapsule(GameObject prefabRoot, GameObject model)
         {
-            EditorUtility.DisplayProgressBar("Animator erstellen", "Controller erstellen...", 0.1f);
+            var renderers = model.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return;
 
-            // Bestehenden Controller löschen
-            var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
-            if (existing != null)
-                AssetDatabase.DeleteAsset(AnimatorControllerPath);
+            var bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+                bounds.Encapsulate(renderers[i].bounds);
 
-            AnimatorControllerCreator.CreateController();
+            float height = bounds.size.y;
+            float radius = Mathf.Max(bounds.extents.x, bounds.extents.z);
 
-            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
-            if (controller == null)
+            var motor = prefabRoot.GetComponent<Core.Motor.CharacterMotor>();
+            if (motor == null) return;
+
+            var motorSo = new SerializedObject(motor);
+            motorSo.FindProperty("CapsuleRadius").floatValue = Mathf.Clamp(radius, 0.15f, 0.5f);
+            motorSo.FindProperty("CapsuleHeight").floatValue = height;
+            motorSo.FindProperty("CapsuleYOffset").floatValue = height * 0.5f;
+            motorSo.ApplyModifiedProperties();
+
+            Debug.Log($"[CharacterAnimationWizard] CapsuleCollider: Height={height:F2}m, Radius={radius:F2}m");
+        }
+
+        private static void RunIKSetup()
+        {
+            // IK-Package ist optional — Aufruf via Reflection
+            var ikType = System.Type.GetType(
+                "Wiesenwischer.GameKit.CharacterController.IK.Editor.IKSetupWizard, " +
+                "Wiesenwischer.GameKit.CharacterController.IK.Editor");
+
+            if (ikType != null)
             {
-                EditorUtility.ClearProgressBar();
-                Debug.LogError("[CharacterAnimationWizard] Controller konnte nicht erstellt werden.");
+                var method = ikType.GetMethod("SetupIKOnPrefab",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                method?.Invoke(null, null);
+            }
+            else
+            {
+                Debug.LogWarning("[CharacterAnimationWizard] IK-Package nicht installiert — IK-Setup übersprungen.");
+            }
+        }
+
+        #endregion
+
+        #region Animation Setup
+
+        private void PerformAnimationSetup()
+        {
+            // Avatar vom Character Model holen (für "Copy From Other Avatar")
+            Avatar sourceAvatar = GetSourceAvatar();
+            if (sourceAvatar == null)
+            {
+                Debug.LogError("[CharacterAnimationWizard] Kein Avatar gefunden. Bitte Character Model FBX zuweisen " +
+                               "und sicherstellen dass es als Humanoid importiert ist.");
                 return;
             }
 
-            // Locomotion Blend Tree
-            EditorUtility.DisplayProgressBar("Animator erstellen", "Locomotion Blend Tree...", 0.3f);
+            Debug.Log($"[CharacterAnimationWizard] Source Avatar: {sourceAvatar.name} (isHuman={sourceAvatar.isHuman})");
 
-            var rootStateMachine = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
+            int configured = 0;
 
-            var blendTree = new BlendTree
+            // Locomotion (loop, grounded → Feet)
+            configured += ConfigureAnim(_animIdle, sourceAvatar, true, false, "Idle");
+            configured += ConfigureAnim(_animWalk, sourceAvatar, true, false, "Walk");
+            configured += ConfigureAnim(_animRun, sourceAvatar, true, false, "Run");
+            configured += ConfigureAnim(_animSprint, sourceAvatar, true, false, "Sprint");
+
+            // Airborne (airborne → Original für Y)
+            configured += ConfigureAnim(_animJump, sourceAvatar, false, true, "Jump");
+            configured += ConfigureAnim(_animFall, sourceAvatar, true, true, "Fall");
+            configured += ConfigureAnim(_animSoftLand, sourceAvatar, false, true, "SoftLand");
+            configured += ConfigureAnim(_animHardLand, sourceAvatar, false, true, "HardLand");
+            configured += ConfigureAnim(_animSlide, sourceAvatar, true, false, "Slide");
+
+            // Stopping (no loop, grounded → Feet, kein Bake XZ)
+            configured += ConfigureAnim(_animLightStop, sourceAvatar, false, false, "LightStop", bakePositionXZ: false);
+            configured += ConfigureAnim(_animMediumStop, sourceAvatar, false, false, "MediumStop", bakePositionXZ: false);
+            configured += ConfigureAnim(_animHardStop, sourceAvatar, false, false, "HardStop", bakePositionXZ: false);
+
+            if (configured > 0)
             {
-                name = "Locomotion",
-                blendType = BlendTreeType.Simple1D,
-                blendParameter = AnimationParameters.SpeedParam,
-                useAutomaticThresholds = false
-            };
+                AssetDatabase.Refresh();
+                AssignClipsToController();
+            }
 
-            if (_idleClip != null) blendTree.AddChild(_idleClip, 0.0f);
-            if (_walkClip != null) blendTree.AddChild(_walkClip, 0.5f);
-            if (_runClip != null) blendTree.AddChild(_runClip, 1.0f);
-            if (_sprintClip != null) blendTree.AddChild(_sprintClip, 1.5f);
+            Debug.Log($"=== {configured} Animation(en) eingerichtet! ===");
+        }
 
-            AssetDatabase.AddObjectToAsset(blendTree, controller);
+        private Avatar GetSourceAvatar()
+        {
+            if (_characterModelFBX != null)
+            {
+                string modelPath = AssetDatabase.GetAssetPath(_characterModelFBX);
+                var avatar = AssetDatabase.LoadAllAssetsAtPath(modelPath)
+                    .OfType<Avatar>().FirstOrDefault();
+                if (avatar != null) return avatar;
+            }
 
-            var locomotionState = rootStateMachine.AddState("Locomotion");
-            locomotionState.motion = blendTree;
-            locomotionState.iKOnFeet = true;
-            locomotionState.writeDefaultValues = false;
-            rootStateMachine.defaultState = locomotionState;
+            // Fallback: Avatar vom aktuellen Prefab-Modell
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            if (prefab != null)
+            {
+                var animator = prefab.GetComponentInChildren<Animator>();
+                if (animator != null) return animator.avatar;
+            }
 
-            // Airborne States
-            EditorUtility.DisplayProgressBar("Animator erstellen", "Airborne + Slide States...", 0.5f);
+            return null;
+        }
 
-            AddStateIfClip(rootStateMachine, "Jump", _jumpClip, false);
-            AddStateIfClip(rootStateMachine, "Fall", _fallClip, false);
-            AddStateIfClip(rootStateMachine, "SoftLand", _softLandClip, true);
-            AddStateIfClip(rootStateMachine, "HardLand", _hardLandClip, true);
-            AddStateIfClip(rootStateMachine, "Slide", _slideClip, false);
+        /// <summary>
+        /// Konfiguriert die Import-Settings einer Animation-FBX.
+        /// Zwei-Schritt-Import: erst Humanoid-Rig, dann CopyFromOther + Clip-Settings.
+        /// </summary>
+        private static int ConfigureAnim(GameObject fbx, Avatar sourceAvatar, bool loop, bool airborne, string label,
+            bool bakePositionXZ = true)
+        {
+            if (fbx == null) return 0;
 
-            // Stopping States
-            EditorUtility.DisplayProgressBar("Animator erstellen", "Stopping States...", 0.7f);
+            string path = AssetDatabase.GetAssetPath(fbx);
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning($"[CharacterAnimationWizard] {label}: Kein gültiges FBX-Asset.");
+                return 0;
+            }
 
-            AddStateIfClip(rootStateMachine, "LightStop", _lightStopClip, true);
-            AddStateIfClip(rootStateMachine, "MediumStop", _mediumStopClip, true);
-            AddStateIfClip(rootStateMachine, "HardStop", _hardStopClip, true);
+            // Schritt 1: Als Humanoid importieren
+            if (importer.animationType != ModelImporterAnimationType.Human)
+            {
+                importer.animationType = ModelImporterAnimationType.Human;
+                importer.SaveAndReimport();
+                importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            }
 
-            // Avatar Masks
-            EditorUtility.DisplayProgressBar("Animator erstellen", "Avatar Masks...", 0.9f);
-            AvatarMaskCreator.CreateAllMasks();
+            // Schritt 2: CopyFromOther + Clip Settings
+            importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
+            importer.sourceAvatar = sourceAvatar;
+
+            var clips = importer.defaultClipAnimations;
+            if (clips.Length > 0)
+            {
+                var clip = clips[0];
+
+                // Root Transform Rotation: Bake Into Pose, Body Orientation
+                clip.lockRootRotation = true;
+                clip.keepOriginalOrientation = false;
+
+                // Root Transform Position Y: Bake Into Pose
+                clip.lockRootHeightY = true;
+                if (airborne)
+                {
+                    // Airborne: Based Upon = Original
+                    clip.keepOriginalPositionY = true;
+                }
+                else
+                {
+                    // Grounded: Based Upon = Feet
+                    clip.keepOriginalPositionY = false;
+                    clip.heightFromFeet = true;
+                }
+
+                // Root Transform Position XZ
+                clip.lockRootPositionXZ = bakePositionXZ;
+                clip.keepOriginalPositionXZ = bakePositionXZ;
+
+                clip.loopTime = loop;
+                importer.clipAnimations = clips;
+            }
+
+            importer.SaveAndReimport();
+
+            Debug.Log($"[CharacterAnimationWizard] {label}: Import konfiguriert " +
+                      $"(CopyFrom={sourceAvatar.name}, Loop={loop}, " +
+                      $"{(airborne ? "Airborne/Original" : "Grounded/Feet")})");
+            return 1;
+        }
+
+        /// <summary>
+        /// Baut den Animator Controller vollständig auf und weist Clips zu. Idempotent.
+        /// </summary>
+        private void AssignClipsToController()
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+
+            if (controller == null)
+            {
+                AnimatorControllerCreator.CreateController();
+                controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+                if (controller == null)
+                {
+                    Debug.LogError("[CharacterAnimationWizard] Animator Controller konnte nicht erstellt werden.");
+                    return;
+                }
+            }
+
+            var rootSM = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
+
+            // === Locomotion Blend Tree ===
+            var locomotionState = FindState(rootSM, "Locomotion");
+            BlendTree blendTree = null;
+
+            if (locomotionState != null && locomotionState.motion is BlendTree existingTree)
+            {
+                blendTree = existingTree;
+            }
+            else
+            {
+                if (locomotionState != null)
+                    rootSM.RemoveState(locomotionState);
+
+                blendTree = new BlendTree
+                {
+                    name = "Locomotion",
+                    blendType = BlendTreeType.Simple1D,
+                    blendParameter = AnimationParameters.SpeedParam,
+                    useAutomaticThresholds = false
+                };
+
+                var emptyClip = new AnimationClip { name = "_empty" };
+                blendTree.AddChild(emptyClip, 0.0f);
+                blendTree.AddChild(emptyClip, 0.5f);
+                blendTree.AddChild(emptyClip, 1.0f);
+                blendTree.AddChild(emptyClip, 1.5f);
+
+                AssetDatabase.AddObjectToAsset(blendTree, controller);
+
+                locomotionState = rootSM.AddState("Locomotion");
+                locomotionState.motion = blendTree;
+                locomotionState.iKOnFeet = true;
+                locomotionState.writeDefaultValues = false;
+                rootSM.defaultState = locomotionState;
+            }
+
+            // Locomotion Clips zuweisen
+            var children = blendTree.children;
+            if (children.Length >= 4)
+            {
+                TryAssignBlendTreeChild(ref children, 0, _animIdle, "Idle");
+                TryAssignBlendTreeChild(ref children, 1, _animWalk, "Walk");
+                TryAssignBlendTreeChild(ref children, 2, _animRun, "Run");
+                TryAssignBlendTreeChild(ref children, 3, _animSprint, "Sprint");
+                blendTree.children = children;
+            }
+
+            // === Einzelne States (immer erstellen, auch ohne Clip) ===
+            string[] requiredStates = { "Jump", "Fall", "SoftLand", "HardLand", "Slide",
+                                        "LightStop", "MediumStop", "HardStop" };
+            foreach (string stateName in requiredStates)
+                EnsureStateExists(rootSM, stateName);
+
+            // Clips zuweisen
+            TryAssignStateMotion(rootSM, "Jump", _animJump);
+            TryAssignStateMotion(rootSM, "Fall", _animFall);
+            TryAssignStateMotion(rootSM, "SoftLand", _animSoftLand);
+            TryAssignStateMotion(rootSM, "HardLand", _animHardLand);
+            TryAssignStateMotion(rootSM, "Slide", _animSlide);
+            TryAssignStateMotion(rootSM, "LightStop", _animLightStop);
+            TryAssignStateMotion(rootSM, "MediumStop", _animMediumStop);
+            TryAssignStateMotion(rootSM, "HardStop", _animHardStop);
 
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
-
-            EditorUtility.ClearProgressBar();
-
-            int stateCount = rootStateMachine.states.Length;
-            Debug.Log($"[CharacterAnimationWizard] Animator Controller erstellt mit {stateCount} States.");
+            Debug.Log("[CharacterAnimationWizard] Animator Controller aktualisiert.");
         }
 
-        private static void AddStateIfClip(AnimatorStateMachine stateMachine, string name,
-            AnimationClip clip, bool ikOnFeet)
+        #endregion
+
+        #region Utilities
+
+        private static void TryAssignBlendTreeChild(ref ChildMotion[] children, int index, GameObject fbx, string label)
         {
-            var state = stateMachine.AddState(name);
-            state.motion = clip; // null ist OK — State existiert für CrossFade
+            if (fbx == null) return;
+            var clip = LoadClipFromFBX(fbx);
+            if (clip == null) return;
+            children[index].motion = clip;
+        }
+
+        private static void EnsureStateExists(AnimatorStateMachine sm, string stateName)
+        {
+            var state = FindState(sm, stateName);
+            if (state != null) return;
+            state = sm.AddState(stateName);
             state.writeDefaultValues = false;
-            state.iKOnFeet = ikOnFeet;
-
-            if (clip == null)
-            {
-                Debug.LogWarning($"[CharacterAnimationWizard] Kein Clip für '{name}' — " +
-                                 "State wurde ohne Motion erstellt.");
-            }
+            state.iKOnFeet = true;
         }
 
-        private static AnimationClip LoadClipFromFbx(string fbxName)
+        private static void TryAssignStateMotion(AnimatorStateMachine sm, string stateName, GameObject fbx)
         {
-            var fbxPath = ClipBasePath + fbxName + ".fbx";
-            var assets = AssetDatabase.LoadAllAssetsAtPath(fbxPath);
-            return assets?
+            if (fbx == null) return;
+            var clip = LoadClipFromFBX(fbx);
+            if (clip == null) return;
+
+            var state = FindState(sm, stateName);
+            if (state == null)
+            {
+                state = sm.AddState(stateName);
+                state.writeDefaultValues = false;
+                state.iKOnFeet = true;
+            }
+
+            state.motion = clip;
+        }
+
+        private static AnimatorState FindState(AnimatorStateMachine sm, string name)
+        {
+            return sm.states
+                .Select(s => s.state)
+                .FirstOrDefault(s => s.name == name);
+        }
+
+        private static AnimationClip LoadClipFromFBX(GameObject fbx)
+        {
+            string path = AssetDatabase.GetAssetPath(fbx);
+            return AssetDatabase.LoadAllAssetsAtPath(path)
                 .OfType<AnimationClip>()
                 .FirstOrDefault(c => !c.name.StartsWith("__preview__"));
         }
