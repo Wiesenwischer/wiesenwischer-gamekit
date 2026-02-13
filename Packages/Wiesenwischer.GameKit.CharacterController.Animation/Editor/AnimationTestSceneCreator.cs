@@ -15,7 +15,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private const string ScenePath = "Assets/Scenes/AnimationTestScene.unity";
         private const string MaterialFolder = "Assets/Materials/TestScene";
 
-        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Animation Test Scene", false, 300)]
         public static void CreateTestScene()
         {
             // Materials erstellen/laden
@@ -76,13 +75,28 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             slope.transform.rotation = Quaternion.Euler(30f, 0f, 0f);
             slope.GetComponent<Renderer>().sharedMaterial = slopeMat;
 
-            // === Steile Slope (60°) für Rutsch-Tests ===
+            // === Steile Slope (60°) für Sliding-Test ===
             var steepSlope = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            steepSlope.name = "Slope_60deg";
+            steepSlope.name = "Slope_60deg_Slide";
             steepSlope.transform.position = new Vector3(0f, 4f, -10f);
             steepSlope.transform.localScale = new Vector3(5f, 0.3f, 10f);
             steepSlope.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
             steepSlope.GetComponent<Renderer>().sharedMaterial = slopeMat;
+
+            // === Grenzwinkel-Slope (47°) für Hysterese-Test ===
+            var borderSlope = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            borderSlope.name = "Slope_47deg_Hysteresis";
+            borderSlope.transform.position = new Vector3(10f, 3f, -10f);
+            borderSlope.transform.localScale = new Vector3(5f, 0.3f, 10f);
+            borderSlope.transform.rotation = Quaternion.Euler(47f, 0f, 0f);
+            borderSlope.GetComponent<Renderer>().sharedMaterial = slopeMat;
+
+            // === Erhöhte Plattform über steilem Hang (Fall→Slide Test) ===
+            var slidePlatform = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slidePlatform.name = "Platform_Above_SteepSlope";
+            slidePlatform.transform.position = new Vector3(0f, 8f, -8f);
+            slidePlatform.transform.localScale = new Vector3(3f, 0.3f, 3f);
+            slidePlatform.GetComponent<Renderer>().sharedMaterial = platformMat;
 
             // === Player Prefab platzieren ===
             var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
@@ -116,6 +130,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             Debug.Log("  2. Window > Animation > Animator öffnen");
             Debug.Log("  3. WASD = Laufen, Shift = Sprint, Space = Jump");
             Debug.Log("  4. Von Plattformen fallen für Landing-Tests");
+            Debug.Log("  5. Steile Rampen (60°) für Slope Sliding, Grenzwinkel-Rampe (47°) für Hysterese-Test");
+            Debug.Log("  6. Von Platform_Above_SteepSlope fallen für Fall→Slide Transition");
         }
 
         private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps, Material stepMat)
@@ -169,12 +185,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             mat.SetColor("_Color", color);
             AssetDatabase.CreateAsset(mat, path);
             return mat;
-        }
-
-        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Animation Test Scene", true)]
-        private static bool ValidateCreateTestScene()
-        {
-            return !Application.isPlaying;
         }
     }
 }

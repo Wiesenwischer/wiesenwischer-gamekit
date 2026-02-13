@@ -184,6 +184,41 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         /// </summary>
         bool UseSlopeDependentSlideSpeed { get; }
 
+        /// <summary>
+        /// Beschleunigung beim Eingleiten in den Slide (m/s²).
+        /// Höhere Werte = schnellerer Übergang zu voller Slide-Geschwindigkeit.
+        /// </summary>
+        float SlideAcceleration { get; }
+
+        /// <summary>
+        /// Seitliche Lenkkraft während des Slidings (0 = keine Lenkung, 1 = volle Kontrolle).
+        /// Erlaubt dem Spieler, die Rutsch-Richtung zu beeinflussen.
+        /// </summary>
+        float SlideSteerStrength { get; }
+
+        /// <summary>
+        /// Hysterese-Winkel für den Exit aus dem Slide-State (Grad).
+        /// Character verlässt Slide erst bei SlopeAngle &lt; MaxSlopeAngle - SlideExitHysteresis.
+        /// Verhindert Flackern an der Grenzwinkel-Kante.
+        /// </summary>
+        float SlideExitHysteresis { get; }
+
+        /// <summary>
+        /// Ob der Spieler aus dem Slide-State abspringen kann.
+        /// </summary>
+        bool CanJumpFromSlide { get; }
+
+        /// <summary>
+        /// Reduzierte Sprungkraft beim Abspringen aus dem Slide (Multiplikator, 0-1).
+        /// </summary>
+        float SlideJumpForceMultiplier { get; }
+
+        /// <summary>
+        /// Mindestzeit im Slide-State (Sekunden).
+        /// Verhindert sofortiges Flackern bei kurzzeitigem Slope-Kontakt.
+        /// </summary>
+        float MinSlideTime { get; }
+
         // Landing
         /// <summary>Fallgeschwindigkeit unter der sofort weitergelaufen werden kann.</summary>
         float SoftLandingThreshold { get; }

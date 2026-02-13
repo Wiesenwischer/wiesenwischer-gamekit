@@ -103,6 +103,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
                       $"→ {(landingSpeed >= Config.HardLandingThreshold ? "HARD" : "SOFT")}");
 #endif
 
+            // Landing auf steiler Slope → direkt Sliding (statt Land-Animation)
+            var groundInfo = Player.Locomotion.GroundInfo;
+            if (groundInfo.SlopeAngle > Config.MaxSlopeAngle
+                && Player.Locomotion.Motor.GroundingStatus.FoundAnyGround)
+            {
+                ChangeState(stateMachine.SlidingState);
+                return;
+            }
+
             if (landingSpeed >= Config.HardLandingThreshold)
             {
                 ChangeState(stateMachine.HardLandingState);

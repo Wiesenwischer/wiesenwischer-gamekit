@@ -141,10 +141,33 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         [Header("Slope Sliding")]
         [Tooltip("Geschwindigkeit beim Rutschen auf zu steilen Oberflächen (m/s)")]
-        [SerializeField] private float _slopeSlideSpeed = 8.0f;
+        [SerializeField] private float _slopeSlideSpeed = 12.0f;
 
         [Tooltip("Wenn aktiviert, skaliert die Rutsch-Geschwindigkeit mit der Steilheit des Hangs (steilere Hänge = schneller). Wenn deaktiviert, wird immer die feste SlopeSlideSpeed verwendet.")]
         [SerializeField] private bool _useSlopeDependentSlideSpeed = true;
+
+        [Tooltip("Beschleunigung beim Eingleiten in den Slide (m/s²)")]
+        [Range(1f, 30f)]
+        [SerializeField] private float _slideAcceleration = 15.0f;
+
+        [Tooltip("Seitliche Lenkkraft während des Slidings (0 = keine, 1 = voll)")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _slideSteerStrength = 0.3f;
+
+        [Tooltip("Hysterese-Winkel für Slide-Exit (Grad). Verhindert Flackern am Grenzwinkel.")]
+        [Range(0f, 10f)]
+        [SerializeField] private float _slideExitHysteresis = 3.0f;
+
+        [Tooltip("Ob aus dem Slide gesprungen werden kann")]
+        [SerializeField] private bool _canJumpFromSlide = true;
+
+        [Tooltip("Sprungkraft-Multiplikator beim Abspringen aus dem Slide")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _slideJumpForceMultiplier = 0.7f;
+
+        [Tooltip("Mindestzeit im Slide-State (Sekunden). Verhindert Flackern bei kurzzeitigem Kontakt.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float _minSlideTime = 0.2f;
 
         [Header("Landing")]
         [Tooltip("Fallgeschwindigkeit unter der sofort weitergelaufen werden kann (m/s)")]
@@ -199,6 +222,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float DownhillSpeedBonus => _downhillSpeedBonus;
         public float SlopeSlideSpeed => _slopeSlideSpeed;
         public bool UseSlopeDependentSlideSpeed => _useSlopeDependentSlideSpeed;
+        public float SlideAcceleration => _slideAcceleration;
+        public float SlideSteerStrength => _slideSteerStrength;
+        public float SlideExitHysteresis => _slideExitHysteresis;
+        public bool CanJumpFromSlide => _canJumpFromSlide;
+        public float SlideJumpForceMultiplier => _slideJumpForceMultiplier;
+        public float MinSlideTime => _minSlideTime;
         public float SoftLandingThreshold => _softLandingThreshold;
         public float HardLandingThreshold => _hardLandingThreshold;
         public float SoftLandingDuration => _softLandingDuration;

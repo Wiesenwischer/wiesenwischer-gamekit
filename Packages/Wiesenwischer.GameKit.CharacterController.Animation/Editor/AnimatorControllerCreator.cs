@@ -12,7 +12,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private const string MaskPath =
             "Packages/Wiesenwischer.GameKit.CharacterController.Animation/Resources/AvatarMasks/";
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Create Animator Controller", false, 100)]
         public static void CreateController()
         {
             var controller = AnimatorController.CreateAnimatorControllerAtPath(

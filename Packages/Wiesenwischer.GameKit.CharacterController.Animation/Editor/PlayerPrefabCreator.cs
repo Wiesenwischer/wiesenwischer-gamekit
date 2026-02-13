@@ -23,7 +23,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         private const string OutputPath = "Assets/Prefabs/Player.prefab";
 
-        [MenuItem("Wiesenwischer/GameKit/Prefabs/Create Player Prefab", false, 200)]
         public static void CreatePlayerPrefab()
         {
             // Assets laden
@@ -132,12 +131,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             {
                 Debug.LogError("[PlayerPrefabCreator] Fehler beim Speichern des Prefabs!");
             }
-        }
-
-        [MenuItem("Wiesenwischer/GameKit/Prefabs/Create Player Prefab", true)]
-        private static bool ValidateCreatePlayerPrefab()
-        {
-            return !Application.isPlaying;
         }
     }
 }

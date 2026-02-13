@@ -12,7 +12,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private const string ClipBasePath = "Assets/Animations/Locomotion/";
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Setup Airborne States", false, 102)]
         public static void SetupAirborneStates()
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
@@ -48,11 +47,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 return;
             }
 
+            var slideClip = LoadClipFromFbx("Anim_Slide");
+
             // --- Cleanup: Existierende Airborne States entfernen (idempotent) ---
             RemoveStateIfExists(rootStateMachine, "Jump");
             RemoveStateIfExists(rootStateMachine, "Fall");
             RemoveStateIfExists(rootStateMachine, "SoftLand");
             RemoveStateIfExists(rootStateMachine, "HardLand");
+            RemoveStateIfExists(rootStateMachine, "Slide");
             RemoveTransitionsToMissing(locomotionState);
 
             // --- States erstellen ---
@@ -77,6 +79,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             hardLandState.iKOnFeet = true;
 
             locomotionState.writeDefaultValues = false;
+
+            // Slide State (Motion optional — wird über Anim_Slide.fbx zugewiesen)
+            var slideState = rootStateMachine.AddState("Slide");
+            slideState.motion = slideClip; // null wenn Clip noch nicht vorhanden
+            slideState.writeDefaultValues = false;
+
+            if (slideClip == null)
+            {
+                Debug.LogWarning("[AirborneStatesCreator] Anim_Slide.fbx nicht gefunden. " +
+                                 "Slide State wurde ohne Motion erstellt — bitte Animation nachträglich zuweisen.");
+            }
 
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
