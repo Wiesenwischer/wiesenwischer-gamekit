@@ -25,7 +25,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
                 EditorUtility.DisplayDialog(
                     "Kein Player gefunden",
                     "In der aktuellen Szene wurde kein Player gefunden.\n\n" +
-                    "Bitte zuerst über 'Animation > Place Player in Scene' einen Player platzieren.",
+                    "Bitte zuerst über 'Core > Place Player in Scene' einen Player platzieren.",
                     "OK");
                 return;
             }

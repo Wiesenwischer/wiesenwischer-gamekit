@@ -7,8 +7,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
     /// <summary>
     /// One-Click Wizard zum Einrichten des kompletten Character Controller Systems.
     /// Erstellt Configs, Animator Controller und Player Prefab.
-    /// Player wird separat über "Animation > Place Player in Scene" platziert.
-    /// Menü: Wiesenwischer > GameKit > Animation > Setup Character Controller
+    /// Player wird separat über "Core > Place Player in Scene" platziert.
+    /// Menü: Wiesenwischer > GameKit > Setup Character Controller
     /// </summary>
     public static class CharacterControllerSetupWizard
     {
@@ -17,7 +17,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private const string LocomotionConfigPath = "Assets/Config/DefaultLocomotionConfig.asset";
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Setup Character Controller", false, 0)]
+        [MenuItem("Wiesenwischer/GameKit/Setup Character Controller", false, 0)]
         public static void RunSetup()
         {
             if (!EditorUtility.DisplayDialog(
@@ -73,15 +73,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 "Character Controller ist bereit.\n\n" +
                 "Nächste Schritte:\n" +
                 "• Animation > Character & Animation Wizard: Model + Clips zuweisen\n" +
-                "• Animation > Create Playground: Testumgebung erstellen\n" +
-                "• Animation > Place Player in Scene: Player platzieren\n" +
+                "• Core > Create Playground: Testumgebung erstellen\n" +
+                "• Core > Place Player in Scene: Player platzieren\n" +
                 "• Camera > Setup Third Person Camera: Kamera einrichten\n" +
                 "• IK > Setup IK on Player Prefab: Foot/LookAt IK\n" +
                 "• Play Mode starten und testen",
                 "OK");
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Setup Character Controller", true)]
+        [MenuItem("Wiesenwischer/GameKit/Setup Character Controller", true)]
         private static bool ValidateRunSetup()
         {
             return !Application.isPlaying;

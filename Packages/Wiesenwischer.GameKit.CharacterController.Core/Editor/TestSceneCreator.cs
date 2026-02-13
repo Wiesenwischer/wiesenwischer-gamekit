@@ -3,18 +3,18 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
+namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 {
     /// <summary>
     /// Editor-Tool zum Platzieren des Player Prefabs in der aktuell geöffneten Szene.
     /// Funktioniert mit jeder Szene — Playground, eigene Szene oder leere Szene.
-    /// Menü: Wiesenwischer > GameKit > Animation > Place Player in Scene
+    /// Menü: Wiesenwischer > GameKit > Core > Place Player in Scene
     /// </summary>
     public static class TestSceneCreator
     {
         private const string PlayerPrefabPath = "Assets/Prefabs/Player.prefab";
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Place Player in Scene", false, 301)]
+        [MenuItem("Wiesenwischer/GameKit/Core/Place Player in Scene", false, 301)]
         public static void PlacePlayerInScene()
         {
             var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
@@ -28,7 +28,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var activeScene = SceneManager.GetActiveScene();
 
             // Prüfen ob bereits ein Player in der Szene ist
-            var existingPlayer = GameObject.FindObjectOfType<Core.PlayerController>();
+            var existingPlayer = GameObject.FindObjectOfType<PlayerController>();
             if (existingPlayer != null)
             {
                 if (!EditorUtility.DisplayDialog("Player bereits vorhanden",
@@ -67,7 +67,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             Debug.Log("  4. Steile Rampen (60°) für Slope Sliding");
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Place Player in Scene", true)]
+        [MenuItem("Wiesenwischer/GameKit/Core/Place Player in Scene", true)]
         private static bool ValidatePlacePlayerInScene()
         {
             return !Application.isPlaying;
