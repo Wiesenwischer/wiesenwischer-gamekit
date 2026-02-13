@@ -39,6 +39,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private int _currentAnimStateHash;
         private bool _canExitAnimation;
 
+#if UNITY_EDITOR
+        private int _prevAnimStateHash;
+#endif
+
         private void Awake()
         {
             _animator = GetComponent<Animator>();
@@ -124,6 +128,26 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 _verticalVelocityDampTime,
                 Time.deltaTime);
 
+
+#if UNITY_EDITOR
+            var stateInfo = _animator.GetCurrentAnimatorStateInfo(0);
+            if (stateInfo.fullPathHash != _prevAnimStateHash)
+            {
+                string stateName = "?";
+                if (stateInfo.IsName("Locomotion")) stateName = "Locomotion";
+                else if (stateInfo.IsName("Jump")) stateName = "Jump";
+                else if (stateInfo.IsName("Fall")) stateName = "Fall";
+                else if (stateInfo.IsName("SoftLand")) stateName = "SoftLand";
+                else if (stateInfo.IsName("HardLand")) stateName = "HardLand";
+                else if (stateInfo.IsName("LightStop")) stateName = "LightStop";
+                else if (stateInfo.IsName("MediumStop")) stateName = "MediumStop";
+                else if (stateInfo.IsName("HardStop")) stateName = "HardStop";
+                else if (stateInfo.IsName("Slide")) stateName = "Slide";
+
+                Debug.Log($"[AnimBridge] Animator → {stateName} | Y={transform.position.y:F2}");
+                _prevAnimStateHash = stateInfo.fullPathHash;
+            }
+#endif
         }
 
         #region IAnimationController
@@ -151,6 +175,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.LightStop: hash = AnimationParameters.LightStopStateHash; break;
                 case CharacterAnimationState.MediumStop: hash = AnimationParameters.MediumStopStateHash; break;
                 case CharacterAnimationState.HardStop: hash = AnimationParameters.HardStopStateHash; break;
+                case CharacterAnimationState.Slide: hash = AnimationParameters.SlideStateHash; break;
                 default: return;
             }
 
@@ -252,6 +277,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.LightStop:  return 0.1f;
                 case CharacterAnimationState.MediumStop: return 0.1f;
                 case CharacterAnimationState.HardStop:   return 0.1f;
+                case CharacterAnimationState.Slide:     return 0.2f;
                 default: return 0.15f;
             }
         }

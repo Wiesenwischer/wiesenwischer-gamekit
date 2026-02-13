@@ -12,7 +12,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private const string ClipBasePath = "Assets/Animations/Locomotion/";
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Setup Stopping States", false, 103)]
         public static void SetupStoppingStates()
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);

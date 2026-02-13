@@ -58,6 +58,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
 
         #endregion
 
+        #region Hybrid State Instances
+
+        /// <summary>Sliding State - Rutschen auf steilen Hängen (Bodenkontakt, aber nicht stabil).</summary>
+        public PlayerSlidingState SlidingState { get; }
+
+        #endregion
+
         #region Airborne State Instances
 
         /// <summary>Jumping State - während des Springens (aufsteigend).</summary>
@@ -101,6 +108,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
             LightStoppingState = new PlayerLightStoppingState(this);
             MediumStoppingState = new PlayerMediumStoppingState(this);
             HardStoppingState = new PlayerHardStoppingState(this);
+
+            // Erstelle Hybrid States
+            SlidingState = new PlayerSlidingState(this);
 
             // Erstelle Airborne States
             JumpingState = new PlayerJumpingState(this);
