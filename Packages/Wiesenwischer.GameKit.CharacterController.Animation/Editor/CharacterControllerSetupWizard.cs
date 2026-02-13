@@ -25,7 +25,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 "1. DefaultLocomotionConfig\n" +
                 "2. DefaultCameraConfig\n" +
                 "3. Avatar Masks\n" +
-                "4. Animator Controller (Locomotion + Airborne + Stopping)\n" +
+                "4. Animator Controller (Locomotion + Airborne + Stopping + Slide)\n" +
                 "5. Player Prefab\n" +
                 "6. Animation Test Scene + Kamera\n\n" +
                 "Bestehende Assets werden überschrieben.\n" +
@@ -96,7 +96,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             EditorUtility.ClearProgressBar();
 
             Debug.Log("=== Character Controller Setup abgeschlossen! ===");
-            Debug.Log("Play Mode starten und mit WASD + Space + Shift testen.");
+            Debug.Log("Play Mode starten und mit WASD + Space + Shift testen. Steile Rampen (>45°) lösen Sliding aus.");
 
             EditorUtility.DisplayDialog(
                 "Setup abgeschlossen!",
@@ -105,7 +105,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 "• WASD = Laufen\n" +
                 "• Shift = Sprint\n" +
                 "• Space = Jump\n" +
-                "• Von Plattformen fallen für Landing-Tests",
+                "• Von Plattformen fallen für Landing-Tests\n" +
+                "• Steile Rampen (>45°) für Slope Sliding",
                 "OK");
         }
 

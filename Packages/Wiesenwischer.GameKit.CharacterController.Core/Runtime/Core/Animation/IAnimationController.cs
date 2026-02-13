@@ -14,7 +14,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Animation
         Roll,
         LightStop,
         MediumStop,
-        HardStop
+        HardStop,
+        Slide
     }
 
     /// <summary>

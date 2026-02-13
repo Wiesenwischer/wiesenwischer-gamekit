@@ -45,6 +45,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         [Tooltip("CrossFade-Dauer beim Wechsel zu HardStop (Sprint-Stopp)")]
         [SerializeField] private float _hardStopTransitionDuration = 0.1f;
 
+        [Header("Slope Sliding")]
+        [Tooltip("CrossFade-Dauer beim Wechsel zu Slide")]
+        [SerializeField] private float _slideTransitionDuration = 0.2f;
+
         public float LocomotionTransitionDuration => _locomotionTransitionDuration;
         public float JumpTransitionDuration => _jumpTransitionDuration;
         public float FallTransitionDuration => _fallTransitionDuration;
@@ -54,6 +58,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         public float LightStopTransitionDuration => _lightStopTransitionDuration;
         public float MediumStopTransitionDuration => _mediumStopTransitionDuration;
         public float HardStopTransitionDuration => _hardStopTransitionDuration;
+        public float SlideTransitionDuration => _slideTransitionDuration;
 
         /// <summary>
         /// Gibt die Transition-Dauer für den angegebenen State zurück.
@@ -71,6 +76,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.LightStop:  return _lightStopTransitionDuration;
                 case CharacterAnimationState.MediumStop: return _mediumStopTransitionDuration;
                 case CharacterAnimationState.HardStop:   return _hardStopTransitionDuration;
+                case CharacterAnimationState.Slide:     return _slideTransitionDuration;
                 default: return 0.15f;
             }
         }
@@ -86,6 +92,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             _lightStopTransitionDuration = Mathf.Max(0f, _lightStopTransitionDuration);
             _mediumStopTransitionDuration = Mathf.Max(0f, _mediumStopTransitionDuration);
             _hardStopTransitionDuration = Mathf.Max(0f, _hardStopTransitionDuration);
+            _slideTransitionDuration = Mathf.Max(0f, _slideTransitionDuration);
         }
     }
 }

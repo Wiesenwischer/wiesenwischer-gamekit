@@ -47,6 +47,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnUpdate()
         {
+            // === Slope Sliding Check (VOR Fall-Detection) ===
+            // Muss vor Fall-Detection stehen, damit Character auf steiler Slope
+            // nicht fälschlicherweise in Falling wechselt (IsOverEdge = true bei unstable ground).
+            if (ShouldTransitionToSliding())
+            {
+                ChangeState(stateMachine.SlidingState);
+                return;
+            }
+
             float currentY = Player.transform.position.y;
 
             // === Fall-Detection Logik ===
@@ -134,6 +143,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         protected bool HasMovementInput()
         {
             return ReusableData.MoveInput.sqrMagnitude > 0.01f;
+        }
+
+        /// <summary>
+        /// Prüft ob der Character auf einem zu steilen Hang steht und rutschen sollte.
+        /// </summary>
+        private bool ShouldTransitionToSliding()
+        {
+            var groundInfo = Player.Locomotion.GroundInfo;
+
+            // Slope muss steiler als MaxSlopeAngle sein
+            if (groundInfo.SlopeAngle <= Config.MaxSlopeAngle)
+                return false;
+
+            // Motor muss noch Bodenkontakt haben (aber instabil)
+            if (!Player.Locomotion.Motor.GroundingStatus.FoundAnyGround)
+                return false;
+
+            return true;
         }
     }
 }
