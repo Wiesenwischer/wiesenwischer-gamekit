@@ -8,7 +8,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private const string MaskPath =
             "Packages/Wiesenwischer.GameKit.CharacterController.Animation/Resources/AvatarMasks/";
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Create Avatar Masks", false, 103)]
         public static void CreateAllMasks()
         {
             CreateUpperBodyMask();

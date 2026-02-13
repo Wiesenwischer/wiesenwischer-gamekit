@@ -12,7 +12,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private const string ClipBasePath = "Assets/Animations/Locomotion/";
 
-        [MenuItem("Wiesenwischer/GameKit/Animation/Setup Airborne States", false, 102)]
         public static void SetupAirborneStates()
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
