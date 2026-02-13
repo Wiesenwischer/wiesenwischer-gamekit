@@ -21,7 +21,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             if (playerPrefab == null)
             {
                 Debug.LogError($"[TestScene] Player Prefab nicht gefunden: {PlayerPrefabPath}. " +
-                               "Bitte zuerst über 'Animation > Character & Animation Wizard' erstellen.");
+                               "Bitte zuerst über 'Setup Character Controller' erstellen.");
                 return;
             }
 
