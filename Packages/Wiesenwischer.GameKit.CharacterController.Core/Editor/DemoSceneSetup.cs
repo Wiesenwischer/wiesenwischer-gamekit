@@ -484,7 +484,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         #region Default Config
 
-        [MenuItem("Wiesenwischer/GameKit/Config/Create Default LocomotionConfig", false, 400)]
         public static void CreateDefaultLocomotionConfig()
         {
             EnsureDirectoryExists("Assets/Config");

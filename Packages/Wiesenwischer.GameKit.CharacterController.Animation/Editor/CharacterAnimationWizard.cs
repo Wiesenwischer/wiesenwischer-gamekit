@@ -10,7 +10,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
     /// Zentraler Wizard zum Einrichten von Character Model und Animationen.
     /// Kombiniert: FBX-Model-Wahl, FBX-Import-Konfiguration (Humanoid, Root Transform),
     /// Clip-Zuweisung, Animator Controller Aufbau, IK-Setup, CapsuleCollider-Anpassung.
-    /// Menü: Wiesenwischer > GameKit > Character & Animation Wizard
+    /// Menü: Wiesenwischer > GameKit > Animation > Character & Animation Wizard
     /// </summary>
     public class CharacterAnimationWizard : EditorWindow
     {
@@ -45,7 +45,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private bool _foldAirborne = true;
         private bool _foldStopping = true;
 
-        [MenuItem("Wiesenwischer/GameKit/Character & Animation Wizard", false, 1)]
+        [MenuItem("Wiesenwischer/GameKit/Animation/Character & Animation Wizard", false, 1)]
         public static void ShowWindow()
         {
             var window = GetWindow<CharacterAnimationWizard>("Character & Animation");
@@ -53,7 +53,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             window.Show();
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Character & Animation Wizard", true)]
+        [MenuItem("Wiesenwischer/GameKit/Animation/Character & Animation Wizard", true)]
         private static bool ValidateShowWindow()
         {
             return !Application.isPlaying;

@@ -25,7 +25,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
                 EditorUtility.DisplayDialog(
                     "Kein Player gefunden",
                     "In der aktuellen Szene wurde kein Player gefunden.\n\n" +
-                    "Bitte zuerst über 'Scenes > Place Player in Scene' einen Player platzieren.",
+                    "Bitte zuerst über 'Animation > Place Player in Scene' einen Player platzieren.",
                     "OK");
                 return;
             }
@@ -99,7 +99,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
             Debug.Log("[CameraSetup] Third Person Camera Setup abgeschlossen!");
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Camera/Create Default Camera Config", false, 201)]
         public static void CreateDefaultCameraConfig()
         {
             var config = FindOrCreateCameraConfig();

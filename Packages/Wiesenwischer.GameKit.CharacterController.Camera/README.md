@@ -30,8 +30,7 @@ Das Package erfordert:
 1. Wähle die Main Camera
 2. Füge `ThirdPersonCamera` Component hinzu
 3. Füge `CameraInputHandler` Component hinzu
-4. Erstelle eine CameraConfig: **Wiesenwischer > GameKit > Camera > Create Default Camera Config**
-5. Weise die Config und das Target zu
+4. Weise eine CameraConfig und das Target zu (Config wird beim Setup automatisch erstellt)
 
 ## Steuerung
 

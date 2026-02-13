@@ -6,14 +6,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 {
     /// <summary>
     /// Editor-Tool zum Erstellen der Playground-Szene (Umgebung ohne Player).
-    /// Menü: Wiesenwischer > GameKit > Scenes > Create Playground
+    /// Menü: Wiesenwischer > GameKit > Animation > Create Playground
     /// </summary>
     public static class PlaygroundSceneCreator
     {
         private const string ScenePath = "Assets/Scenes/Playground.unity";
         private const string MaterialFolder = "Assets/Materials/TestScene";
 
-        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Playground", false, 300)]
+        [MenuItem("Wiesenwischer/GameKit/Animation/Create Playground", false, 300)]
         public static void CreatePlayground()
         {
             // Materials erstellen/laden
@@ -116,7 +116,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             Debug.Log($"[Playground] Playground-Szene erstellt: {ScenePath}");
-            Debug.Log("[Playground] Enthält nur Umgebung — Player über 'Place Player in Scene' hinzufügen.");
+            Debug.Log("[Playground] Enthält nur Umgebung — Player über 'Animation > Place Player in Scene' hinzufügen.");
         }
 
         private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps,
@@ -222,7 +222,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             return mat;
         }
 
-        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Playground", true)]
+        [MenuItem("Wiesenwischer/GameKit/Animation/Create Playground", true)]
         private static bool ValidateCreatePlayground()
         {
             return !Application.isPlaying;
