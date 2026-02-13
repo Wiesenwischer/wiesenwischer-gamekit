@@ -28,7 +28,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 | Epic | Phasen | Status |
 |------|--------|--------|
-| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20 | In Arbeit |
+| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–22 | In Arbeit |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | Offen |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8 | Offen |
@@ -52,6 +52,8 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
+| 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Offen |
+| 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ❌ | Offen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
 | 13 | Character | CP: Equipment System | — | ❌ | Offen |
@@ -68,7 +70,8 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 ```
 Lebendige Charaktere (Animation)
-  Phase 1 ──> Phase 2 ──> Phase 3 ──> Phase 4
+  Phase 1 ──> Phase 2 ──> Phase 3 ──> Phase 4 ──> Phase 21 (Slope Sliding)
+                                                └──> Phase 22 (Landing Roll)
 
 Fähigkeiten & Action Combat
   Phase 4 ──> Phase 5 ──> Phase 9
@@ -191,6 +194,49 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [ ] [20.2 Unit Tests](phase-20-grounding-smoother/20.2-unit-tests.md)
 - [ ] [20.3 Prefab-Integration](phase-20-grounding-smoother/20.3-prefab-integration.md)
 - [ ] [20.4 Verifikation](phase-20-grounding-smoother/20.4-verification.md)
+
+---
+
+### Phase 21: Slope Sliding
+**Branch:** `integration/phase-21-slope-sliding`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-21-slope-sliding/README.md)
+
+**Ziel:** Dedizierter Sliding-State für steile Hänge — aktive Rutsch-Kraft statt passiver Projektion. Aktiviert die bisher ungenutzten `SlopeSlideSpeed`-Config-Werte und `SlopeModule.CalculateSlideVelocity()`.
+
+**Relevante Spezifikationen:**
+- [Slope Sliding Spezifikation](../specs/SlopeSliding_Spezifikation.md)
+
+**Schritte:**
+- [ ] [21.1 Slide-Animation beschaffen + importieren](phase-21-slope-sliding/21.1-slide-animation-asset.md)
+- [ ] [21.2 Config-Erweiterung (Sliding-Parameter)](phase-21-slope-sliding/21.2-config-erweiterung.md)
+- [ ] [21.3 Slide-Intent in CharacterLocomotion](phase-21-slope-sliding/21.3-locomotion-slide-intent.md)
+- [ ] [21.4 PlayerSlidingState implementieren](phase-21-slope-sliding/21.4-sliding-state.md)
+- [ ] [21.5 Entry/Exit-Transitions (Grounded, Falling)](phase-21-slope-sliding/21.5-entry-exit-transitions.md)
+- [ ] [21.6 Animation-Integration (Enum, Animator, CrossFade)](phase-21-slope-sliding/21.6-animation-integration.md)
+- [ ] [21.7 Unit Tests](phase-21-slope-sliding/21.7-unit-tests.md)
+- [ ] [21.8 Play Mode Verifikation](phase-21-slope-sliding/21.8-play-mode-verifikation.md)
+
+---
+
+### Phase 22: Landing Roll
+**Branch:** `integration/phase-22-landing-roll`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Neuer Landing-State für Roll bei hartem Aufprall mit Movement-Input — Character rollt in Bewegungsrichtung statt komplett zu stoppen (HardLanding). Konfigurierbarer Trigger-Modus (MovementInput / ButtonPress), omni-direktional.
+
+**Relevante Spezifikationen:**
+- [Landing Roll Spezifikation](../specs/LandingRoll_Spezifikation.md)
+
+**Vorläufige Schritte:**
+- [ ] 22.1 Roll-Animation beschaffen + importieren (Mixamo)
+- [ ] 22.2 `RollTriggerMode` Enum + Config-Erweiterung in `LocomotionConfig`
+- [ ] 22.3 `PlayerRollingState` implementieren
+- [ ] 22.4 `PlayerFallingState` Transition-Logik erweitern
+- [ ] 22.5 `PlayerMovementStateMachine` um RollingState erweitern
+- [ ] 22.6 Animator-State `Roll` + Transitions
+- [ ] 22.7 `CharacterAnimationState.Roll` + AnimationController-Mapping
+- [ ] 22.8 Unit Tests
+- [ ] 22.9 Play Mode Verifikation
 
 ---
 
