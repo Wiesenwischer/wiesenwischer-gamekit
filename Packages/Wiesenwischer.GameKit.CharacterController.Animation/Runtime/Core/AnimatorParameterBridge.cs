@@ -114,6 +114,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 else if (stateInfo.IsName("Fall")) stateName = "Fall";
                 else if (stateInfo.IsName("SoftLand")) stateName = "SoftLand";
                 else if (stateInfo.IsName("HardLand")) stateName = "HardLand";
+                else if (stateInfo.IsName("Roll")) stateName = "Roll";
                 else if (stateInfo.IsName("LightStop")) stateName = "LightStop";
                 else if (stateInfo.IsName("MediumStop")) stateName = "MediumStop";
                 else if (stateInfo.IsName("HardStop")) stateName = "HardStop";
@@ -146,6 +147,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.Fall: hash = AnimationParameters.FallStateHash; break;
                 case CharacterAnimationState.SoftLand: hash = AnimationParameters.SoftLandStateHash; break;
                 case CharacterAnimationState.HardLand: hash = AnimationParameters.HardLandStateHash; break;
+                case CharacterAnimationState.Roll: hash = AnimationParameters.RollStateHash; break;
                 case CharacterAnimationState.LightStop: hash = AnimationParameters.LightStopStateHash; break;
                 case CharacterAnimationState.MediumStop: hash = AnimationParameters.MediumStopStateHash; break;
                 case CharacterAnimationState.HardStop: hash = AnimationParameters.HardStopStateHash; break;
@@ -247,6 +249,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.Fall:        return 0.05f;
                 case CharacterAnimationState.SoftLand:    return 0.1f;
                 case CharacterAnimationState.HardLand:    return 0.08f;
+                case CharacterAnimationState.Roll:        return 0.1f;
                 case CharacterAnimationState.LightStop:  return 0.1f;
                 case CharacterAnimationState.MediumStop: return 0.1f;
                 case CharacterAnimationState.HardStop:   return 0.1f;

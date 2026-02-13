@@ -32,6 +32,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         [Tooltip("CrossFade-Dauer beim Wechsel zu HardLand")]
         [SerializeField] private float _hardLandTransitionDuration = 0.08f;
 
+        [Tooltip("CrossFade-Dauer beim Wechsel zu Roll")]
+        [SerializeField] private float _rollTransitionDuration = 0.1f;
+
         [Header("Stopping")]
         [Tooltip("CrossFade-Dauer beim Wechsel zu LightStop (Walk-Stopp)")]
         [SerializeField] private float _lightStopTransitionDuration = 0.1f;
@@ -47,6 +50,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         public float FallTransitionDuration => _fallTransitionDuration;
         public float SoftLandTransitionDuration => _softLandTransitionDuration;
         public float HardLandTransitionDuration => _hardLandTransitionDuration;
+        public float RollTransitionDuration => _rollTransitionDuration;
         public float LightStopTransitionDuration => _lightStopTransitionDuration;
         public float MediumStopTransitionDuration => _mediumStopTransitionDuration;
         public float HardStopTransitionDuration => _hardStopTransitionDuration;
@@ -63,6 +67,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.Fall:        return _fallTransitionDuration;
                 case CharacterAnimationState.SoftLand:    return _softLandTransitionDuration;
                 case CharacterAnimationState.HardLand:    return _hardLandTransitionDuration;
+                case CharacterAnimationState.Roll:        return _rollTransitionDuration;
                 case CharacterAnimationState.LightStop:  return _lightStopTransitionDuration;
                 case CharacterAnimationState.MediumStop: return _mediumStopTransitionDuration;
                 case CharacterAnimationState.HardStop:   return _hardStopTransitionDuration;
@@ -77,6 +82,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             _fallTransitionDuration = Mathf.Max(0f, _fallTransitionDuration);
             _softLandTransitionDuration = Mathf.Max(0f, _softLandTransitionDuration);
             _hardLandTransitionDuration = Mathf.Max(0f, _hardLandTransitionDuration);
+            _rollTransitionDuration = Mathf.Max(0f, _rollTransitionDuration);
             _lightStopTransitionDuration = Mathf.Max(0f, _lightStopTransitionDuration);
             _mediumStopTransitionDuration = Mathf.Max(0f, _mediumStopTransitionDuration);
             _hardStopTransitionDuration = Mathf.Max(0f, _hardStopTransitionDuration);

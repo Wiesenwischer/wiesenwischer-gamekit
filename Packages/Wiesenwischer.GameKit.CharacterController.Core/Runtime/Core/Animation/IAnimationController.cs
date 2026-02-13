@@ -11,6 +11,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Animation
         Fall,
         SoftLand,
         HardLand,
+        Roll,
         LightStop,
         MediumStop,
         HardStop
