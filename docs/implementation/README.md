@@ -207,7 +207,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [Slope Sliding Spezifikation](../specs/SlopeSliding_Spezifikation.md)
 
 **Schritte:**
-- [ ] [21.1 Slide-Animation beschaffen + importieren](phase-21-slope-sliding/21.1-slide-animation-asset.md)
+- [x] [21.1 Slide-Animation beschaffen + importieren](phase-21-slope-sliding/21.1-slide-animation-asset.md)
 - [x] [21.2 Config-Erweiterung (Sliding-Parameter)](phase-21-slope-sliding/21.2-config-erweiterung.md)
 - [x] [21.3 Slide-Intent in CharacterLocomotion](phase-21-slope-sliding/21.3-locomotion-slide-intent.md)
 - [x] [21.4 PlayerSlidingState implementieren](phase-21-slope-sliding/21.4-sliding-state.md)
