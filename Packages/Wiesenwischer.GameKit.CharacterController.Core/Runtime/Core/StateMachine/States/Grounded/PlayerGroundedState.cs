@@ -160,6 +160,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             if (!Player.Locomotion.Motor.GroundingStatus.FoundAnyGround)
                 return false;
 
+            // Auf Treppen erkennt das Step-Handling stabilen Boden trotz steiler Stufenflächen —
+            // in diesem Fall NICHT sliden
+            if (Player.Locomotion.Motor.GroundingStatus.IsStableOnGround)
+                return false;
+
             return true;
         }
     }
