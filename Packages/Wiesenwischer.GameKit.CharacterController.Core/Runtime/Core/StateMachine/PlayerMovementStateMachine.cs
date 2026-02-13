@@ -56,6 +56,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         /// <summary>Hard Stopping State - Stopp nach Sprinting.</summary>
         public PlayerHardStoppingState HardStoppingState { get; }
 
+        /// <summary>Rolling State - Landing Roll bei hartem Aufprall mit Movement-Input.</summary>
+        public PlayerRollingState RollingState { get; }
+
         #endregion
 
         #region Hybrid State Instances
@@ -108,6 +111,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
             LightStoppingState = new PlayerLightStoppingState(this);
             MediumStoppingState = new PlayerMediumStoppingState(this);
             HardStoppingState = new PlayerHardStoppingState(this);
+            RollingState = new PlayerRollingState(this);
 
             // Erstelle Hybrid States
             SlidingState = new PlayerSlidingState(this);

@@ -1,5 +1,6 @@
 using UnityEngine;
 using Wiesenwischer.GameKit.CharacterController.Core.Animation;
+using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 {
@@ -114,12 +115,34 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
             if (landingSpeed >= Config.HardLandingThreshold)
             {
+                if (ShouldRoll())
+                {
+                    ChangeState(stateMachine.RollingState);
+                    return;
+                }
                 ChangeState(stateMachine.HardLandingState);
             }
             else
             {
                 ChangeState(stateMachine.SoftLandingState);
             }
+        }
+
+        /// <summary>
+        /// Prüft ob der Character einen Landing Roll ausführen soll.
+        /// </summary>
+        private bool ShouldRoll()
+        {
+            if (!Config.RollEnabled) return false;
+
+            return Config.RollTriggerMode switch
+            {
+                RollTriggerMode.MovementInput
+                    => ReusableData.MoveInput.sqrMagnitude > 0.01f,
+                RollTriggerMode.ButtonPress
+                    => ReusableData.DashPressed,
+                _ => false,
+            };
         }
     }
 }
