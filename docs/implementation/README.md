@@ -52,7 +52,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
-| 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Offen |
+| 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Abgeschlossen |
 | 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ❌ | Offen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
@@ -214,7 +214,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [x] [21.5 Entry/Exit-Transitions (Grounded, Falling)](phase-21-slope-sliding/21.5-entry-exit-transitions.md)
 - [x] [21.6 Animation-Integration (Enum, Animator, CrossFade)](phase-21-slope-sliding/21.6-animation-integration.md)
 - [x] [21.7 Unit Tests](phase-21-slope-sliding/21.7-unit-tests.md)
-- [ ] [21.8 Play Mode Verifikation](phase-21-slope-sliding/21.8-play-mode-verifikation.md)
+- [x] [21.8 Play Mode Verifikation](phase-21-slope-sliding/21.8-play-mode-verifikation.md)
 
 ---
 
