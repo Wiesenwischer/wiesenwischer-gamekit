@@ -24,7 +24,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         // --- Character Model ---
         private GameObject _characterModelFBX;
         private bool _adjustCapsule = true;
-        private bool _runIKSetup = true;
 
         // --- Animation FBX Slots ---
         private GameObject _animIdle;
@@ -92,7 +91,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
             EditorGUILayout.Space(4);
             _adjustCapsule = EditorGUILayout.Toggle("CapsuleCollider anpassen", _adjustCapsule);
-            _runIKSetup = EditorGUILayout.Toggle("IK-Komponenten einrichten", _runIKSetup);
 
             EditorGUILayout.Space(4);
 
@@ -400,10 +398,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
             Debug.Log($"[CharacterAnimationWizard] Character Model ausgetauscht: {_characterModelFBX.name}");
 
-            // IK Setup (Reflection — IK-Package ist optional)
-            if (_runIKSetup)
-                RunIKSetup();
-
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             EditorGUIUtility.PingObject(Selection.activeObject);
         }
@@ -488,10 +482,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             if (prefab != null)
             {
                 Debug.Log($"[CharacterAnimationWizard] Player Prefab erstellt: {_characterModelFBX.name}");
-
-                if (_runIKSetup)
-                    RunIKSetup();
-
                 Selection.activeObject = prefab;
                 EditorGUIUtility.PingObject(prefab);
             }
@@ -519,25 +509,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             motorSo.ApplyModifiedProperties();
 
             Debug.Log($"[CharacterAnimationWizard] CapsuleCollider: Height={height:F2}m, Radius={radius:F2}m");
-        }
-
-        private static void RunIKSetup()
-        {
-            // IK-Package ist optional — Aufruf via Reflection
-            var ikType = System.Type.GetType(
-                "Wiesenwischer.GameKit.CharacterController.IK.Editor.IKSetupWizard, " +
-                "Wiesenwischer.GameKit.CharacterController.IK.Editor");
-
-            if (ikType != null)
-            {
-                var method = ikType.GetMethod("SetupIKOnPrefab",
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                method?.Invoke(null, null);
-            }
-            else
-            {
-                Debug.LogWarning("[CharacterAnimationWizard] IK-Package nicht installiert — IK-Setup übersprungen.");
-            }
         }
 
         #endregion
