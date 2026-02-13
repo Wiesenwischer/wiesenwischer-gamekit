@@ -15,6 +15,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
         [MenuItem("Wiesenwischer/GameKit/Camera/Setup Third Person Camera", false, 200)]
         public static void SetupThirdPersonCamera()
         {
+            // Suche nach Player — ohne Target ist Kamera-Setup sinnlos
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null)
+                player = GameObject.Find("Player");
+
+            if (player == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Kein Player gefunden",
+                    "In der aktuellen Szene wurde kein Player gefunden.\n\n" +
+                    "Bitte zuerst über 'Scenes > Place Player in Scene' einen Player platzieren.",
+                    "OK");
+                return;
+            }
+
             // Finde oder erstelle Main Camera
             var mainCamera = UnityEngine.Camera.main;
             if (mainCamera == null)
@@ -60,7 +75,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
             var config = FindOrCreateCameraConfig();
             if (config != null)
             {
-                // Setze Config via SerializedObject
                 var serializedObject = new SerializedObject(thirdPersonCamera);
                 var configProperty = serializedObject.FindProperty("_config");
                 configProperty.objectReferenceValue = config;
@@ -68,28 +82,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera.Editor
                 Debug.Log("[CameraSetup] CameraConfig zugewiesen.");
             }
 
-            // Suche nach Player
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player == null)
-            {
-                player = GameObject.Find("Player");
-            }
+            // Target zuweisen
+            var targetSo = new SerializedObject(thirdPersonCamera);
+            var targetProperty = targetSo.FindProperty("_target");
+            targetProperty.objectReferenceValue = player.transform;
+            targetSo.ApplyModifiedProperties();
+            Debug.Log($"[CameraSetup] Target gesetzt auf: {player.name}");
 
-            if (player != null)
-            {
-                var serializedObject = new SerializedObject(thirdPersonCamera);
-                var targetProperty = serializedObject.FindProperty("_target");
-                targetProperty.objectReferenceValue = player.transform;
-                serializedObject.ApplyModifiedProperties();
-                Debug.Log($"[CameraSetup] Target gesetzt auf: {player.name}");
-
-                // Positioniere Kamera hinter Player
-                thirdPersonCamera.SnapBehindTarget();
-            }
-            else
-            {
-                Debug.LogWarning("[CameraSetup] Kein Player gefunden. Bitte Target manuell zuweisen.");
-            }
+            // Positioniere Kamera hinter Player
+            thirdPersonCamera.SnapBehindTarget();
 
             // Wähle die Kamera aus
             Selection.activeGameObject = mainCamera.gameObject;
