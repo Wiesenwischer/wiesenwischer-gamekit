@@ -53,7 +53,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
 | 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Abgeschlossen |
-| 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ❌ | Offen |
+| 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ✅ | Offen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
 | 13 | Character | CP: Equipment System | — | ❌ | Offen |
@@ -220,23 +220,21 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 
 ### Phase 22: Landing Roll
 **Branch:** `integration/phase-22-landing-roll`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-22-landing-roll/README.md)
 
 **Ziel:** Neuer Landing-State für Roll bei hartem Aufprall mit Movement-Input — Character rollt in Bewegungsrichtung statt komplett zu stoppen (HardLanding). Konfigurierbarer Trigger-Modus (MovementInput / ButtonPress), omni-direktional.
 
 **Relevante Spezifikationen:**
 - [Landing Roll Spezifikation](../specs/LandingRoll_Spezifikation.md)
 
-**Vorläufige Schritte:**
-- [ ] 22.1 Roll-Animation beschaffen + importieren (Mixamo)
-- [ ] 22.2 `RollTriggerMode` Enum + Config-Erweiterung in `LocomotionConfig`
-- [ ] 22.3 `PlayerRollingState` implementieren
-- [ ] 22.4 `PlayerFallingState` Transition-Logik erweitern
-- [ ] 22.5 `PlayerMovementStateMachine` um RollingState erweitern
-- [ ] 22.6 Animator-State `Roll` + Transitions
-- [ ] 22.7 `CharacterAnimationState.Roll` + AnimationController-Mapping
-- [ ] 22.8 Unit Tests
-- [ ] 22.9 Play Mode Verifikation
+**Schritte:**
+- [ ] [22.1 Roll-Animation beschaffen + importieren](phase-22-landing-roll/22.1-roll-animation-asset.md)
+- [ ] [22.2 RollTriggerMode Enum + Config-Erweiterung](phase-22-landing-roll/22.2-config-erweiterung.md)
+- [ ] [22.3 CharacterAnimationState.Roll + Animator-State](phase-22-landing-roll/22.3-animation-integration.md)
+- [ ] [22.4 PlayerRollingState implementieren](phase-22-landing-roll/22.4-rolling-state.md)
+- [ ] [22.5 StateMachine + FallingState Transition](phase-22-landing-roll/22.5-statemachine-transition.md)
+- [ ] [22.6 Unit Tests](phase-22-landing-roll/22.6-unit-tests.md)
+- [ ] [22.7 Play Mode Verifikation](phase-22-landing-roll/22.7-play-mode-verifikation.md)
 
 ---
 
