@@ -1,21 +1,20 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 {
     /// <summary>
-    /// Editor-Tool zum Erstellen der Animation-Test-Szene.
-    /// Menü: Wiesenwischer > GameKit > Create Animation Test Scene
+    /// Editor-Tool zum Erstellen der Playground-Szene (Umgebung ohne Player).
+    /// Menü: Wiesenwischer > GameKit > Scenes > Create Playground
     /// </summary>
-    public static class AnimationTestSceneCreator
+    public static class PlaygroundSceneCreator
     {
-        private const string PlayerPrefabPath = "Assets/Prefabs/Player.prefab";
-        private const string ScenePath = "Assets/Scenes/AnimationTestScene.unity";
+        private const string ScenePath = "Assets/Scenes/Playground.unity";
         private const string MaterialFolder = "Assets/Materials/TestScene";
 
-        public static void CreateTestScene()
+        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Playground", false, 300)]
+        public static void CreatePlayground()
         {
             // Materials erstellen/laden
             EnsureMaterialFolder();
@@ -98,40 +97,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             slidePlatform.transform.localScale = new Vector3(3f, 0.3f, 3f);
             slidePlatform.GetComponent<Renderer>().sharedMaterial = platformMat;
 
-            // === Player Prefab platzieren ===
-            var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
-            if (playerPrefab != null)
-            {
-                var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
-                player.transform.position = new Vector3(0f, 1f, 0f);
-            }
-            else
-            {
-                Debug.LogWarning($"[AnimationTestScene] Player Prefab nicht gefunden: {PlayerPrefabPath}. " +
-                                 "Bitte zuerst 'Create Player Prefab' ausführen.");
-            }
-
-            // === Kamera positionieren ===
-            var mainCamera = Camera.main;
-            if (mainCamera != null)
-            {
-                mainCamera.transform.position = new Vector3(0f, 3f, -8f);
-                mainCamera.transform.rotation = Quaternion.Euler(15f, 0f, 0f);
-            }
-
             // === Szene speichern ===
             if (!AssetDatabase.IsValidFolder("Assets/Scenes"))
                 AssetDatabase.CreateFolder("Assets", "Scenes");
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            Debug.Log($"[AnimationTestScene] Test-Szene erstellt: {ScenePath}");
-            Debug.Log("[AnimationTestScene] Test-Checkliste:");
-            Debug.Log("  1. Play Mode starten");
-            Debug.Log("  2. Window > Animation > Animator öffnen");
-            Debug.Log("  3. WASD = Laufen, Shift = Sprint, Space = Jump");
-            Debug.Log("  4. Von Plattformen fallen für Landing-Tests");
-            Debug.Log("  5. Steile Rampen (60°) für Slope Sliding, Grenzwinkel-Rampe (47°) für Hysterese-Test");
-            Debug.Log("  6. Von Platform_Above_SteepSlope fallen für Fall→Slide Transition");
+            Debug.Log($"[Playground] Playground-Szene erstellt: {ScenePath}");
+            Debug.Log("[Playground] Enthält nur Umgebung — Player wird über 'Create Test Scene' hinzugefügt.");
         }
 
         private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps, Material stepMat)
@@ -176,7 +148,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var shader = Shader.Find("HDRP/Lit");
             if (shader == null)
             {
-                Debug.LogWarning($"[AnimationTestScene] HDRP/Lit Shader nicht gefunden — verwende Standard-Shader.");
+                Debug.LogWarning("[Playground] HDRP/Lit Shader nicht gefunden — verwende Standard-Shader.");
                 shader = Shader.Find("Standard");
             }
 
@@ -185,6 +157,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             mat.SetColor("_Color", color);
             AssetDatabase.CreateAsset(mat, path);
             return mat;
+        }
+
+        [MenuItem("Wiesenwischer/GameKit/Scenes/Create Playground", true)]
+        private static bool ValidateCreatePlayground()
+        {
+            return !Application.isPlaying;
         }
     }
 }
