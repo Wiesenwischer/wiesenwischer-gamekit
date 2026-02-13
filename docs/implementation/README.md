@@ -235,7 +235,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [x] [22.3 CharacterAnimationState.Roll + Animator-State](phase-22-landing-roll/22.3-animation-integration.md)
 - [x] [22.4 PlayerRollingState implementieren](phase-22-landing-roll/22.4-rolling-state.md)
 - [x] [22.5 StateMachine + FallingState Transition](phase-22-landing-roll/22.5-statemachine-transition.md)
-- [ ] [22.6 Unit Tests](phase-22-landing-roll/22.6-unit-tests.md)
+- [x] [22.6 Unit Tests](phase-22-landing-roll/22.6-unit-tests.md)
 - [ ] [22.7 Play Mode Verifikation](phase-22-landing-roll/22.7-play-mode-verifikation.md)
 
 ---
