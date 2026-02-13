@@ -53,7 +53,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
 | 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Abgeschlossen |
-| 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ✅ | Offen |
+| 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ✅ | In Arbeit |
 | 23 | Animation | Crouching | [Features](phase-23-crouching/README.md) | ✅ | Offen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
@@ -236,7 +236,7 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [x] [22.4 PlayerRollingState implementieren](phase-22-landing-roll/22.4-rolling-state.md)
 - [x] [22.5 StateMachine + FallingState Transition](phase-22-landing-roll/22.5-statemachine-transition.md)
 - [x] [22.6 Unit Tests](phase-22-landing-roll/22.6-unit-tests.md)
-- [ ] [22.7 Play Mode Verifikation](phase-22-landing-roll/22.7-play-mode-verifikation.md)
+- [x] [22.7 Play Mode Verifikation](phase-22-landing-roll/22.7-play-mode-verifikation.md)
 
 ---
 
