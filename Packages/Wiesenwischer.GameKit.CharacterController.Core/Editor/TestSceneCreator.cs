@@ -46,7 +46,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             Undo.RegisterCreatedObjectUndo(player, "Place Player in Scene");
 
             // === Kamera positionieren (falls vorhanden) ===
-            var mainCamera = Camera.main;
+            var mainCamera = UnityEngine.Camera.main;
             if (mainCamera != null)
             {
                 Undo.RecordObject(mainCamera.transform, "Position Camera for Player");
