@@ -225,5 +225,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
         public float StairSpeedReduction { get; set; } = 0.3f;
         public float UphillSpeedPenalty { get; set; } = 0.3f;
         public float DownhillSpeedBonus { get; set; } = 0.1f;
+        public bool RollEnabled { get; set; } = true;
+        public RollTriggerMode RollTriggerMode { get; set; } = RollTriggerMode.MovementInput;
+        public float RollSpeedModifier { get; set; } = 1.0f;
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
 {
@@ -196,5 +197,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
 
         /// <summary>Recovery-Zeit bei harter Landung (Sekunden).</summary>
         float HardLandingDuration { get; }
+
+        // Landing Roll
+        /// <summary>Ob Landing Roll aktiviert ist (false = immer HardLanding).</summary>
+        bool RollEnabled { get; }
+
+        /// <summary>Trigger-Modus: MovementInput (automatisch) oder ButtonPress (Taste).</summary>
+        RollTriggerMode RollTriggerMode { get; }
+
+        /// <summary>Geschwindigkeits-Multiplikator relativ zu RunSpeed (0.5-2.0).</summary>
+        float RollSpeedModifier { get; }
     }
 }

@@ -20,6 +20,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private bool _stepDetectionFoldout = false;
         private bool _slopeSpeedFoldout = true;
         private bool _slopeSlidingFoldout = false;
+        private bool _landingRollFoldout = false;
 
         // Serialized Properties
         private SerializedProperty _walkSpeed;
@@ -57,6 +58,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         private SerializedProperty _slopeSlideSpeed;
         private SerializedProperty _useSlopeDependentSlideSpeed;
+
+        private SerializedProperty _rollEnabled;
+        private SerializedProperty _rollTriggerMode;
+        private SerializedProperty _rollSpeedModifier;
 
         private void OnEnable()
         {
@@ -103,6 +108,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Slope Sliding
             _slopeSlideSpeed = serializedObject.FindProperty("_slopeSlideSpeed");
             _useSlopeDependentSlideSpeed = serializedObject.FindProperty("_useSlopeDependentSlideSpeed");
+
+            // Landing Roll
+            _rollEnabled = serializedObject.FindProperty("_rollEnabled");
+            _rollTriggerMode = serializedObject.FindProperty("_rollTriggerMode");
+            _rollSpeedModifier = serializedObject.FindProperty("_rollSpeedModifier");
         }
 
         public override void OnInspectorGUI()
@@ -241,6 +251,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
                 EditorGUI.indentLevel++;
                 DrawPropertyWithTooltip(_slopeSlideSpeed, "Slide Speed", "Base speed when sliding on steep slopes (m/s)");
                 EditorGUILayout.PropertyField(_useSlopeDependentSlideSpeed, new GUIContent("Dynamic Speed", "Scale speed with slope steepness"));
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
+            // Landing Roll Section
+            _landingRollFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_landingRollFoldout, "Landing Roll");
+            if (_landingRollFoldout)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(_rollEnabled, new GUIContent("Enabled", "Enable/disable landing roll (false = always HardLanding)"));
+                using (new EditorGUI.DisabledScope(!(_rollEnabled?.boolValue ?? true)))
+                {
+                    DrawPropertyWithTooltip(_rollTriggerMode, "Trigger Mode", "MovementInput = auto roll with stick input, ButtonPress = requires dodge button");
+                    DrawPropertyWithTooltip(_rollSpeedModifier, "Speed Modifier", "Roll speed relative to RunSpeed (0.5-2.0)");
+                }
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
@@ -384,6 +409,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Slope Sliding
             _slopeSlideSpeed.floatValue = 8f;
             _useSlopeDependentSlideSpeed.boolValue = true;
+
+            // Landing Roll
+            _rollEnabled.boolValue = true;
+            _rollTriggerMode.enumValueIndex = 0; // MovementInput
+            _rollSpeedModifier.floatValue = 1.0f;
 
             serializedObject.ApplyModifiedProperties();
         }
