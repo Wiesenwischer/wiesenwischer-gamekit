@@ -170,14 +170,27 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
 #endif
 
             // Body Offset berechnen — nur wenn IK aktiv (terrainWeight > 0)
+            // Gelockte Füße ausschließen: ihr animiertes Delta ist irrelevant
+            var footLock = _ikManager.GetModule<FootLock>();
+            bool useLeft = _leftFootHit && !(footLock != null && footLock.IsLeftFootLocked);
+            bool useRight = _rightFootHit && !(footLock != null && footLock.IsRightFootLocked);
+
             float targetBodyOffset = 0f;
-            if (_leftFootHit && _rightFootHit)
+            if (useLeft && useRight)
             {
                 float leftDelta = _leftFootTarget.y - leftFoot.y;
                 float rightDelta = _rightFootTarget.y - rightFoot.y;
                 targetBodyOffset = Mathf.Min(leftDelta, rightDelta);
-                targetBodyOffset = Mathf.Clamp(targetBodyOffset, -_maxFootAdjustment, _maxBodyUpOffset);
             }
+            else if (useLeft)
+            {
+                targetBodyOffset = _leftFootTarget.y - leftFoot.y;
+            }
+            else if (useRight)
+            {
+                targetBodyOffset = _rightFootTarget.y - rightFoot.y;
+            }
+            targetBodyOffset = Mathf.Clamp(targetBodyOffset, -_maxFootAdjustment, _maxBodyUpOffset);
 
             _currentBodyOffset = Mathf.SmoothDamp(
                 _currentBodyOffset, targetBodyOffset * _terrainWeight, ref _bodyOffsetVelocity, _bodyOffsetSmooth);
@@ -186,6 +199,11 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         public void ProcessIK(Animator animator, int layerIndex)
         {
             if (layerIndex != 0) return;
+
+            // FootLock-Referenz: Gelockte Füße nicht anfassen
+            var footLock = _ikManager.GetModule<FootLock>();
+            bool leftLocked = footLock != null && footLock.IsLeftFootLocked;
+            bool rightLocked = footLock != null && footLock.IsRightFootLocked;
 
             // IK-Weight × Locomotion-Blend × Terrain-Varianz
             float effectiveWeight = _weight * _locomotionBlendWeight * _terrainWeight;
@@ -211,8 +229,8 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             if (effectiveWeight < 0.001f)
                 return;
 
-            // Left Foot
-            if (_leftFootHit)
+            // Left Foot — nur wenn NICHT gelockt
+            if (_leftFootHit && !leftLocked)
             {
                 float leftDelta = (_leftFootTarget - animator.GetIKPosition(AvatarIKGoal.LeftFoot)).magnitude;
                 float leftFootWeight = effectiveWeight * Mathf.InverseLerp(0f, _footDeadZone, leftDelta);
@@ -222,14 +240,14 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                 animator.SetIKPosition(AvatarIKGoal.LeftFoot, ClampFootTarget(_leftFootTarget, animator, AvatarIKGoal.LeftFoot));
                 animator.SetIKRotation(AvatarIKGoal.LeftFoot, _leftFootRotation);
             }
-            else
+            else if (!leftLocked)
             {
                 animator.SetIKPositionWeight(AvatarIKGoal.LeftFoot, 0f);
                 animator.SetIKRotationWeight(AvatarIKGoal.LeftFoot, 0f);
             }
 
-            // Right Foot
-            if (_rightFootHit)
+            // Right Foot — nur wenn NICHT gelockt
+            if (_rightFootHit && !rightLocked)
             {
                 float rightDelta = (_rightFootTarget - animator.GetIKPosition(AvatarIKGoal.RightFoot)).magnitude;
                 float rightFootWeight = effectiveWeight * Mathf.InverseLerp(0f, _footDeadZone, rightDelta);
@@ -239,7 +257,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                 animator.SetIKPosition(AvatarIKGoal.RightFoot, ClampFootTarget(_rightFootTarget, animator, AvatarIKGoal.RightFoot));
                 animator.SetIKRotation(AvatarIKGoal.RightFoot, _rightFootRotation);
             }
-            else
+            else if (!rightLocked)
             {
                 animator.SetIKPositionWeight(AvatarIKGoal.RightFoot, 0f);
                 animator.SetIKRotationWeight(AvatarIKGoal.RightFoot, 0f);
