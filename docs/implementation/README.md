@@ -54,7 +54,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
 | 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Abgeschlossen |
 | 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ✅ | Abgeschlossen |
-| 23 | Animation | Crouching | [Features](phase-23-crouching/README.md) | ✅ | Offen |
+| 23 | Animation | Crouching | [Features](phase-23-crouching/README.md) | ✅ | In Arbeit |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
 | 13 | Character | CP: Equipment System | — | ❌ | Offen |
@@ -255,13 +255,13 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 
 **Schritte:**
 - [ ] [23.1 Crouch-Animationen beschaffen + importieren](phase-23-crouching/23.1-crouch-animation-assets.md)
-- [ ] [23.2 ILocomotionConfig + LocomotionConfig erweitern](phase-23-crouching/23.2-config-erweiterung.md)
-- [ ] [23.3 Input-Integration (CrouchTogglePressed)](phase-23-crouching/23.3-input-integration.md)
-- [ ] [23.4 Animation-Integration (Crouch Blend Tree)](phase-23-crouching/23.4-animation-integration.md)
-- [ ] [23.5 Capsule-Höhen-Transition in CharacterLocomotion](phase-23-crouching/23.5-capsule-transition.md)
-- [ ] [23.6 PlayerCrouchingState implementieren](phase-23-crouching/23.6-crouching-state.md)
-- [ ] [23.7 StateMachine + GroundedState Transition](phase-23-crouching/23.7-statemachine-transition.md)
-- [ ] [23.8 Unit Tests](phase-23-crouching/23.8-unit-tests.md)
+- [x] [23.2 ILocomotionConfig + LocomotionConfig erweitern](phase-23-crouching/23.2-config-erweiterung.md)
+- [x] [23.3 Input-Integration (CrouchTogglePressed)](phase-23-crouching/23.3-input-integration.md)
+- [x] [23.4 Animation-Integration (Crouch Blend Tree)](phase-23-crouching/23.4-animation-integration.md)
+- [x] [23.5 Capsule-Höhen-Transition in CharacterLocomotion](phase-23-crouching/23.5-capsule-transition.md)
+- [x] [23.6 PlayerCrouchingState implementieren](phase-23-crouching/23.6-crouching-state.md)
+- [x] [23.7 StateMachine + GroundedState Transition](phase-23-crouching/23.7-statemachine-transition.md)
+- [x] [23.8 Unit Tests](phase-23-crouching/23.8-unit-tests.md)
 - [ ] [23.9 Play Mode Verifikation](phase-23-crouching/23.9-play-mode-verifikation.md)
 
 ---
