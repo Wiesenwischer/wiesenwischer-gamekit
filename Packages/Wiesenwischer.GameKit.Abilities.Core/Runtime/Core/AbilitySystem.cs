@@ -12,7 +12,7 @@ namespace Wiesenwischer.GameKit.Abilities.Core
     /// Handles registration, activation, deactivation, cooldowns and priority.
     /// Placed on the Player root alongside PlayerController.
     /// </summary>
-    public class AbilitySystem : MonoBehaviour
+    public class AbilitySystem : MonoBehaviour, IAbilitySystem
     {
         // === Events ===
         public event Action<IAbility> OnAbilityActivated;
