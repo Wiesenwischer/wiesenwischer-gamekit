@@ -53,7 +53,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
 | 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Abgeschlossen |
-| 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ✅ | In Arbeit |
+| 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ✅ | Abgeschlossen |
 | 23 | Animation | Crouching | [Features](phase-23-crouching/README.md) | ✅ | Offen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
