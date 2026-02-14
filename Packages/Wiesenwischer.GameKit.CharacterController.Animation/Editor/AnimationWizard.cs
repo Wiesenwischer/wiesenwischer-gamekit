@@ -30,6 +30,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private GameObject _animMediumStop;
         private GameObject _animHardStop;
         private GameObject _animSlide;
+        private GameObject _animRoll;
 
         // --- UI State ---
         private Vector2 _scrollPos;
@@ -102,6 +103,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 _animSoftLand = FbxSlot("Soft Land", _animSoftLand);
                 _animHardLand = FbxSlot("Hard Land", _animHardLand);
                 _animSlide = FbxSlot("Slide", _animSlide);
+                _animRoll = FbxSlot("Roll", _animRoll);
                 EditorGUI.indentLevel--;
             }
 
@@ -162,7 +164,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 controller != null ? $"{controller.layers[0].stateMachine.states.Length} States" : null);
 
             int count = CountAnimSlots();
-            StatusRow("Animation FBXs", count > 0, $"{count}/12 zugewiesen");
+            StatusRow("Animation FBXs", count > 0, $"{count}/13 zugewiesen");
 
             // Character Model aus Prefab anzeigen (read-only)
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabCreator.OutputPath);
@@ -204,7 +206,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         {
             return _animIdle || _animWalk || _animRun || _animSprint ||
                    _animJump || _animFall || _animSoftLand || _animHardLand ||
-                   _animLightStop || _animMediumStop || _animHardStop || _animSlide;
+                   _animLightStop || _animMediumStop || _animHardStop || _animSlide ||
+                   _animRoll;
         }
 
         private int CountAnimSlots()
@@ -222,6 +225,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             if (_animMediumStop) c++;
             if (_animHardStop) c++;
             if (_animSlide) c++;
+            if (_animRoll) c++;
             return c;
         }
 
@@ -243,12 +247,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             _animMediumStop = LoadFbxAsset("Anim_MediumStop");
             _animHardStop = LoadFbxAsset("Anim_HardStop");
             _animSlide = LoadFbxAsset("Anim_Slide");
+            _animRoll = LoadFbxAsset("Anim_Roll");
 
             // Fallback: Anim_Land als SoftLand
             if (_animSoftLand == null)
                 _animSoftLand = LoadFbxAsset("Anim_Land");
 
-            Debug.Log($"[AnimationWizard] Auto-Erkennung: {CountAnimSlots()}/12 FBXs gefunden.");
+            Debug.Log($"[AnimationWizard] Auto-Erkennung: {CountAnimSlots()}/13 FBXs gefunden.");
         }
 
         private static GameObject LoadFbxAsset(string fbxName)
@@ -287,6 +292,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             configured += ConfigureAnim(_animSoftLand, sourceAvatar, false, true, "SoftLand");
             configured += ConfigureAnim(_animHardLand, sourceAvatar, false, true, "HardLand");
             configured += ConfigureAnim(_animSlide, sourceAvatar, true, false, "Slide");
+            configured += ConfigureAnim(_animRoll, sourceAvatar, false, false, "Roll");
 
             // Stopping (no loop, grounded → Feet, kein Bake XZ)
             configured += ConfigureAnim(_animLightStop, sourceAvatar, false, false, "LightStop", bakePositionXZ: false);
@@ -453,7 +459,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             }
 
             // === Einzelne States ===
-            string[] requiredStates = { "Jump", "Fall", "SoftLand", "HardLand", "Slide",
+            string[] requiredStates = { "Jump", "Fall", "SoftLand", "HardLand", "Slide", "Roll",
                                         "LightStop", "MediumStop", "HardStop" };
             foreach (string stateName in requiredStates)
                 EnsureStateExists(rootSM, stateName);
@@ -463,6 +469,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             TryAssignStateMotion(rootSM, "SoftLand", _animSoftLand);
             TryAssignStateMotion(rootSM, "HardLand", _animHardLand);
             TryAssignStateMotion(rootSM, "Slide", _animSlide);
+            TryAssignStateMotion(rootSM, "Roll", _animRoll);
             TryAssignStateMotion(rootSM, "LightStop", _animLightStop);
             TryAssignStateMotion(rootSM, "MediumStop", _animMediumStop);
             TryAssignStateMotion(rootSM, "HardStop", _animHardStop);
