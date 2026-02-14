@@ -31,7 +31,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | Offen |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
-| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8 | Abgeschlossen |
+| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24 | In Arbeit |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [Character Platform](#character-platform) | 11–19 | Offen |
 
@@ -49,6 +49,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
+| 24 | IK | FootIK Terrain-Adaptive Verbesserungen | — | ❌ | Offen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
@@ -86,7 +87,7 @@ MMO-Netzwerk
                           Phase 8 (IK Target Sync benötigt IK-Module)
 
 Natürliche Bewegung (IK)
-  Phase 4 ──> Phase 20 (Grounding Smoother) ──> Phase 8
+  Phase 4 ──> Phase 20 (Grounding Smoother) ──> Phase 8 ──> Phase 24 (FootIK Verbesserungen)
 
 Reiten, Gleiten & Schwimmen
   Phase 6 ──> Phase 10
@@ -367,6 +368,25 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [x] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
 - [x] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
 - [x] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
+
+---
+
+### Phase 24: FootIK Terrain-Adaptive Verbesserungen
+**Branch:** `integration/phase-24-footik-improvements`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** FootIK verbessern, damit auf flachem Boden keine gebeugten Knie entstehen. Drei gezielte Fixes: Body-Offset darf leicht nach oben, Terrain-Varianz-basierter IK-Weight und Delta-basierte Dead Zone pro Fuß.
+
+**Relevante Spezifikationen:**
+- [FootIK Verbesserungen Spezifikation](../specs/FootIK_Verbesserungen_Spezifikation.md)
+- [GameKit IK Spezifikation](../specs/GameKit_IK_Spezifikation.md)
+
+**Schritte (vorläufig):**
+- [ ] 24.1 Fix 1: Body-Offset darf leicht nach oben (`_maxBodyUpOffset`)
+- [ ] 24.2 Fix 2: Terrain-Varianz-basierter IK-Weight (`_terrainVarianceThreshold`, Normalen speichern)
+- [ ] 24.3 Fix 3: Delta-basierte Dead Zone pro Fuß (`_footDeadZone`)
+- [ ] 24.4 Unit Tests (Terrain-Varianz, Body-Offset, Dead Zone)
+- [ ] 24.5 Play Mode Verifikation
 
 ---
 
