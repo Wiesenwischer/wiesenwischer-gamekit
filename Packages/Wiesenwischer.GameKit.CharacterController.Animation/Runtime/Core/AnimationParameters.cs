@@ -34,6 +34,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         public static readonly int FallStateHash = Animator.StringToHash("Fall");
         public static readonly int SoftLandStateHash = Animator.StringToHash("SoftLand");
         public static readonly int HardLandStateHash = Animator.StringToHash("HardLand");
+        public static readonly int RollStateHash = Animator.StringToHash("Roll");
         public static readonly int LightStopStateHash = Animator.StringToHash("LightStop");
         public static readonly int MediumStopStateHash = Animator.StringToHash("MediumStop");
         public static readonly int HardStopStateHash = Animator.StringToHash("HardStop");

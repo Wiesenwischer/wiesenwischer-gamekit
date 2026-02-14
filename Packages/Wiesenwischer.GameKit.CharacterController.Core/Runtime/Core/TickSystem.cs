@@ -104,10 +104,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 ticksExecuted++;
             }
 
-            // Wenn zu viel akkumuliert wurde, clampe
+            // Wenn zu viel akkumuliert wurde, clampe (normal bei Editor-Frame-Spikes)
             if (_accumulator > _tickDelta * 2)
             {
-                Debug.LogWarning($"[TickSystem] Accumulator overflow: {_accumulator:F3}s. Clamping.");
                 _accumulator = _tickDelta;
             }
 

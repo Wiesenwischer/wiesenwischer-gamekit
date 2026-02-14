@@ -20,6 +20,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private bool _stepDetectionFoldout = false;
         private bool _slopeSpeedFoldout = true;
         private bool _slopeSlidingFoldout = false;
+        private bool _landingFoldout = true;
+        private bool _landingRollFoldout = false;
 
         // Serialized Properties
         private SerializedProperty _walkSpeed;
@@ -57,6 +59,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 
         private SerializedProperty _slopeSlideSpeed;
         private SerializedProperty _useSlopeDependentSlideSpeed;
+
+        private SerializedProperty _softLandingThreshold;
+        private SerializedProperty _hardLandingThreshold;
+        private SerializedProperty _softLandingDuration;
+        private SerializedProperty _hardLandingDuration;
+
+        private SerializedProperty _rollEnabled;
+        private SerializedProperty _rollTriggerMode;
+        private SerializedProperty _rollSpeedModifier;
 
         private void OnEnable()
         {
@@ -103,6 +114,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Slope Sliding
             _slopeSlideSpeed = serializedObject.FindProperty("_slopeSlideSpeed");
             _useSlopeDependentSlideSpeed = serializedObject.FindProperty("_useSlopeDependentSlideSpeed");
+
+            // Landing
+            _softLandingThreshold = serializedObject.FindProperty("_softLandingThreshold");
+            _hardLandingThreshold = serializedObject.FindProperty("_hardLandingThreshold");
+            _softLandingDuration = serializedObject.FindProperty("_softLandingDuration");
+            _hardLandingDuration = serializedObject.FindProperty("_hardLandingDuration");
+
+            // Landing Roll
+            _rollEnabled = serializedObject.FindProperty("_rollEnabled");
+            _rollTriggerMode = serializedObject.FindProperty("_rollTriggerMode");
+            _rollSpeedModifier = serializedObject.FindProperty("_rollSpeedModifier");
         }
 
         public override void OnInspectorGUI()
@@ -245,6 +267,38 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
 
+            // Landing Section
+            _landingFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_landingFoldout, "Landing");
+            if (_landingFoldout)
+            {
+                EditorGUI.indentLevel++;
+                DrawPropertyWithTooltip(_softLandingThreshold, "Soft Landing Threshold", "Landing speed below this = no recovery pause (m/s)");
+                DrawPropertyWithTooltip(_hardLandingThreshold, "Hard Landing Threshold", "Landing speed above this = hard landing or roll (m/s)");
+                DrawPropertyWithTooltip(_softLandingDuration, "Soft Landing Duration", "Recovery time for soft landing (s)");
+                DrawPropertyWithTooltip(_hardLandingDuration, "Hard Landing Duration", "Recovery time for hard landing (s)");
+
+                // Preview
+                DrawLandingPreview();
+
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
+            // Landing Roll Section
+            _landingRollFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_landingRollFoldout, "Landing Roll");
+            if (_landingRollFoldout)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(_rollEnabled, new GUIContent("Enabled", "Enable/disable landing roll (false = always HardLanding)"));
+                using (new EditorGUI.DisabledScope(!(_rollEnabled?.boolValue ?? true)))
+                {
+                    DrawPropertyWithTooltip(_rollTriggerMode, "Trigger Mode", "MovementInput = auto roll with stick input, ButtonPress = requires dodge button");
+                    DrawPropertyWithTooltip(_rollSpeedModifier, "Speed Modifier", "Roll speed relative to RunSpeed (0.5-2.0)");
+                }
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
             serializedObject.ApplyModifiedProperties();
         }
 
@@ -343,6 +397,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             EditorGUILayout.EndVertical();
         }
 
+        private void DrawLandingPreview()
+        {
+            float gravity = _gravity?.floatValue ?? 20f;
+            float softThreshold = _softLandingThreshold?.floatValue ?? 5f;
+            float hardThreshold = _hardLandingThreshold?.floatValue ?? 15f;
+
+            // Benötigte Fallhöhe: h = v² / (2g)
+            float softHeight = softThreshold * softThreshold / (2f * gravity);
+            float hardHeight = hardThreshold * hardThreshold / (2f * gravity);
+
+            EditorGUILayout.Space(3);
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField("Landing Preview", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"Soft Landing ab: {softHeight:F1}m Fallhöhe ({softThreshold:F0} m/s)");
+            EditorGUILayout.LabelField($"Hard Landing ab: {hardHeight:F1}m Fallhöhe ({hardThreshold:F0} m/s)");
+            EditorGUILayout.EndVertical();
+        }
+
         private void ResetToDefaults()
         {
             // Ground Movement
@@ -384,6 +456,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             // Slope Sliding
             _slopeSlideSpeed.floatValue = 8f;
             _useSlopeDependentSlideSpeed.boolValue = true;
+
+            // Landing
+            _softLandingThreshold.floatValue = 5f;
+            _hardLandingThreshold.floatValue = 15f;
+            _softLandingDuration.floatValue = 0.1f;
+            _hardLandingDuration.floatValue = 0.4f;
+
+            // Landing Roll
+            _rollEnabled.boolValue = true;
+            _rollTriggerMode.enumValueIndex = 0; // MovementInput
+            _rollSpeedModifier.floatValue = 1.0f;
 
             serializedObject.ApplyModifiedProperties();
         }

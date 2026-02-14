@@ -49,7 +49,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
         private void Awake()
         {
             _motor = GetComponent<CharacterMotor>();
+            ResolveModelTransform();
             if (_debugLog) Debug.Log($"[GS] Awake — motor={_motor != null} modelTransform={_modelTransform != null}");
+        }
+
+        /// <summary>
+        /// Findet das Model-Transform automatisch wenn nicht manuell zugewiesen.
+        /// Sucht das erste Child mit Animator-Komponente.
+        /// </summary>
+        private void ResolveModelTransform()
+        {
+            if (_modelTransform != null) return;
+
+            var animator = GetComponentInChildren<Animator>();
+            if (animator != null && animator.transform != transform)
+            {
+                _modelTransform = animator.transform;
+                if (_debugLog) Debug.Log($"[GS] Auto-resolved modelTransform: {_modelTransform.name}");
+            }
+            else
+            {
+                Debug.LogWarning("[GroundingSmoother] Kein Model-Transform gefunden. " +
+                    "Animator-Komponente auf Child-Object erwartet.", this);
+            }
         }
 
         private void OnEnable()

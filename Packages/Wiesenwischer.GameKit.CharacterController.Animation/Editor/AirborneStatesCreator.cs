@@ -25,6 +25,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var fallClip = LoadClipFromFbx("Anim_Fall");
             var landClip = LoadClipFromFbx("Anim_Land");
             var hardLandClip = LoadClipFromFbx("Anim_HardLand");
+            var rollClip = LoadClipFromFbx("Anim_Roll");
 
             if (jumpClip == null || fallClip == null || landClip == null)
             {
@@ -36,6 +37,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             {
                 Debug.LogWarning("[AirborneStatesCreator] Anim_HardLand.fbx nicht gefunden — verwende Anim_Land als Fallback für HardLand.");
                 hardLandClip = landClip;
+            }
+
+            if (rollClip == null)
+            {
+                Debug.LogWarning("[AirborneStatesCreator] Anim_Roll.fbx nicht gefunden — Roll State wird übersprungen.");
             }
 
             var rootStateMachine = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
@@ -54,6 +60,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             RemoveStateIfExists(rootStateMachine, "Fall");
             RemoveStateIfExists(rootStateMachine, "SoftLand");
             RemoveStateIfExists(rootStateMachine, "HardLand");
+            RemoveStateIfExists(rootStateMachine, "Roll");
             RemoveStateIfExists(rootStateMachine, "Slide");
             RemoveTransitionsToMissing(locomotionState);
 
@@ -78,6 +85,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             hardLandState.writeDefaultValues = false;
             hardLandState.iKOnFeet = true;
 
+            if (rollClip != null)
+            {
+                var rollState = rootStateMachine.AddState("Roll");
+                rollState.motion = rollClip;
+                rollState.writeDefaultValues = false;
+                rollState.iKOnFeet = true;
+            }
+
             locomotionState.writeDefaultValues = false;
 
             // Slide State (Motion optional — wird über Anim_Slide.fbx zugewiesen)
@@ -93,7 +108,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
-            Debug.Log("[AirborneStatesCreator] Airborne States erstellt (CrossFade-Architektur). " +
+            Debug.Log("[AirborneStatesCreator] Airborne States erstellt (CrossFade-Architektur, inkl. Roll). " +
                       "State Machine steuert Animator direkt via PlayState() in OnEnter.");
         }
 

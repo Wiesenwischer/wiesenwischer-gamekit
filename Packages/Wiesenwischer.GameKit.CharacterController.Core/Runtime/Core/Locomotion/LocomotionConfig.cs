@@ -188,6 +188,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Tooltip("Recovery-Zeit bei harter Landung (Sekunden)")]
         [SerializeField] private float _hardLandingDuration = 0.4f;
 
+        [Header("Landing Roll")]
+        [Tooltip("Roll aktivieren/deaktivieren (false = immer HardLanding)")]
+        [SerializeField] private bool _rollEnabled = true;
+
+        [Tooltip("Trigger-Modus: MovementInput (automatisch) oder ButtonPress (Taste)")]
+        [SerializeField] private RollTriggerMode _rollTriggerMode = RollTriggerMode.MovementInput;
+
+        [Tooltip("Geschwindigkeits-Multiplikator relativ zu RunSpeed (0.5-2.0)")]
+        [Range(0.5f, 2.0f)]
+        [SerializeField] private float _rollSpeedModifier = 1.0f;
+
         // Interface Implementation
         public float WalkSpeed => _walkSpeed;
         public float RunSpeed => _runSpeed;
@@ -239,6 +250,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float HardLandingThreshold => _hardLandingThreshold;
         public float SoftLandingDuration => _softLandingDuration;
         public float HardLandingDuration => _hardLandingDuration;
+        public bool RollEnabled => _rollEnabled;
+        public RollTriggerMode RollTriggerMode => _rollTriggerMode;
+        public float RollSpeedModifier => _rollSpeedModifier;
 
         /// <summary>
         /// Berechnet die initiale Sprunggeschwindigkeit basierend auf Sprunghöhe und -dauer.

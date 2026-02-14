@@ -231,5 +231,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
         public bool CanJumpFromSlide { get; set; } = true;
         public float SlideJumpForceMultiplier { get; set; } = 0.7f;
         public float MinSlideTime { get; set; } = 0.2f;
+        public bool RollEnabled { get; set; } = true;
+        public RollTriggerMode RollTriggerMode { get; set; } = RollTriggerMode.MovementInput;
+        public float RollSpeedModifier { get; set; } = 1.0f;
     }
 }

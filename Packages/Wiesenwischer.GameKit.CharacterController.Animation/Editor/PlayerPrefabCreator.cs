@@ -5,6 +5,7 @@ using Wiesenwischer.GameKit.CharacterController.Core;
 using Wiesenwischer.GameKit.CharacterController.Core.Input;
 using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 using Wiesenwischer.GameKit.CharacterController.Core.Motor;
+using Wiesenwischer.GameKit.CharacterController.Core.Visual;
 
 namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 {
@@ -18,6 +19,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             "Packages/Wiesenwischer.GameKit.CharacterController.Animation/Resources/AnimatorControllers/CharacterAnimatorController.controller";
 
         private const string LocomotionConfigPath = "Assets/Config/DefaultLocomotionConfig.asset";
+        private const string TransitionConfigPath = "Assets/Config/DefaultAnimationTransitionConfig.asset";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         public const string OutputPath = "Assets/Prefabs/Player.prefab";
 
@@ -99,10 +101,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             animator.updateMode = AnimatorUpdateMode.Normal;
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
 
+            var transitionConfig = AssetDatabase.LoadAssetAtPath<AnimationTransitionConfig>(TransitionConfigPath);
+
             var bridge = model.AddComponent<AnimatorParameterBridge>();
             var bridgeSo = new SerializedObject(bridge);
             bridgeSo.FindProperty("_playerController").objectReferenceValue = playerController;
+            if (transitionConfig != null)
+                bridgeSo.FindProperty("_transitionConfig").objectReferenceValue = transitionConfig;
             bridgeSo.ApplyModifiedProperties();
+
+            // === GroundingSmoother ===
+            var smoother = root.AddComponent<GroundingSmoother>();
+            var smootherSo = new SerializedObject(smoother);
+            smootherSo.FindProperty("_modelTransform").objectReferenceValue = model.transform;
+            smootherSo.ApplyModifiedProperties();
 
             if (adjustCapsule)
                 AdjustCapsule(root, model);
@@ -180,10 +192,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             newAnimator.updateMode = AnimatorUpdateMode.Normal;
             newAnimator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
 
+            var transitionConfig = AssetDatabase.LoadAssetAtPath<AnimationTransitionConfig>(TransitionConfigPath);
+
             var bridge = newModel.AddComponent<AnimatorParameterBridge>();
             var bridgeSo = new SerializedObject(bridge);
             bridgeSo.FindProperty("_playerController").objectReferenceValue = playerController;
+            if (transitionConfig != null)
+                bridgeSo.FindProperty("_transitionConfig").objectReferenceValue = transitionConfig;
             bridgeSo.ApplyModifiedProperties();
+
+            // GroundingSmoother: _modelTransform auf neues Modell zeigen
+            var smoother = prefabRoot.GetComponent<GroundingSmoother>();
+            if (smoother != null)
+            {
+                var smootherSo = new SerializedObject(smoother);
+                smootherSo.FindProperty("_modelTransform").objectReferenceValue = newModel.transform;
+                smootherSo.ApplyModifiedProperties();
+            }
 
             if (adjustCapsule)
                 AdjustCapsule(prefabRoot, newModel);
