@@ -24,10 +24,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         private InputAction _sprintAction;
         private InputAction _dashAction;
         private InputAction _walkToggleAction;
+        private InputAction _crouchToggleAction;
 
         private bool _jumpStarted;
         private bool _dashStarted;
         private bool _walkToggleStarted;
+        private bool _crouchToggleStarted;
 
         #region IMovementInputProvider
 
@@ -67,6 +69,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             }
         }
 
+        public bool CrouchTogglePressed
+        {
+            get
+            {
+                if (!_isActive || !_crouchToggleStarted) return false;
+                _crouchToggleStarted = false;
+                return true;
+            }
+        }
+
         public bool IsActive => _isActive && enabled;
 
         public void UpdateInput()
@@ -78,6 +90,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             _jumpStarted = false;
             _dashStarted = false;
             _walkToggleStarted = false;
+            _crouchToggleStarted = false;
         }
 
         #endregion
@@ -107,6 +120,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             _sprintAction = _actionMap.FindAction("Sprint");
             _dashAction = _actionMap.FindAction("Dash");
             _walkToggleAction = _actionMap.FindAction("WalkToggle");
+            _crouchToggleAction = _actionMap.FindAction("Crouch");
 
             if (_moveAction == null)
                 Debug.LogError($"[PlayerInputProvider] Move-Action nicht in ActionMap '{_actionMapName}'!");
@@ -114,6 +128,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             if (_jumpAction != null) _jumpAction.started += OnJumpStarted;
             if (_dashAction != null) _dashAction.started += OnDashStarted;
             if (_walkToggleAction != null) _walkToggleAction.started += OnWalkToggleStarted;
+            if (_crouchToggleAction != null) _crouchToggleAction.started += OnCrouchToggleStarted;
 
             _actionMap.Enable();
         }
@@ -123,6 +138,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             if (_jumpAction != null) _jumpAction.started -= OnJumpStarted;
             if (_dashAction != null) _dashAction.started -= OnDashStarted;
             if (_walkToggleAction != null) _walkToggleAction.started -= OnWalkToggleStarted;
+            if (_crouchToggleAction != null) _crouchToggleAction.started -= OnCrouchToggleStarted;
 
             _actionMap?.Disable();
         }
@@ -146,6 +162,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             _walkToggleStarted = true;
         }
 
+        private void OnCrouchToggleStarted(InputAction.CallbackContext context)
+        {
+            _crouchToggleStarted = true;
+        }
+
         #endregion
 
         #region Public Methods
@@ -164,6 +185,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             if (SprintHeld) buttons |= InputButtons.Sprint;
             if (_dashStarted) buttons |= InputButtons.Dash;
             if (_walkToggleStarted) buttons |= InputButtons.Walk;
+            if (_crouchToggleStarted) buttons |= InputButtons.Crouch;
 
             return new InputSnapshot
             {
