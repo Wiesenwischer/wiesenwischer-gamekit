@@ -1,6 +1,6 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-11
+> **Letzte Aktualisierung:** 2026-02-13
 > **Status:** In Entwicklung
 
 ---
@@ -28,7 +28,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 | Epic | Phasen | Status |
 |------|--------|--------|
-| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–22 | In Arbeit |
+| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | In Arbeit |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | Offen |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8 | Offen |
@@ -48,12 +48,13 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Offen |
 | 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
-| 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
+| 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Offen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
-| 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Offen |
-| 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Offen |
+| 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
+| 21 | Animation | Slope Sliding | [Features](phase-21-slope-sliding/README.md) | ✅ | Abgeschlossen |
 | 22 | Animation | Landing Roll | [Features](phase-22-landing-roll/README.md) | ✅ | Offen |
+| 23 | Animation | Crouching | [Features](phase-23-crouching/README.md) | ✅ | Offen |
 | 11 | Character | CP: Core Data Model & Catalogs | — | ❌ | Offen |
 | 12 | Character | CP: Builder Pipeline & Assembly Graph | — | ❌ | Offen |
 | 13 | Character | CP: Equipment System | — | ❌ | Offen |
@@ -71,13 +72,18 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 ```
 Lebendige Charaktere (Animation)
   Phase 1 ──> Phase 2 ──> Phase 3 ──> Phase 4 ──> Phase 21 (Slope Sliding)
-                                                └──> Phase 22 (Landing Roll)
+                                                ├──> Phase 22 (Landing Roll)
+                                                └──> Phase 23 (Crouching)
 
 Fähigkeiten & Action Combat
   Phase 4 ──> Phase 5 ──> Phase 9
+                             ↑
+                          Phase 8 (Hand IK benötigt IK-Infrastruktur)
 
 MMO-Netzwerk
   Phase 5 ──> Phase 6 ──> Phase 7
+                             ↑
+                          Phase 8 (IK Target Sync benötigt IK-Module)
 
 Natürliche Bewegung (IK)
   Phase 4 ──> Phase 20 (Grounding Smoother) ──> Phase 8
@@ -190,10 +196,10 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [GroundingSmoother Spezifikation](../specs/GroundingSmoother_Spezifikation.md)
 
 **Schritte:**
-- [ ] [20.1 GroundingSmoother Komponente](phase-20-grounding-smoother/20.1-grounding-smoother-component.md)
-- [ ] [20.2 Unit Tests](phase-20-grounding-smoother/20.2-unit-tests.md)
-- [ ] [20.3 Prefab-Integration](phase-20-grounding-smoother/20.3-prefab-integration.md)
-- [ ] [20.4 Verifikation](phase-20-grounding-smoother/20.4-verification.md)
+- [x] [20.1 GroundingSmoother Komponente](phase-20-grounding-smoother/20.1-grounding-smoother-component.md)
+- [x] [20.2 Unit Tests](phase-20-grounding-smoother/20.2-unit-tests.md)
+- [x] [20.3 Prefab-Integration](phase-20-grounding-smoother/20.3-prefab-integration.md)
+- [x] [20.4 Verifikation](phase-20-grounding-smoother/20.4-verification.md)
 
 ---
 
@@ -207,14 +213,14 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [Slope Sliding Spezifikation](../specs/SlopeSliding_Spezifikation.md)
 
 **Schritte:**
-- [ ] [21.1 Slide-Animation beschaffen + importieren](phase-21-slope-sliding/21.1-slide-animation-asset.md)
+- [x] [21.1 Slide-Animation beschaffen + importieren](phase-21-slope-sliding/21.1-slide-animation-asset.md)
 - [x] [21.2 Config-Erweiterung (Sliding-Parameter)](phase-21-slope-sliding/21.2-config-erweiterung.md)
 - [x] [21.3 Slide-Intent in CharacterLocomotion](phase-21-slope-sliding/21.3-locomotion-slide-intent.md)
 - [x] [21.4 PlayerSlidingState implementieren](phase-21-slope-sliding/21.4-sliding-state.md)
 - [x] [21.5 Entry/Exit-Transitions (Grounded, Falling)](phase-21-slope-sliding/21.5-entry-exit-transitions.md)
 - [x] [21.6 Animation-Integration (Enum, Animator, CrossFade)](phase-21-slope-sliding/21.6-animation-integration.md)
 - [x] [21.7 Unit Tests](phase-21-slope-sliding/21.7-unit-tests.md)
-- [ ] [21.8 Play Mode Verifikation](phase-21-slope-sliding/21.8-play-mode-verifikation.md)
+- [x] [21.8 Play Mode Verifikation](phase-21-slope-sliding/21.8-play-mode-verifikation.md)
 
 ---
 
@@ -235,6 +241,28 @@ Vom statischen Modell zum animierten Character: Assets vorbereiten, Animator mit
 - [ ] [22.5 StateMachine + FallingState Transition](phase-22-landing-roll/22.5-statemachine-transition.md)
 - [ ] [22.6 Unit Tests](phase-22-landing-roll/22.6-unit-tests.md)
 - [ ] [22.7 Play Mode Verifikation](phase-22-landing-roll/22.7-play-mode-verifikation.md)
+
+---
+
+### Phase 23: Crouching
+**Branch:** `integration/phase-23-crouching`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-23-crouching/README.md)
+
+**Ziel:** Toggle-basiertes Crouching-System mit C-Taste — Capsule-Höhen-Transition, Ceiling-Detection (CanStandUp), reduzierte Geschwindigkeit und Crouch Idle/Walk Blend Tree.
+
+**Relevante Spezifikationen:**
+- [Crouching Spezifikation](../specs/Crouching_Spezifikation.md)
+
+**Schritte:**
+- [ ] [23.1 Crouch-Animationen beschaffen + importieren](phase-23-crouching/23.1-crouch-animation-assets.md)
+- [ ] [23.2 ILocomotionConfig + LocomotionConfig erweitern](phase-23-crouching/23.2-config-erweiterung.md)
+- [ ] [23.3 Input-Integration (CrouchTogglePressed)](phase-23-crouching/23.3-input-integration.md)
+- [ ] [23.4 Animation-Integration (Crouch Blend Tree)](phase-23-crouching/23.4-animation-integration.md)
+- [ ] [23.5 Capsule-Höhen-Transition in CharacterLocomotion](phase-23-crouching/23.5-capsule-transition.md)
+- [ ] [23.6 PlayerCrouchingState implementieren](phase-23-crouching/23.6-crouching-state.md)
+- [ ] [23.7 StateMachine + GroundedState Transition](phase-23-crouching/23.7-statemachine-transition.md)
+- [ ] [23.8 Unit Tests](phase-23-crouching/23.8-unit-tests.md)
+- [ ] [23.9 Play Mode Verifikation](phase-23-crouching/23.9-play-mode-verifikation.md)
 
 ---
 
@@ -272,7 +300,8 @@ Modulares Ability-Framework als Infrastruktur für Nahkampf, Fernkampf, Zauber u
 - [ ] 9.3 RangedAbility (Fernkampf/Bogen)
 - [ ] 9.4 SpellAbility (Zauber)
 - [ ] 9.5 Combat Animationen
-- [ ] 9.6 Combat Netzwerk-Sync
+- [ ] 9.6 Hand IK Integration (Waffen-/Zauber-Ziele, IIKTargetProvider für Abilities)
+- [ ] 9.7 Combat Netzwerk-Sync
 
 ---
 
@@ -309,7 +338,8 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [ ] 7.1 Animator Sync
 - [ ] 7.2 State Sync
 - [ ] 7.3 Ability Sync
-- [ ] 7.4 Lag Compensation
+- [ ] 7.4 IK Target Sync (LookAt-/Hand-Ziele über Netzwerk, nur wenn Spieler sichtbar)
+- [ ] 7.5 Lag Compensation
 
 ---
 
@@ -332,11 +362,11 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [Animationskonzept LayeredAbilities](../specs/Animationskonzept_LayeredAbilities.md)
 
 **Schritte:**
-- [x] [8.1 Package-Struktur & IIKModule Interface](phase-8-ik-system/8.1-package-interfaces.md)
-- [x] [8.2 IKManager Komponente](phase-8-ik-system/8.2-ik-manager.md)
-- [x] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
-- [x] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
-- [x] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
+- [ ] [8.1 Package-Struktur & IIKModule Interface](phase-8-ik-system/8.1-package-interfaces.md)
+- [ ] [8.2 IKManager Komponente](phase-8-ik-system/8.2-ik-manager.md)
+- [ ] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
+- [ ] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
+- [ ] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
 
 ---
 
