@@ -674,7 +674,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [Camera System Spezifikation](../specs/Camera_System_Spezifikation.md)
 
 **Schritte:**
-- [ ] [26.1 Package-Struktur & Grundtypen](phase-26-camera-core/26.1-package-grundtypen.md)
+- [x] [26.1 Package-Struktur & Grundtypen](phase-26-camera-core/26.1-package-grundtypen.md)
 - [ ] [26.2 Pivot Rig Hierarchie](phase-26-camera-core/26.2-pivot-rig.md)
 - [ ] [26.3 Camera Anchor](phase-26-camera-core/26.3-camera-anchor.md)
 - [ ] [26.4 Camera Input Pipeline](phase-26-camera-core/26.4-input-pipeline.md)
