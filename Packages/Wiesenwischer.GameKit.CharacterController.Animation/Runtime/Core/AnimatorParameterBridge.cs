@@ -172,6 +172,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 else if (stateInfo.IsName("MediumStop")) stateName = "MediumStop";
                 else if (stateInfo.IsName("HardStop")) stateName = "HardStop";
                 else if (stateInfo.IsName("Slide")) stateName = "Slide";
+                else if (stateInfo.IsName("Crouch")) stateName = "Crouch";
 
                 Debug.Log($"[AnimBridge] Animator → {stateName} | Y={transform.position.y:F2}");
                 _prevAnimStateHash = stateInfo.fullPathHash;
@@ -206,6 +207,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.MediumStop: hash = AnimationParameters.MediumStopStateHash; break;
                 case CharacterAnimationState.HardStop: hash = AnimationParameters.HardStopStateHash; break;
                 case CharacterAnimationState.Slide: hash = AnimationParameters.SlideStateHash; break;
+                case CharacterAnimationState.Crouch: hash = AnimationParameters.CrouchStateHash; break;
                 default: return;
             }
 
@@ -333,6 +335,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.MediumStop: return 0.1f;
                 case CharacterAnimationState.HardStop:   return 0.1f;
                 case CharacterAnimationState.Slide:     return 0.2f;
+                case CharacterAnimationState.Crouch:    return 0.25f;
                 default: return 0.15f;
             }
         }

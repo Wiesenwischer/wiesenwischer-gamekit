@@ -31,12 +31,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
         private GameObject _animHardStop;
         private GameObject _animSlide;
         private GameObject _animRoll;
+        private GameObject _animCrouchIdle;
+        private GameObject _animCrouchWalk;
 
         // --- UI State ---
         private Vector2 _scrollPos;
         private bool _foldLocomotion = true;
         private bool _foldAirborne = true;
         private bool _foldStopping = true;
+        private bool _foldCrouching = true;
 
         [MenuItem("Wiesenwischer/GameKit/Animation/Animation Wizard", false, 1)]
         public static void ShowWindow()
@@ -118,6 +121,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 EditorGUI.indentLevel--;
             }
 
+            // Crouching
+            _foldCrouching = EditorGUILayout.Foldout(_foldCrouching, "Crouching (Loop)", true, EditorStyles.foldoutHeader);
+            if (_foldCrouching)
+            {
+                EditorGUI.indentLevel++;
+                _animCrouchIdle = FbxSlot("Crouch Idle", _animCrouchIdle);
+                _animCrouchWalk = FbxSlot("Crouch Walk", _animCrouchWalk);
+                EditorGUI.indentLevel--;
+            }
+
             EditorGUILayout.Space(8);
 
             GUI.enabled = HasAnyAnimation();
@@ -164,7 +177,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 controller != null ? $"{controller.layers[0].stateMachine.states.Length} States" : null);
 
             int count = CountAnimSlots();
-            StatusRow("Animation FBXs", count > 0, $"{count}/13 zugewiesen");
+            StatusRow("Animation FBXs", count > 0, $"{count}/15 zugewiesen");
 
             // Character Model aus Prefab anzeigen (read-only)
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabCreator.OutputPath);
@@ -207,7 +220,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             return _animIdle || _animWalk || _animRun || _animSprint ||
                    _animJump || _animFall || _animSoftLand || _animHardLand ||
                    _animLightStop || _animMediumStop || _animHardStop || _animSlide ||
-                   _animRoll;
+                   _animRoll || _animCrouchIdle || _animCrouchWalk;
         }
 
         private int CountAnimSlots()
@@ -226,6 +239,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             if (_animHardStop) c++;
             if (_animSlide) c++;
             if (_animRoll) c++;
+            if (_animCrouchIdle) c++;
+            if (_animCrouchWalk) c++;
             return c;
         }
 
@@ -248,12 +263,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             _animHardStop = LoadFbxAsset("Anim_HardStop");
             _animSlide = LoadFbxAsset("Anim_Slide");
             _animRoll = LoadFbxAsset("Anim_Roll");
+            _animCrouchIdle = LoadFbxAsset("Anim_CrouchIdle");
+            _animCrouchWalk = LoadFbxAsset("Anim_CrouchWalk");
 
             // Fallback: Anim_Land als SoftLand
             if (_animSoftLand == null)
                 _animSoftLand = LoadFbxAsset("Anim_Land");
 
-            Debug.Log($"[AnimationWizard] Auto-Erkennung: {CountAnimSlots()}/13 FBXs gefunden.");
+            Debug.Log($"[AnimationWizard] Auto-Erkennung: {CountAnimSlots()}/15 FBXs gefunden.");
         }
 
         private static GameObject LoadFbxAsset(string fbxName)
@@ -298,6 +315,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             configured += ConfigureAnim(_animLightStop, sourceAvatar, false, false, "LightStop", bakePositionXZ: false);
             configured += ConfigureAnim(_animMediumStop, sourceAvatar, false, false, "MediumStop", bakePositionXZ: false);
             configured += ConfigureAnim(_animHardStop, sourceAvatar, false, false, "HardStop", bakePositionXZ: false);
+
+            // Crouching (loop, grounded → Feet)
+            configured += ConfigureAnim(_animCrouchIdle, sourceAvatar, true, false, "CrouchIdle");
+            configured += ConfigureAnim(_animCrouchWalk, sourceAvatar, true, false, "CrouchWalk");
 
             if (configured > 0)
             {
@@ -456,6 +477,50 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 TryAssignBlendTreeChild(ref children, 2, _animRun, "Run");
                 TryAssignBlendTreeChild(ref children, 3, _animSprint, "Sprint");
                 blendTree.children = children;
+            }
+
+            // === Crouch Blend Tree ===
+            if (_animCrouchIdle != null || _animCrouchWalk != null)
+            {
+                var crouchState = FindState(rootSM, "Crouch");
+                BlendTree crouchTree = null;
+
+                if (crouchState != null && crouchState.motion is BlendTree existingCrouchTree)
+                {
+                    crouchTree = existingCrouchTree;
+                }
+                else
+                {
+                    if (crouchState != null)
+                        rootSM.RemoveState(crouchState);
+
+                    crouchTree = new BlendTree
+                    {
+                        name = "Crouch",
+                        blendType = BlendTreeType.Simple1D,
+                        blendParameter = AnimationParameters.SpeedParam,
+                        useAutomaticThresholds = false
+                    };
+
+                    var emptyClip = new AnimationClip { name = "_empty_crouch" };
+                    crouchTree.AddChild(emptyClip, 0.0f);
+                    crouchTree.AddChild(emptyClip, 0.5f);
+
+                    AssetDatabase.AddObjectToAsset(crouchTree, controller);
+
+                    crouchState = rootSM.AddState("Crouch");
+                    crouchState.motion = crouchTree;
+                    crouchState.iKOnFeet = true;
+                    crouchState.writeDefaultValues = false;
+                }
+
+                var crouchChildren = crouchTree.children;
+                if (crouchChildren.Length >= 2)
+                {
+                    TryAssignBlendTreeChild(ref crouchChildren, 0, _animCrouchIdle, "CrouchIdle");
+                    TryAssignBlendTreeChild(ref crouchChildren, 1, _animCrouchWalk, "CrouchWalk");
+                    crouchTree.children = crouchChildren;
+                }
             }
 
             // === Einzelne States ===
