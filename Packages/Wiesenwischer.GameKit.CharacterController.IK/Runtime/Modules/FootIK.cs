@@ -156,7 +156,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             }
             _terrainWeight = Mathf.InverseLerp(0f, _terrainVarianceThreshold, terrainVariance);
 
-            // Body Offset berechnen (auch mit Locomotion Blend skaliert)
+            // Body Offset berechnen — nur wenn IK aktiv (terrainWeight > 0)
             float targetBodyOffset = 0f;
             if (_leftFootHit && _rightFootHit)
             {
@@ -167,7 +167,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             }
 
             _currentBodyOffset = Mathf.SmoothDamp(
-                _currentBodyOffset, targetBodyOffset, ref _bodyOffsetVelocity, _bodyOffsetSmooth);
+                _currentBodyOffset, targetBodyOffset * _terrainWeight, ref _bodyOffsetVelocity, _bodyOffsetSmooth);
         }
 
         public void ProcessIK(Animator animator, int layerIndex)
