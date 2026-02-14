@@ -1,6 +1,6 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-13
+> **Letzte Aktualisierung:** 2026-02-14
 > **Status:** In Entwicklung
 
 ---
@@ -31,7 +31,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | Offen |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
-| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24 | Abgeschlossen |
+| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Offen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [Character Platform](#character-platform) | 11–19 | Offen |
 
@@ -50,6 +50,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
+| 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Offen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
@@ -88,6 +89,7 @@ MMO-Netzwerk
 
 Natürliche Bewegung (IK)
   Phase 4 ──> Phase 20 (Grounding Smoother) ──> Phase 8 ──> Phase 24 (FootIK Verbesserungen)
+                                                                 └──> Phase 25 (Foot Locking)
 
 Reiten, Gleiten & Schwimmen
   Phase 6 ──> Phase 10
@@ -387,6 +389,25 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [x] [24.3 Delta Dead Zone pro Fuß](phase-24-footik-improvements/24.3-dead-zone.md)
 - [x] [24.4 Unit Tests](phase-24-footik-improvements/24.4-unit-tests.md)
 - [x] [24.5 Play Mode Verifikation](phase-24-footik-improvements/24.5-play-mode-verifikation.md)
+
+---
+
+### Phase 25: Foot Locking (Anti-Sliding)
+**Branch:** `integration/phase-25-foot-locking`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-25-foot-locking/README.md)
+
+**Ziel:** Foot Sliding bei Animations-Übergängen eliminieren. Velocity-basierte Erkennung nagelt Füße an ihrer Position fest. Komplementär zu FootIK (Terrain-Anpassung).
+
+**Relevante Spezifikationen:**
+- [FootLock Spezifikation](../specs/FootLock_Spezifikation.md)
+- [GameKit IK Spezifikation](../specs/GameKit_IK_Spezifikation.md)
+
+**Schritte:**
+- [ ] [25.1 FootLock Modul implementieren](phase-25-foot-locking/25.1-footlock-module.md)
+- [ ] [25.2 FootIK Koordination](phase-25-foot-locking/25.2-footik-coordination.md)
+- [ ] [25.3 IKSetupWizard Erweiterung](phase-25-foot-locking/25.3-wizard-extension.md)
+- [ ] [25.4 Unit Tests](phase-25-foot-locking/25.4-unit-tests.md)
+- [ ] [25.5 Play Mode Verifikation](phase-25-foot-locking/25.5-play-mode-verifikation.md)
 
 ---
 
