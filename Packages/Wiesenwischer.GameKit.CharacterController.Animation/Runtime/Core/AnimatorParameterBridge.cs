@@ -95,12 +95,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
 
             // Speed: Normalisiert auf RunSpeed (0=Idle, 0.5=Walk, 1.0=Run, 1.5=Sprint)
             float movementSpeed = data.HorizontalVelocity.magnitude;
+            float horizontalSpeed = movementSpeed;
 
             // Treppen-Kompensation: StairSpeedReduction verlangsamt den Motor auf Treppen
             // (Gameplay-Entscheidung), aber visuell bewegt sich der Character durch die
             // Step-Up-Teleportationen mit annähernd normaler Geschwindigkeit. Ohne Kompensation
             // läuft die Walk-Animation deutlich langsamer als die sichtbare Körperbewegung.
-            bool stairCompensated = false;
             if (_playerController.IsGrounded && _playerController.Locomotion.IsOnStairs)
             {
                 float reduction = config.StairSpeedReduction;
@@ -109,7 +109,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                     movementSpeed /= (1f - reduction);
                 }
                 movementSpeed *= _stairAnimSpeedMultiplier;
-                stairCompensated = true;
             }
 
             float normalizedSpeed = config.RunSpeed > 0f
