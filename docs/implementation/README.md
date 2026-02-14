@@ -300,7 +300,7 @@ Modulares Ability-Framework als Infrastruktur für Nahkampf, Fernkampf, Zauber u
 - [x] [5.2 AbilityDefinition & AbilityContext](phase-5-ability-system/5.2-ability-definition-context.md)
 - [x] [5.3 AbilitySystem Manager](phase-5-ability-system/5.3-ability-system-manager.md)
 - [x] [5.4 Animation Layer Integration](phase-5-ability-system/5.4-animation-layer-integration.md)
-- [ ] [5.5 PlayerController Integration & Tests](phase-5-ability-system/5.5-integration-tests.md)
+- [x] [5.5 PlayerController Integration & Tests](phase-5-ability-system/5.5-integration-tests.md)
 
 ---
 
