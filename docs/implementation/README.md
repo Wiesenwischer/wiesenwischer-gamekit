@@ -403,10 +403,10 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [GameKit IK Spezifikation](../specs/GameKit_IK_Spezifikation.md)
 
 **Schritte:**
-- [ ] [25.1 FootLock Modul implementieren](phase-25-foot-locking/25.1-footlock-module.md)
-- [ ] [25.2 FootIK Koordination](phase-25-foot-locking/25.2-footik-coordination.md)
-- [ ] [25.3 IKSetupWizard Erweiterung](phase-25-foot-locking/25.3-wizard-extension.md)
-- [ ] [25.4 Unit Tests](phase-25-foot-locking/25.4-unit-tests.md)
+- [x] [25.1 FootLock Modul implementieren](phase-25-foot-locking/25.1-footlock-module.md)
+- [x] [25.2 FootIK Koordination](phase-25-foot-locking/25.2-footik-coordination.md)
+- [x] [25.3 IKSetupWizard Erweiterung](phase-25-foot-locking/25.3-wizard-extension.md)
+- [x] [25.4 Unit Tests](phase-25-foot-locking/25.4-unit-tests.md)
 - [ ] [25.5 Play Mode Verifikation](phase-25-foot-locking/25.5-play-mode-verifikation.md)
 
 ---
