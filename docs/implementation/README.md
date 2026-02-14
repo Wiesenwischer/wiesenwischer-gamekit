@@ -28,10 +28,10 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 
 | Epic | Phasen | Status |
 |------|--------|--------|
-| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | In Arbeit |
+| [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | Offen |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
-| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8 | Offen |
+| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8 | Abgeschlossen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [Character Platform](#character-platform) | 11–19 | Offen |
 
@@ -48,7 +48,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Offen |
 | 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
-| 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Offen |
+| 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
@@ -362,11 +362,11 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [Animationskonzept LayeredAbilities](../specs/Animationskonzept_LayeredAbilities.md)
 
 **Schritte:**
-- [ ] [8.1 Package-Struktur & IIKModule Interface](phase-8-ik-system/8.1-package-interfaces.md)
-- [ ] [8.2 IKManager Komponente](phase-8-ik-system/8.2-ik-manager.md)
-- [ ] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
-- [ ] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
-- [ ] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
+- [x] [8.1 Package-Struktur & IIKModule Interface](phase-8-ik-system/8.1-package-interfaces.md)
+- [x] [8.2 IKManager Komponente](phase-8-ik-system/8.2-ik-manager.md)
+- [x] [8.3 FootIK Modul](phase-8-ik-system/8.3-foot-ik.md)
+- [x] [8.4 LookAtIK Modul](phase-8-ik-system/8.4-lookat-ik.md)
+- [x] [8.5 Prefab-Integration & Tests](phase-8-ik-system/8.5-integration-tests.md)
 
 ---
 
