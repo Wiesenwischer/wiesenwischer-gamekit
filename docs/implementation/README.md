@@ -676,7 +676,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 **Schritte:**
 - [x] [26.1 Package-Struktur & Grundtypen](phase-26-camera-core/26.1-package-grundtypen.md)
 - [x] [26.2 Pivot Rig Hierarchie](phase-26-camera-core/26.2-pivot-rig.md)
-- [ ] [26.3 Camera Anchor](phase-26-camera-core/26.3-camera-anchor.md)
+- [x] [26.3 Camera Anchor](phase-26-camera-core/26.3-camera-anchor.md)
 - [ ] [26.4 Camera Input Pipeline](phase-26-camera-core/26.4-input-pipeline.md)
 - [ ] [26.5 CameraBrain Orchestrator](phase-26-camera-core/26.5-camera-brain.md)
 - [ ] [26.6 Migration & Editor Update](phase-26-camera-core/26.6-migration-editor.md)
