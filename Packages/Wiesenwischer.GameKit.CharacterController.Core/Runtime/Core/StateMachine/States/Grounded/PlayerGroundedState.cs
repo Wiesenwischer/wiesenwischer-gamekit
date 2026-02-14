@@ -37,6 +37,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
                 ReusableData.JumpWasReleased = true;
             }
 
+            // Crouch Toggle (C-Taste)
+            if (ReusableData.CrouchTogglePressed)
+            {
+                ChangeState(stateMachine.CrouchingState);
+                return;
+            }
+
             // Jump Input prüfen
             if (ReusableData.JumpPressed && CanJump())
             {
