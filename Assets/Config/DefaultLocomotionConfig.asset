@@ -40,13 +40,30 @@ MonoBehaviour:
   _rotateTowardsMovement: 1
   _maxStepHeight: 0.5
   _minStepDepth: 0.1
+  _stairSpeedReductionEnabled: 1
+  _stairSpeedReduction: 0.3
   _ledgeDetectionEnabled: 1
   _maxStableDistanceFromLedge: 0.5
   _maxStableDenivelationAngle: 60
   _maxVelocityForLedgeSnap: 10
+  _lightStopDeceleration: 12
+  _mediumStopDeceleration: 10
+  _hardStopDeceleration: 8
+  _fullAnimSpeedOnTerrain: 1
+  _uphillSpeedPenalty: 0.3
+  _downhillSpeedBonus: 0.1
   _slopeSlideSpeed: 8
   _useSlopeDependentSlideSpeed: 1
+  _slideAcceleration: 15
+  _slideSteerStrength: 0.3
+  _slideExitHysteresis: 3
+  _canJumpFromSlide: 1
+  _slideJumpForceMultiplier: 0.7
+  _minSlideTime: 0.2
   _softLandingThreshold: 5
-  _hardLandingThreshold: 15
+  _hardLandingThreshold: 10
   _softLandingDuration: 0.1
   _hardLandingDuration: 0.4
+  _rollEnabled: 1
+  _rollTriggerMode: 0
+  _rollSpeedModifier: 1
