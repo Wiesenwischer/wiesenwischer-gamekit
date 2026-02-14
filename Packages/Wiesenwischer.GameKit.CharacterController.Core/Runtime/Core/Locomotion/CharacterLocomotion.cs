@@ -61,6 +61,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         // Wird in UpdateVelocity berechnet, damit AnimatorParameterBridge kompensieren kann.
         private float _currentTerrainSpeedMultiplier = 1f;
 
+        // Crouching state
+        private bool _isCrouching;
+        private bool _crouchTransitionActive;
+        private float _currentCapsuleHeight;
+        private float _targetCapsuleHeight;
+        private float _capsuleHeightVelocity;
+
         /// <summary>
         /// Erstellt eine neue CharacterLocomotion. Erwartet einen existierenden CharacterMotor.
         /// </summary>
@@ -102,6 +109,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             _targetYaw = _currentYaw;
 
             _cachedGroundInfo = GroundInfo.Empty;
+
+            _currentCapsuleHeight = _config.StandingHeight;
+            _targetCapsuleHeight = _config.StandingHeight;
         }
 
         private void ConfigureMotor()
@@ -140,6 +150,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool SnappingPrevented => _motor.GroundingStatus.SnappingPrevented;
         public bool IsSliding => _isSliding;
         public float SlidingTime => _slidingTime;
+        public bool IsCrouching => _isCrouching;
         public CharacterMotor Motor => _motor;
 
         public void Simulate(LocomotionInput input, float deltaTime)
@@ -174,6 +185,41 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         {
             _isSliding = sliding;
             if (!sliding) _slidingTime = 0f;
+        }
+
+        /// <summary>
+        /// Setzt den Crouch-Status und startet die Capsule-Höhen-Transition.
+        /// </summary>
+        public void SetCrouching(bool crouching)
+        {
+            _isCrouching = crouching;
+            _targetCapsuleHeight = crouching ? _config.CrouchHeight : _config.StandingHeight;
+            _crouchTransitionActive = true;
+            _capsuleHeightVelocity = 0f;
+        }
+
+        /// <summary>
+        /// Prüft ob genügend Platz zum Aufstehen vorhanden ist (Ceiling Detection).
+        /// </summary>
+        public bool CanStandUp()
+        {
+            if (!_isCrouching) return true;
+
+            float standingHeight = _config.StandingHeight;
+            float currentHeight = _motor.Height;
+            float heightDifference = standingHeight - currentHeight;
+            float margin = _config.CrouchHeadClearanceMargin;
+
+            Vector3 origin = _motor.Transform.position + _motor.CharacterTransformToCapsuleTop;
+            bool blocked = Physics.SphereCast(
+                origin,
+                _motor.Radius - 0.05f,
+                Vector3.up,
+                out _,
+                heightDifference + margin,
+                _config.GroundLayers);
+
+            return !blocked;
         }
 
         #endregion
@@ -388,6 +434,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         {
             // Kein Wall-Sync nötig: UpdateVelocity liest direkt aus currentVelocity (= BaseVelocity),
             // die bereits die Kollisions-Auflösung vom Motor enthält.
+
+            UpdateCapsuleTransition(deltaTime);
         }
 
         public bool IsColliderValidForCollisions(Collider coll)
@@ -599,6 +647,33 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                 : _config.DownhillSpeedBonus * slopeFactor;    // Bonus → multiplier > 1
 
             return Mathf.Clamp(1f + modifier, 0.1f, 2f);
+        }
+
+        #endregion
+
+        #region Capsule Transition
+
+        private void UpdateCapsuleTransition(float deltaTime)
+        {
+            if (!_crouchTransitionActive) return;
+
+            _currentCapsuleHeight = Mathf.SmoothDamp(
+                _currentCapsuleHeight,
+                _targetCapsuleHeight,
+                ref _capsuleHeightVelocity,
+                _config.CrouchTransitionDuration,
+                Mathf.Infinity,
+                deltaTime);
+
+            float yOffset = _currentCapsuleHeight * 0.5f;
+            _motor.SetCapsuleDimensions(_motor.Radius, _currentCapsuleHeight, yOffset);
+
+            if (Mathf.Abs(_currentCapsuleHeight - _targetCapsuleHeight) < 0.01f)
+            {
+                _motor.SetCapsuleDimensions(_motor.Radius, _targetCapsuleHeight, _targetCapsuleHeight * 0.5f);
+                _currentCapsuleHeight = _targetCapsuleHeight;
+                _crouchTransitionActive = false;
+            }
         }
 
         #endregion
