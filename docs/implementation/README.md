@@ -47,7 +47,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 3 | Animation | Animation-Integration | [Features](phase-3-animation-integration/README.md) | ✅ | Abgeschlossen |
 | 4 | Animation | Fortgeschrittene Lokomotion | [Features](phase-4-locomotion-features/README.md) | ✅ | Abgeschlossen |
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Abgeschlossen |
-| 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
+| 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | Offen |
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
@@ -332,15 +332,18 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 ---
 
 ### Phase 6: Netzwerk-Grundstruktur
-**Branch:** `integration/phase-6-network`
-**Ausgearbeitet:** ❌ Nein
+**Branch:** `integration/phase-6-network-foundation`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-6-network-foundation/README.md)
 
-**Schritte (vorläufig):**
-- [ ] 6.1 FishNet einbinden
-- [ ] 6.2 NetworkPlayer
-- [ ] 6.3 Input Sync
-- [ ] 6.4 Position/Rotation Sync
-- [ ] 6.5 Client-Side Prediction
+**Schritte:**
+- [ ] [6.1 FishNet Installation & Network Package](phase-6-network-foundation/6.1-fishnet-package-setup.md)
+- [ ] [6.2 Network Abstractions in Core](phase-6-network-foundation/6.2-network-abstractions.md)
+- [ ] [6.3 NetworkManager & Connection Setup](phase-6-network-foundation/6.3-network-manager.md)
+- [ ] [6.4 NetworkPlayer Component](phase-6-network-foundation/6.4-network-player.md)
+- [ ] [6.5 Input Sync (Client → Server)](phase-6-network-foundation/6.5-input-sync.md)
+- [ ] [6.6 State Sync & Reconciliation](phase-6-network-foundation/6.6-state-sync.md)
+- [ ] [6.7 Remote Player Interpolation](phase-6-network-foundation/6.7-remote-interpolation.md)
+- [ ] [6.8 Unit Tests & Verifikation](phase-6-network-foundation/6.8-unit-tests.md)
 
 ---
 
