@@ -4,25 +4,28 @@ using Wiesenwischer.GameKit.CharacterController.Core;
 namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
 {
     /// <summary>
-    /// Foot Locking (Anti-Sliding): Nagelt Füße per Velocity-Erkennung an ihrer
-    /// Welt-Position fest, solange sie am Boden stehen. Verhindert sichtbares
-    /// Foot Sliding bei Animations-Übergängen (Walk→Idle, Run→Stop).
-    /// Registriert sich VOR FootIK beim IKManager.
+    /// Foot Locking (Anti-Sliding): Nagelt Füße an ihrer IK-Position fest,
+    /// sobald der Character stillsteht. Verhindert sichtbares Foot Sliding
+    /// bei Animations-Übergängen (Walk→Idle, Run→Stop).
+    ///
+    /// Nutzt die CHARACTER-Geschwindigkeit (nicht Fuß-Velocity) als Lock-Trigger.
+    /// Grund: Während eines Animation-Crossfade bewegen sich die Fuß-IK-Positionen
+    /// durch den Blend selbst — per-Fuß-Velocity erkennt den Stillstand zu spät.
+    /// Die Character-Geschwindigkeit geht SOFORT auf 0 wenn der Input stoppt.
+    ///
+    /// Arbeitet mit IK-Positionen (animator.GetIKPosition), nicht Bone-Positionen.
     /// </summary>
     public class FootLock : MonoBehaviour, IIKModule
     {
         [Header("References")]
         [SerializeField] private PlayerController _playerController;
 
-        [Header("Detection")]
-        [Tooltip("Geschwindigkeit (m/s) unter der ein Fuß als stehend gilt.")]
-        [SerializeField] private float _lockVelocityThreshold = 0.05f;
+        [Header("Detection (Character Speed)")]
+        [Tooltip("Character-Geschwindigkeit (m/s) unter der Füße gelockt werden.")]
+        [SerializeField] private float _lockSpeedThreshold = 0.1f;
 
-        [Tooltip("Geschwindigkeit (m/s) über der ein Lock gelöst wird.")]
-        [SerializeField] private float _releaseVelocityThreshold = 0.15f;
-
-        [Tooltip("Frames unter Lock-Threshold bevor Lock greift.")]
-        [SerializeField] private int _stableFramesRequired = 2;
+        [Tooltip("Character-Geschwindigkeit (m/s) über der Locks gelöst werden.")]
+        [SerializeField] private float _releaseSpeedThreshold = 0.3f;
 
         [Header("Release")]
         [Tooltip("Smooth Blend-Out Zeit beim Lösen (Sekunden).")]
@@ -39,6 +42,10 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         private IKManager _ikManager;
         private Transform _rootTransform;
 
+        // Cached in PrepareIK, used in ProcessIK
+        private bool _isGrounded;
+        private float _characterSpeed;
+
         private FootState _leftFoot;
         private FootState _rightFoot;
 
@@ -47,16 +54,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         public bool IsEnabled { get => _isEnabled; set => _isEnabled = value; }
         public float Weight { get => _weight; set => _weight = Mathf.Clamp01(value); }
 
-        /// <summary>
-        /// Ob der linke Fuß gerade gelockt ist (inkl. Release-Blend).
-        /// FootIK prüft dieses Flag und überspringt gelockte Füße.
-        /// </summary>
         public bool IsLeftFootLocked => _leftFoot.IsLocked || _leftFoot.IsReleasing;
-
-        /// <summary>
-        /// Ob der rechte Fuß gerade gelockt ist (inkl. Release-Blend).
-        /// FootIK prüft dieses Flag und überspringt gelockte Füße.
-        /// </summary>
         public bool IsRightFootLocked => _rightFoot.IsLocked || _rightFoot.IsReleasing;
 
         private void Awake()
@@ -79,40 +77,63 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
 
         public void PrepareIK()
         {
-            var animator = GetComponent<Animator>();
-            if (animator == null || !animator.isHuman) return;
+            _isGrounded = _playerController != null && _playerController.IsGrounded;
+            _characterSpeed = _playerController?.Locomotion?.HorizontalVelocity.magnitude ?? 0f;
 
-            var leftFootBone = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
-            var rightFootBone = animator.GetBoneTransform(HumanBodyBones.RightFoot);
-            if (leftFootBone == null || rightFootBone == null) return;
-
-            bool isGrounded = _playerController != null && _playerController.IsGrounded;
-
-            if (!isGrounded)
+            if (!_isGrounded)
             {
                 ReleaseFoot(ref _leftFoot);
                 ReleaseFoot(ref _rightFoot);
-                return;
             }
-
-            _leftFoot = CalculateFootLock(
-                leftFootBone.position, leftFootBone.rotation,
-                _rootTransform.position, _rootTransform.rotation,
-                _leftFoot, isGrounded, Time.deltaTime,
-                _lockVelocityThreshold, _releaseVelocityThreshold,
-                _stableFramesRequired, _releaseDuration, _maxLockDistance);
-
-            _rightFoot = CalculateFootLock(
-                rightFootBone.position, rightFootBone.rotation,
-                _rootTransform.position, _rootTransform.rotation,
-                _rightFoot, isGrounded, Time.deltaTime,
-                _lockVelocityThreshold, _releaseVelocityThreshold,
-                _stableFramesRequired, _releaseDuration, _maxLockDistance);
         }
 
         public void ProcessIK(Animator animator, int layerIndex)
         {
             if (layerIndex != 0) return;
+
+            bool shouldLock = _isGrounded && _characterSpeed < _lockSpeedThreshold;
+            bool shouldRelease = _characterSpeed > _releaseSpeedThreshold;
+
+            // Fuß-Positionen: FootIK Terrain-Raycast bevorzugen (Fuß auf dem Boden),
+            // Fallback auf Animation-IK-Position (flacher Boden ohne Terrain-Anpassung).
+            var footIK = _ikManager.GetModule<FootIK>();
+
+            Vector3 leftPos, rightPos;
+            Quaternion leftRot, rightRot;
+
+            if (footIK != null && footIK.LeftFootHit)
+            {
+                leftPos = footIK.LeftFootTarget;
+                leftRot = footIK.LeftFootRotation;
+            }
+            else
+            {
+                leftPos = animator.GetIKPosition(AvatarIKGoal.LeftFoot);
+                leftRot = animator.GetIKRotation(AvatarIKGoal.LeftFoot);
+            }
+
+            if (footIK != null && footIK.RightFootHit)
+            {
+                rightPos = footIK.RightFootTarget;
+                rightRot = footIK.RightFootRotation;
+            }
+            else
+            {
+                rightPos = animator.GetIKPosition(AvatarIKGoal.RightFoot);
+                rightRot = animator.GetIKRotation(AvatarIKGoal.RightFoot);
+            }
+
+            _leftFoot = CalculateFootLock(
+                leftPos, leftRot,
+                _rootTransform.position, _rootTransform.rotation,
+                _leftFoot, shouldLock, shouldRelease, Time.deltaTime,
+                _releaseDuration, _maxLockDistance);
+
+            _rightFoot = CalculateFootLock(
+                rightPos, rightRot,
+                _rootTransform.position, _rootTransform.rotation,
+                _rightFoot, shouldLock, shouldRelease, Time.deltaTime,
+                _releaseDuration, _maxLockDistance);
 
             ApplyFootLock(animator, AvatarIKGoal.LeftFoot, _leftFoot);
             ApplyFootLock(animator, AvatarIKGoal.RightFoot, _rightFoot);
@@ -143,33 +164,25 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                 state.IsReleasing = true;
                 state.ReleaseTimer = 0f;
             }
-            state.StableCount = 0;
         }
 
         internal static FootState CalculateFootLock(
-            Vector3 footWorldPos,
-            Quaternion footWorldRot,
+            Vector3 footIKWorldPos,
+            Quaternion footIKWorldRot,
             Vector3 rootPosition,
             Quaternion rootRotation,
             FootState state,
-            bool isGrounded,
+            bool shouldLock,
+            bool shouldRelease,
             float deltaTime,
-            float lockThreshold,
-            float releaseThreshold,
-            int stableFramesRequired,
             float releaseDuration,
             float maxLockDistance)
         {
-            float velocity = deltaTime > 0f
-                ? (footWorldPos - state.PrevWorldPos).magnitude / deltaTime
-                : 0f;
-            state.PrevWorldPos = footWorldPos;
-
             if (state.IsLocked)
             {
-                // Transform locked local position to world for distance check
+                // Safety: Release if foot drifts too far from locked position
                 Vector3 lockedWorldPos = rootPosition + rootRotation * state.LockedLocalPos;
-                if ((footWorldPos - lockedWorldPos).magnitude > maxLockDistance)
+                if ((footIKWorldPos - lockedWorldPos).magnitude > maxLockDistance)
                 {
                     state.IsLocked = false;
                     state.IsReleasing = true;
@@ -177,7 +190,8 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                     return state;
                 }
 
-                if (velocity > releaseThreshold)
+                // Release when character starts moving
+                if (shouldRelease)
                 {
                     state.IsLocked = false;
                     state.IsReleasing = true;
@@ -186,25 +200,17 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             }
             else if (!state.IsReleasing)
             {
-                if (velocity < lockThreshold && isGrounded)
+                // Lock when character is stationary
+                if (shouldLock)
                 {
-                    state.StableCount++;
-                    if (state.StableCount >= stableFramesRequired)
-                    {
-                        // Store in root-local space
-                        Quaternion invRootRot = Quaternion.Inverse(rootRotation);
-                        state.LockedLocalPos = invRootRot * (footWorldPos - rootPosition);
-                        state.LockedLocalRot = invRootRot * footWorldRot;
-                        state.IsLocked = true;
-                        state.StableCount = 0;
-                    }
-                }
-                else
-                {
-                    state.StableCount = 0;
+                    Quaternion invRootRot = Quaternion.Inverse(rootRotation);
+                    state.LockedLocalPos = invRootRot * (footIKWorldPos - rootPosition);
+                    state.LockedLocalRot = invRootRot * footIKWorldRot;
+                    state.IsLocked = true;
                 }
             }
 
+            // Release blend-out timer
             if (state.IsReleasing)
             {
                 state.ReleaseTimer += deltaTime;
@@ -221,8 +227,6 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             public bool IsReleasing;
             public Vector3 LockedLocalPos;
             public Quaternion LockedLocalRot;
-            public Vector3 PrevWorldPos;
-            public int StableCount;
             public float ReleaseTimer;
         }
     }

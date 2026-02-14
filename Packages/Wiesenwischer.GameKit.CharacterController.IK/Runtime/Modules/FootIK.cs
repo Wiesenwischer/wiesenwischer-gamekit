@@ -62,13 +62,20 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         private bool _isEnabled = true;
         private IKManager _ikManager;
 
-        // Raycast-Ergebnisse (berechnet in PrepareIK)
+        // Raycast-Ergebnisse (berechnet in PrepareIK, von FootLock gelesen)
         private bool _leftFootHit;
         private bool _rightFootHit;
         private Vector3 _leftFootTarget;
         private Vector3 _rightFootTarget;
         private Quaternion _leftFootRotation;
         private Quaternion _rightFootRotation;
+
+        public bool LeftFootHit => _leftFootHit;
+        public bool RightFootHit => _rightFootHit;
+        public Vector3 LeftFootTarget => _leftFootTarget;
+        public Vector3 RightFootTarget => _rightFootTarget;
+        public Quaternion LeftFootRotation => _leftFootRotation;
+        public Quaternion RightFootRotation => _rightFootRotation;
 
         // Body Offset
         private float _currentBodyOffset;

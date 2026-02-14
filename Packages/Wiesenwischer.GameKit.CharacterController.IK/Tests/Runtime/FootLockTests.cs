@@ -7,9 +7,6 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Tests
     [TestFixture]
     public class FootLockTests
     {
-        private const float LockThreshold = 0.05f;
-        private const float ReleaseThreshold = 0.15f;
-        private const int StableFrames = 2;
         private const float ReleaseDuration = 0.15f;
         private const float MaxLockDistance = 0.3f;
         private const float DeltaTime = 0.016f;
@@ -17,112 +14,72 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Tests
         private static readonly Vector3 RootPos = Vector3.zero;
         private static readonly Quaternion RootRot = Quaternion.identity;
 
-        private FootLock.FootState CreateStationaryState(Vector3 pos)
-        {
-            return new FootLock.FootState { PrevWorldPos = pos };
-        }
-
-        private FootLock.FootState CreateLockedState(Vector3 footWorldPos)
-        {
-            Quaternion invRootRot = Quaternion.Inverse(RootRot);
-            return new FootLock.FootState
-            {
-                IsLocked = true,
-                PrevWorldPos = footWorldPos,
-                LockedLocalPos = invRootRot * (footWorldPos - RootPos),
-                LockedLocalRot = invRootRot * Quaternion.identity
-            };
-        }
-
         private FootLock.FootState Step(FootLock.FootState state, Vector3 footPos,
-            bool isGrounded = true, Quaternion? footRot = null,
-            Vector3? rootPos = null, Quaternion? rootRot = null)
+            bool shouldLock = false, bool shouldRelease = false,
+            Quaternion? footRot = null, Vector3? rootPos = null, Quaternion? rootRot = null)
         {
             return FootLock.CalculateFootLock(
                 footPos,
                 footRot ?? Quaternion.identity,
                 rootPos ?? RootPos,
                 rootRot ?? RootRot,
-                state, isGrounded, DeltaTime,
-                LockThreshold, ReleaseThreshold,
-                StableFrames, ReleaseDuration, MaxLockDistance);
+                state, shouldLock, shouldRelease, DeltaTime,
+                ReleaseDuration, MaxLockDistance);
         }
 
-        // === 1. Lock-Erkennung ===
+        // === 1. Lock when character stops ===
 
         [Test]
-        public void FootLock_VelocityBelowThreshold_LocksAfterStableFrames()
+        public void FootLock_ShouldLock_LocksImmediately()
         {
             Vector3 pos = new Vector3(0.5f, 0f, 0f);
-            var state = CreateStationaryState(pos);
+            var state = new FootLock.FootState();
 
-            // Frame 1: Fuß steht still (velocity = 0)
-            state = Step(state, pos);
-            Assert.IsFalse(state.IsLocked);
-            Assert.AreEqual(1, state.StableCount);
+            state = Step(state, pos, shouldLock: true);
 
-            // Frame 2: Immer noch still → Lock!
-            state = Step(state, pos);
             Assert.IsTrue(state.IsLocked);
-            Assert.AreEqual(0, state.StableCount);
             Assert.AreEqual(pos, state.LockedLocalPos);
         }
 
         [Test]
-        public void FootLock_VelocityBelowThreshold_NotLockedBeforeStableFrames()
+        public void FootLock_ShouldNotLock_StaysUnlocked()
         {
             Vector3 pos = new Vector3(0.5f, 0f, 0f);
-            var state = CreateStationaryState(pos);
+            var state = new FootLock.FootState();
 
-            state = Step(state, pos);
+            state = Step(state, pos, shouldLock: false);
+
             Assert.IsFalse(state.IsLocked);
-            Assert.AreEqual(1, state.StableCount);
         }
 
+        // === 2. Release when character moves ===
+
         [Test]
-        public void FootLock_NotGrounded_NeverLocks()
+        public void FootLock_ShouldRelease_StartsReleaseBlend()
         {
             Vector3 pos = new Vector3(0.5f, 0f, 0f);
-            var state = CreateStationaryState(pos);
+            var state = new FootLock.FootState();
 
-            state = Step(state, pos, isGrounded: false);
-            Assert.IsFalse(state.IsLocked);
-            Assert.AreEqual(0, state.StableCount);
+            // Lock
+            state = Step(state, pos, shouldLock: true);
+            Assert.IsTrue(state.IsLocked);
 
-            state = Step(state, pos, isGrounded: false);
-            Assert.IsFalse(state.IsLocked);
-            Assert.AreEqual(0, state.StableCount);
-        }
-
-        // === 2. Release-Erkennung ===
-
-        [Test]
-        public void FootLock_VelocityAboveReleaseThreshold_ReleasesLock()
-        {
-            Vector3 lockedPos = new Vector3(0.5f, 0f, 0f);
-            var state = CreateLockedState(lockedPos);
-
-            // Fuß bewegt sich schnell (velocity > releaseThreshold)
-            float moveDistance = ReleaseThreshold * DeltaTime * 2f;
-            Vector3 movedPos = lockedPos + new Vector3(moveDistance, 0f, 0f);
-            state = Step(state, movedPos);
-
+            // Release
+            state = Step(state, pos, shouldRelease: true);
             Assert.IsFalse(state.IsLocked);
             Assert.IsTrue(state.IsReleasing);
             Assert.AreEqual(0f, state.ReleaseTimer);
         }
 
         [Test]
-        public void FootLock_VelocityBetweenThresholds_StaysLocked()
+        public void FootLock_NotReleasing_StaysLocked()
         {
-            Vector3 lockedPos = new Vector3(0.5f, 0f, 0f);
-            var state = CreateLockedState(lockedPos);
+            Vector3 pos = new Vector3(0.5f, 0f, 0f);
+            var state = new FootLock.FootState();
 
-            // Velocity im Hysterese-Bereich (zwischen lock und release threshold)
-            float midVelocity = (LockThreshold + ReleaseThreshold) / 2f;
-            float moveDistance = midVelocity * DeltaTime;
-            Vector3 movedPos = lockedPos + new Vector3(moveDistance, 0f, 0f);
-            state = Step(state, movedPos);
+            state = Step(state, pos, shouldLock: true);
+            // Neither lock nor release signal
+            state = Step(state, pos);
 
             Assert.IsTrue(state.IsLocked);
         }
@@ -135,8 +92,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Tests
             var state = new FootLock.FootState
             {
                 IsReleasing = true,
-                ReleaseTimer = 0f,
-                PrevWorldPos = Vector3.zero
+                ReleaseTimer = 0f
             };
 
             state = Step(state, Vector3.zero);
@@ -151,8 +107,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Tests
             var state = new FootLock.FootState
             {
                 IsReleasing = true,
-                ReleaseTimer = ReleaseDuration - DeltaTime * 0.5f,
-                PrevWorldPos = Vector3.zero
+                ReleaseTimer = ReleaseDuration - DeltaTime * 0.5f
             };
 
             state = Step(state, Vector3.zero);
@@ -166,55 +121,49 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Tests
         public void FootLock_LocalSpaceStorage_SurvivesCharacterRotation()
         {
             Vector3 footPos = new Vector3(1f, 0f, 0f);
-            var state = CreateStationaryState(footPos);
+            var state = new FootLock.FootState();
 
-            // Lock the foot (2 stable frames)
-            state = Step(state, footPos);
-            state = Step(state, footPos);
+            state = Step(state, footPos, shouldLock: true);
             Assert.IsTrue(state.IsLocked);
 
-            // Root dreht sich 90° um Y
+            // Root dreht sich 90° um Y → Fuß sollte bei (0, 0, 1) statt (1, 0, 0) sein
             Quaternion rotated = Quaternion.Euler(0f, 90f, 0f);
-            Vector3 expectedWorldPos = RootPos + rotated * state.LockedLocalPos;
+            Vector3 lockedWorld = RootPos + rotated * state.LockedLocalPos;
 
-            Vector3 actualWorldPos = rotated * state.LockedLocalPos;
-            Assert.AreEqual(expectedWorldPos.x, actualWorldPos.x, 0.01f);
-            Assert.AreEqual(expectedWorldPos.z, actualWorldPos.z, 0.01f);
-
-            // Fuß sollte jetzt bei (0, 0, 1) statt (1, 0, 0) sein
-            Assert.AreEqual(0f, actualWorldPos.x, 0.01f);
-            Assert.AreEqual(1f, actualWorldPos.z, 0.01f);
+            Assert.AreEqual(0f, lockedWorld.x, 0.01f);
+            Assert.AreEqual(1f, lockedWorld.z, 0.01f);
         }
 
         [Test]
         public void FootLock_LocalSpaceStorage_SurvivesCharacterMovement()
         {
             Vector3 footPos = new Vector3(1f, 0f, 0f);
-            var state = CreateStationaryState(footPos);
+            var state = new FootLock.FootState();
 
-            state = Step(state, footPos);
-            state = Step(state, footPos);
+            state = Step(state, footPos, shouldLock: true);
             Assert.IsTrue(state.IsLocked);
 
             // Root bewegt sich um (5, 0, 3)
             Vector3 newRootPos = new Vector3(5f, 0f, 3f);
-            Vector3 expectedWorldPos = newRootPos + RootRot * state.LockedLocalPos;
+            Vector3 lockedWorld = newRootPos + RootRot * state.LockedLocalPos;
 
-            Assert.AreEqual(6f, expectedWorldPos.x, 0.01f);
-            Assert.AreEqual(3f, expectedWorldPos.z, 0.01f);
+            Assert.AreEqual(6f, lockedWorld.x, 0.01f);
+            Assert.AreEqual(3f, lockedWorld.z, 0.01f);
         }
 
-        // === 5. Sicherheitsmechanismen ===
+        // === 5. Safety: Max Lock Distance ===
 
         [Test]
         public void FootLock_MaxLockDistance_ForcesRelease()
         {
             Vector3 lockedPos = new Vector3(0.5f, 0f, 0f);
-            var state = CreateLockedState(lockedPos);
+            var state = new FootLock.FootState();
+
+            state = Step(state, lockedPos, shouldLock: true);
+            Assert.IsTrue(state.IsLocked);
 
             // Fuß springt weit weg (über maxLockDistance)
             Vector3 farPos = lockedPos + new Vector3(MaxLockDistance + 0.1f, 0f, 0f);
-            state.PrevWorldPos = farPos; // Prevent velocity spike from triggering release first
             state = Step(state, farPos);
 
             Assert.IsFalse(state.IsLocked);
@@ -225,13 +174,13 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Tests
         public void FootLock_MaxLockDistance_WithinLimit_StaysLocked()
         {
             Vector3 lockedPos = new Vector3(0.5f, 0f, 0f);
-            var state = CreateLockedState(lockedPos);
+            var state = new FootLock.FootState();
 
-            // Fuß bewegt sich leicht (innerhalb maxLockDistance, velocity im Hysterese-Bereich)
-            float smallMove = MaxLockDistance * 0.5f;
-            Vector3 nearPos = lockedPos + new Vector3(smallMove, 0f, 0f);
-            // Set prevPos close to nearPos to keep velocity in hysteresis band
-            state.PrevWorldPos = nearPos - new Vector3(LockThreshold * DeltaTime * 0.5f, 0f, 0f);
+            state = Step(state, lockedPos, shouldLock: true);
+            Assert.IsTrue(state.IsLocked);
+
+            // Fuß bewegt sich leicht (innerhalb maxLockDistance)
+            Vector3 nearPos = lockedPos + new Vector3(MaxLockDistance * 0.5f, 0f, 0f);
             state = Step(state, nearPos);
 
             Assert.IsTrue(state.IsLocked);
@@ -244,8 +193,6 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Tests
         {
             var state = new FootLock.FootState { IsLocked = true };
             float weight = 1f;
-
-            // When locked, weight should be full
             float effectiveWeight = state.IsLocked ? weight : 0f;
             Assert.AreEqual(1f, effectiveWeight, 0.001f);
         }
@@ -256,41 +203,50 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Tests
             float weight = 1f;
             float timer = ReleaseDuration * 0.5f;
             float expectedWeight = weight * (1f - Mathf.Clamp01(timer / ReleaseDuration));
-
             Assert.AreEqual(0.5f, expectedWeight, 0.01f);
         }
 
         [Test]
         public void FootLock_ProcessWeight_NotLockedNotReleasing_NoEffect()
         {
-            var state = new FootLock.FootState
-            {
-                IsLocked = false,
-                IsReleasing = false
-            };
-
+            var state = new FootLock.FootState();
             Assert.IsFalse(state.IsLocked);
             Assert.IsFalse(state.IsReleasing);
         }
 
-        // === Bonus: Stable-Count Reset ===
+        // === 7. During release, shouldLock is ignored ===
 
         [Test]
-        public void FootLock_MovementInterrupts_ResetsStableCount()
+        public void FootLock_DuringRelease_ShouldLockIgnored()
+        {
+            var state = new FootLock.FootState
+            {
+                IsReleasing = true,
+                ReleaseTimer = 0f
+            };
+
+            // shouldLock is true but we're still releasing → don't re-lock
+            state = Step(state, new Vector3(1f, 0f, 0f), shouldLock: true);
+
+            Assert.IsFalse(state.IsLocked);
+            Assert.IsTrue(state.IsReleasing);
+        }
+
+        // === 8. Hysteresis ===
+
+        [Test]
+        public void FootLock_Hysteresis_StaysLockedBetweenThresholds()
         {
             Vector3 pos = new Vector3(0.5f, 0f, 0f);
-            var state = CreateStationaryState(pos);
+            var state = new FootLock.FootState();
 
-            // Frame 1: still
-            state = Step(state, pos);
-            Assert.AreEqual(1, state.StableCount);
+            // Lock
+            state = Step(state, pos, shouldLock: true);
+            Assert.IsTrue(state.IsLocked);
 
-            // Frame 2: sudden movement
-            float bigMove = LockThreshold * DeltaTime * 3f;
-            Vector3 movedPos = pos + new Vector3(bigMove, 0f, 0f);
-            state = Step(state, movedPos);
-            Assert.AreEqual(0, state.StableCount);
-            Assert.IsFalse(state.IsLocked);
+            // Neither shouldLock nor shouldRelease (speed in hysteresis band)
+            state = Step(state, pos, shouldLock: false, shouldRelease: false);
+            Assert.IsTrue(state.IsLocked);
         }
     }
 }
