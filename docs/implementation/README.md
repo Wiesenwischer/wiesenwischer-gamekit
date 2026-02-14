@@ -50,7 +50,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
-| 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Offen |
+| 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Abgeschlossen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
@@ -403,11 +403,11 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [GameKit IK Spezifikation](../specs/GameKit_IK_Spezifikation.md)
 
 **Schritte:**
-- [ ] [25.1 FootLock Modul implementieren](phase-25-foot-locking/25.1-footlock-module.md)
-- [ ] [25.2 FootIK Koordination](phase-25-foot-locking/25.2-footik-coordination.md)
-- [ ] [25.3 IKSetupWizard Erweiterung](phase-25-foot-locking/25.3-wizard-extension.md)
-- [ ] [25.4 Unit Tests](phase-25-foot-locking/25.4-unit-tests.md)
-- [ ] [25.5 Play Mode Verifikation](phase-25-foot-locking/25.5-play-mode-verifikation.md)
+- [x] [25.1 FootLock Modul implementieren](phase-25-foot-locking/25.1-footlock-module.md)
+- [x] [25.2 FootIK Koordination](phase-25-foot-locking/25.2-footik-coordination.md)
+- [x] [25.3 IKSetupWizard Erweiterung](phase-25-foot-locking/25.3-wizard-extension.md)
+- [x] [25.4 Unit Tests](phase-25-foot-locking/25.4-unit-tests.md)
+- [x] [25.5 Play Mode Verifikation](phase-25-foot-locking/25.5-play-mode-verifikation.md)
 
 ---
 

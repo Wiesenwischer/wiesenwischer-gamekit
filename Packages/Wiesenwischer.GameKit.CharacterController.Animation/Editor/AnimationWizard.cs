@@ -381,7 +381,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             configured += ConfigureAnim(_animSoftLand, sourceAvatar, false, true, "SoftLand");
             configured += ConfigureAnim(_animHardLand, sourceAvatar, false, true, "HardLand");
             configured += ConfigureAnim(_animSlide, sourceAvatar, true, false, "Slide");
-            configured += ConfigureAnim(_animRoll, sourceAvatar, false, false, "Roll");
+            configured += ConfigureAnim(_animRoll, sourceAvatar, false, true, "Roll");
 
             // Stopping (no loop, grounded → Feet, kein Bake XZ)
             configured += ConfigureAnim(_animLightStop, sourceAvatar, false, false, "LightStop", bakePositionXZ: false);
