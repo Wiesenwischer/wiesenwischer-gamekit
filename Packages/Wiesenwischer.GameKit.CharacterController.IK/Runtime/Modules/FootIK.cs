@@ -46,6 +46,9 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         [Tooltip("Höhendifferenz (m) ab der IK voll aktiv wird.")]
         [SerializeField] private float _terrainVarianceThreshold = 0.03f;
 
+        [Tooltip("Minimaler Fuß-Versatz (m) ab dem IK eingreift.")]
+        [SerializeField] private float _footDeadZone = 0.02f;
+
         [Header("Locomotion Blend")]
         [Tooltip("Ab dieser Geschwindigkeit wird FootIK ausgeblendet (m/s).")]
         [SerializeField] private float _speedBlendStart = 0.1f;
@@ -185,8 +188,11 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             // Left Foot
             if (_leftFootHit)
             {
-                animator.SetIKPositionWeight(AvatarIKGoal.LeftFoot, effectiveWeight);
-                animator.SetIKRotationWeight(AvatarIKGoal.LeftFoot, effectiveWeight);
+                float leftDelta = (_leftFootTarget - animator.GetIKPosition(AvatarIKGoal.LeftFoot)).magnitude;
+                float leftFootWeight = effectiveWeight * Mathf.InverseLerp(0f, _footDeadZone, leftDelta);
+
+                animator.SetIKPositionWeight(AvatarIKGoal.LeftFoot, leftFootWeight);
+                animator.SetIKRotationWeight(AvatarIKGoal.LeftFoot, leftFootWeight);
                 animator.SetIKPosition(AvatarIKGoal.LeftFoot, ClampFootTarget(_leftFootTarget, animator, AvatarIKGoal.LeftFoot));
                 animator.SetIKRotation(AvatarIKGoal.LeftFoot, _leftFootRotation);
             }
@@ -199,8 +205,11 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             // Right Foot
             if (_rightFootHit)
             {
-                animator.SetIKPositionWeight(AvatarIKGoal.RightFoot, effectiveWeight);
-                animator.SetIKRotationWeight(AvatarIKGoal.RightFoot, effectiveWeight);
+                float rightDelta = (_rightFootTarget - animator.GetIKPosition(AvatarIKGoal.RightFoot)).magnitude;
+                float rightFootWeight = effectiveWeight * Mathf.InverseLerp(0f, _footDeadZone, rightDelta);
+
+                animator.SetIKPositionWeight(AvatarIKGoal.RightFoot, rightFootWeight);
+                animator.SetIKRotationWeight(AvatarIKGoal.RightFoot, rightFootWeight);
                 animator.SetIKPosition(AvatarIKGoal.RightFoot, ClampFootTarget(_rightFootTarget, animator, AvatarIKGoal.RightFoot));
                 animator.SetIKRotation(AvatarIKGoal.RightFoot, _rightFootRotation);
             }
