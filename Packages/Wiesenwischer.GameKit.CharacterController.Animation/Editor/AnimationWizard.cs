@@ -17,22 +17,22 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private const string ClipBasePath = "Assets/Animations/Locomotion/";
 
-        // --- Animation FBX Slots ---
-        private GameObject _animIdle;
-        private GameObject _animWalk;
-        private GameObject _animRun;
-        private GameObject _animSprint;
-        private GameObject _animJump;
-        private GameObject _animFall;
-        private GameObject _animSoftLand;
-        private GameObject _animHardLand;
-        private GameObject _animLightStop;
-        private GameObject _animMediumStop;
-        private GameObject _animHardStop;
-        private GameObject _animSlide;
-        private GameObject _animRoll;
-        private GameObject _animCrouchIdle;
-        private GameObject _animCrouchWalk;
+        // --- Animation FBX Slots (SerializeField für Persistenz über Domain Reloads) ---
+        [SerializeField] private GameObject _animIdle;
+        [SerializeField] private GameObject _animWalk;
+        [SerializeField] private GameObject _animRun;
+        [SerializeField] private GameObject _animSprint;
+        [SerializeField] private GameObject _animJump;
+        [SerializeField] private GameObject _animFall;
+        [SerializeField] private GameObject _animSoftLand;
+        [SerializeField] private GameObject _animHardLand;
+        [SerializeField] private GameObject _animLightStop;
+        [SerializeField] private GameObject _animMediumStop;
+        [SerializeField] private GameObject _animHardStop;
+        [SerializeField] private GameObject _animSlide;
+        [SerializeField] private GameObject _animRoll;
+        [SerializeField] private GameObject _animCrouchIdle;
+        [SerializeField] private GameObject _animCrouchWalk;
 
         // --- UI State ---
         private Vector2 _scrollPos;
@@ -57,7 +57,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private void OnEnable()
         {
-            AutoDetectAnimationFBXs();
+            // Beim Öffnen: Aktuell im Controller zugewiesene Clips auslesen.
+            // So sieht der User immer was tatsächlich im Controller aktiv ist.
+            ReadFromController();
         }
 
         private void OnGUI()
@@ -242,6 +244,76 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             if (_animCrouchIdle) c++;
             if (_animCrouchWalk) c++;
             return c;
+        }
+
+        #endregion
+
+        #region Read From Controller
+
+        private void ReadFromController()
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+            if (controller == null) return;
+
+            var rootSM = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
+
+            // Locomotion Blend Tree auslesen
+            var locomotionState = FindState(rootSM, "Locomotion");
+            if (locomotionState != null && locomotionState.motion is BlendTree locomotionTree)
+            {
+                var children = locomotionTree.children;
+                if (children.Length >= 4)
+                {
+                    _animIdle = FbxFromMotion(children[0].motion);
+                    _animWalk = FbxFromMotion(children[1].motion);
+                    _animRun = FbxFromMotion(children[2].motion);
+                    _animSprint = FbxFromMotion(children[3].motion);
+                }
+            }
+
+            // Crouch Blend Tree auslesen
+            var crouchState = FindState(rootSM, "Crouch");
+            if (crouchState != null && crouchState.motion is BlendTree crouchTree)
+            {
+                var crouchChildren = crouchTree.children;
+                if (crouchChildren.Length >= 2)
+                {
+                    _animCrouchIdle = FbxFromMotion(crouchChildren[0].motion);
+                    _animCrouchWalk = FbxFromMotion(crouchChildren[1].motion);
+                }
+            }
+
+            // Einzelne States auslesen
+            _animJump = FbxFromState(rootSM, "Jump");
+            _animFall = FbxFromState(rootSM, "Fall");
+            _animSoftLand = FbxFromState(rootSM, "SoftLand");
+            _animHardLand = FbxFromState(rootSM, "HardLand");
+            _animSlide = FbxFromState(rootSM, "Slide");
+            _animRoll = FbxFromState(rootSM, "Roll");
+            _animLightStop = FbxFromState(rootSM, "LightStop");
+            _animMediumStop = FbxFromState(rootSM, "MediumStop");
+            _animHardStop = FbxFromState(rootSM, "HardStop");
+        }
+
+        private static GameObject FbxFromState(AnimatorStateMachine sm, string stateName)
+        {
+            var state = FindState(sm, stateName);
+            if (state == null) return null;
+            return FbxFromMotion(state.motion);
+        }
+
+        private static GameObject FbxFromMotion(Motion motion)
+        {
+            if (motion == null) return null;
+
+            var clip = motion as AnimationClip;
+            if (clip == null) return null;
+
+            string path = AssetDatabase.GetAssetPath(clip);
+            if (string.IsNullOrEmpty(path) || !path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
         }
 
         #endregion
