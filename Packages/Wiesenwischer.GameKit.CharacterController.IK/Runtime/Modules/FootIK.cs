@@ -39,6 +39,16 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         [Tooltip("Maximaler Fuß-Versatz (verhindert Überdehnung).")]
         [SerializeField] private float _maxFootAdjustment = 0.4f;
 
+        [Tooltip("Maximaler Body-Offset nach oben (kompensiert footOffset).")]
+        [SerializeField] private float _maxBodyUpOffset = 0.05f;
+
+        [Header("Terrain Adaptation")]
+        [Tooltip("Höhendifferenz (m) ab der IK voll aktiv wird.")]
+        [SerializeField] private float _terrainVarianceThreshold = 0.03f;
+
+        [Tooltip("Minimaler Fuß-Versatz (m) ab dem IK eingreift.")]
+        [SerializeField] private float _footDeadZone = 0.02f;
+
         [Header("Locomotion Blend")]
         [Tooltip("Ab dieser Geschwindigkeit wird FootIK ausgeblendet (m/s).")]
         [SerializeField] private float _speedBlendStart = 0.1f;
@@ -63,6 +73,19 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         // Body Offset
         private float _currentBodyOffset;
         private float _bodyOffsetVelocity;
+
+        // Terrain-Varianz
+        private float _terrainWeight;
+        private Vector3 _leftFootNormal;
+        private Vector3 _rightFootNormal;
+
+#if UNITY_EDITOR
+        [Header("Debug (Runtime)")]
+        [SerializeField] private float _debugTerrainVariance;
+        [SerializeField] private float _debugTerrainWeight;
+        [SerializeField] private float _debugEffectiveWeight;
+        [SerializeField] private float _debugBodyOffset;
+#endif
 
         // Locomotion Blend: IK-Weight wird bei Bewegung ausgeblendet,
         // damit die Walk/Run-Animation die Beine steuert (nicht IK).
@@ -126,31 +149,57 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             Vector3 leftFoot = leftFootBone.position;
             Vector3 rightFoot = rightFootBone.position;
 
-            _leftFootHit = CastFoot(leftFoot, out _leftFootTarget, out _leftFootRotation);
-            _rightFootHit = CastFoot(rightFoot, out _rightFootTarget, out _rightFootRotation);
+            _leftFootHit = CastFoot(leftFoot, out _leftFootTarget, out _leftFootRotation, out _leftFootNormal);
+            _rightFootHit = CastFoot(rightFoot, out _rightFootTarget, out _rightFootRotation, out _rightFootNormal);
 
-            // Body Offset berechnen (auch mit Locomotion Blend skaliert)
+            // Terrain-Varianz berechnen
+            float terrainVariance = 0f;
+            if (_leftFootHit && _rightFootHit)
+            {
+                float heightDiff = Mathf.Abs(_leftFootTarget.y - _rightFootTarget.y);
+                float leftNormalDev = 1f - Vector3.Dot(_leftFootNormal, Vector3.up);
+                float rightNormalDev = 1f - Vector3.Dot(_rightFootNormal, Vector3.up);
+                float normalDev = Mathf.Max(leftNormalDev, rightNormalDev);
+                terrainVariance = heightDiff + normalDev * 0.1f;
+            }
+            _terrainWeight = Mathf.InverseLerp(0f, _terrainVarianceThreshold, terrainVariance);
+
+#if UNITY_EDITOR
+            _debugTerrainVariance = terrainVariance;
+            _debugTerrainWeight = _terrainWeight;
+#endif
+
+            // Body Offset berechnen — nur wenn IK aktiv (terrainWeight > 0)
             float targetBodyOffset = 0f;
             if (_leftFootHit && _rightFootHit)
             {
                 float leftDelta = _leftFootTarget.y - leftFoot.y;
                 float rightDelta = _rightFootTarget.y - rightFoot.y;
                 targetBodyOffset = Mathf.Min(leftDelta, rightDelta);
-                targetBodyOffset = Mathf.Min(targetBodyOffset, 0f); // Nur nach unten
+                targetBodyOffset = Mathf.Clamp(targetBodyOffset, -_maxFootAdjustment, _maxBodyUpOffset);
             }
 
             _currentBodyOffset = Mathf.SmoothDamp(
-                _currentBodyOffset, targetBodyOffset, ref _bodyOffsetVelocity, _bodyOffsetSmooth);
+                _currentBodyOffset, targetBodyOffset * _terrainWeight, ref _bodyOffsetVelocity, _bodyOffsetSmooth);
         }
 
         public void ProcessIK(Animator animator, int layerIndex)
         {
             if (layerIndex != 0) return;
 
-            // IK-Weight × Locomotion-Blend: Bei Bewegung → 0, bei Idle → _weight
-            float effectiveWeight = _weight * _locomotionBlendWeight;
+            // IK-Weight × Locomotion-Blend × Terrain-Varianz
+            float effectiveWeight = _weight * _locomotionBlendWeight * _terrainWeight;
 
-            // Body Offset anwenden (Hüfte absenken), auch mit Blend skaliert
+#if UNITY_EDITOR
+            _debugEffectiveWeight = effectiveWeight;
+            _debugBodyOffset = _currentBodyOffset;
+#endif
+
+            // Wenn IK praktisch inaktiv → komplett überspringen (keine SetIK-Aufrufe)
+            if (effectiveWeight < 0.001f && Mathf.Abs(_currentBodyOffset) < 0.001f)
+                return;
+
+            // Body Offset anwenden (Hüfte verschieben), auch mit Blend skaliert
             if (Mathf.Abs(_currentBodyOffset * _locomotionBlendWeight) > 0.001f)
             {
                 Vector3 bodyPos = animator.bodyPosition;
@@ -158,11 +207,18 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                 animator.bodyPosition = bodyPos;
             }
 
+            // Wenn kein IK-Weight → nur Body-Offset anwenden, Füße nicht anfassen
+            if (effectiveWeight < 0.001f)
+                return;
+
             // Left Foot
             if (_leftFootHit)
             {
-                animator.SetIKPositionWeight(AvatarIKGoal.LeftFoot, effectiveWeight);
-                animator.SetIKRotationWeight(AvatarIKGoal.LeftFoot, effectiveWeight);
+                float leftDelta = (_leftFootTarget - animator.GetIKPosition(AvatarIKGoal.LeftFoot)).magnitude;
+                float leftFootWeight = effectiveWeight * Mathf.InverseLerp(0f, _footDeadZone, leftDelta);
+
+                animator.SetIKPositionWeight(AvatarIKGoal.LeftFoot, leftFootWeight);
+                animator.SetIKRotationWeight(AvatarIKGoal.LeftFoot, leftFootWeight);
                 animator.SetIKPosition(AvatarIKGoal.LeftFoot, ClampFootTarget(_leftFootTarget, animator, AvatarIKGoal.LeftFoot));
                 animator.SetIKRotation(AvatarIKGoal.LeftFoot, _leftFootRotation);
             }
@@ -175,8 +231,11 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             // Right Foot
             if (_rightFootHit)
             {
-                animator.SetIKPositionWeight(AvatarIKGoal.RightFoot, effectiveWeight);
-                animator.SetIKRotationWeight(AvatarIKGoal.RightFoot, effectiveWeight);
+                float rightDelta = (_rightFootTarget - animator.GetIKPosition(AvatarIKGoal.RightFoot)).magnitude;
+                float rightFootWeight = effectiveWeight * Mathf.InverseLerp(0f, _footDeadZone, rightDelta);
+
+                animator.SetIKPositionWeight(AvatarIKGoal.RightFoot, rightFootWeight);
+                animator.SetIKRotationWeight(AvatarIKGoal.RightFoot, rightFootWeight);
                 animator.SetIKPosition(AvatarIKGoal.RightFoot, ClampFootTarget(_rightFootTarget, animator, AvatarIKGoal.RightFoot));
                 animator.SetIKRotation(AvatarIKGoal.RightFoot, _rightFootRotation);
             }
@@ -187,7 +246,8 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             }
         }
 
-        private bool CastFoot(Vector3 footPos, out Vector3 targetPos, out Quaternion targetRot)
+        private bool CastFoot(Vector3 footPos, out Vector3 targetPos, out Quaternion targetRot,
+                              out Vector3 surfaceNormal)
         {
             Vector3 origin = footPos + Vector3.up * _raycastHeight;
             float distance = _raycastHeight + _raycastDepth;
@@ -197,11 +257,13 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                 targetPos = hit.point + hit.normal * _footOffset;
                 targetRot = Quaternion.FromToRotation(Vector3.up, hit.normal)
                             * transform.rotation;
+                surfaceNormal = hit.normal;
                 return true;
             }
 
             targetPos = footPos;
             targetRot = Quaternion.identity;
+            surfaceNormal = Vector3.up;
             return false;
         }
 
