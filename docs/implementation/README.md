@@ -386,7 +386,7 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [x] [24.2 Terrain-Varianz IK-Weight](phase-24-footik-improvements/24.2-terrain-variance.md)
 - [x] [24.3 Delta Dead Zone pro Fuß](phase-24-footik-improvements/24.3-dead-zone.md)
 - [x] [24.4 Unit Tests](phase-24-footik-improvements/24.4-unit-tests.md)
-- [ ] [24.5 Play Mode Verifikation](phase-24-footik-improvements/24.5-play-mode-verifikation.md)
+- [x] [24.5 Play Mode Verifikation](phase-24-footik-improvements/24.5-play-mode-verifikation.md)
 
 ---
 
