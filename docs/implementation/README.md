@@ -1,6 +1,6 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-14
+> **Letzte Aktualisierung:** 2026-02-15
 > **Status:** In Entwicklung
 
 ---
@@ -33,6 +33,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Offen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
+| [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Offen |
 | [Character Platform](#character-platform) | 11–19 | Offen |
 
 ---
@@ -66,6 +67,10 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 17 | Character | CP: Save/Load & Integration | — | ❌ | Offen |
 | 18 | Character | CP: DNA Space & Constraints | — | ❌ | Offen |
 | 19 | Character | CP: Morph Graph & HD Anatomy | — | ❌ | Offen |
+| 26 | Camera | Camera Core — Brain, State & Pivot Rig | [Features](phase-26-camera-core/README.md) | ✅ | Offen |
+| 27 | Camera | Camera Behaviours | — | ❌ | Offen |
+| 28 | Camera | Camera Intent System & Presets | — | ❌ | Offen |
+| 29 | Camera | Shared Orientation & Facing Integration | — | ❌ | Offen |
 
 ---
 
@@ -93,6 +98,12 @@ Natürliche Bewegung (IK)
 
 Reiten, Gleiten & Schwimmen
   Phase 6 ──> Phase 10
+
+AAA Third-Person Camera System
+  Phase 26 (Camera Core) ──> Phase 27 (Behaviours) ──> Phase 28 (Intents & Presets)
+  Phase 26 ──> Phase 29 (Orientation & Facing Integration)
+                   ↑
+                Phase 4 (Locomotion, für CharacterController-Integration)
 
 Character Platform (unabhängig von den anderen Epics)
   Phase 11 ──> Phase 12 ──> Phase 13
@@ -628,6 +639,100 @@ AAA-taugliche Character Platform mit Live-Preview Creator, Equipment System, DNA
 - [ ] 19.8 Tests
 
 **Referenz:** Konsolidierte Spec Kapitel 17
+
+---
+
+# AAA Third-Person Camera System
+
+Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System und austauschbaren Camera-Styles (BDO/ArcheAge). Entkopplung von Camera und Character über Shared Orientation System und Facing Provider.
+
+**Haupt-Spezifikation (konsolidiert):**
+- [Camera System Spezifikation](../specs/Camera_System_Spezifikation.md)
+
+**Packages:**
+- `Wiesenwischer.GameKit.Camera.Core` — CameraBrain, CameraState, PivotRig, Anchor, Input Pipeline, CinemachineDriver
+- `Wiesenwischer.GameKit.Camera.Behaviours` — Orbit, Follow, Zoom, Collision, Inertia, Recenter, ShoulderOffset
+- `Wiesenwischer.GameKit.Camera.Presets` — CameraPreset SO, BDO/ArcheAge Presets
+- `Wiesenwischer.GameKit.CharacterController.Core` (Erweiterung) — IOrientationProvider, IFacingProvider, FrameSpace
+
+**Bestehendes Camera-Package:** `Wiesenwischer.GameKit.CharacterController.Camera` enthält bereits eine Basis-Implementierung (ThirdPersonCamera, CameraInputHandler, CameraConfig) die in die neue Architektur migriert wird.
+
+---
+
+### Phase 26: Camera Core — Brain, State & Pivot Rig
+**Branch:** `integration/phase-26-camera-core`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-26-camera-core/README.md)
+
+**Ziel:** Bestehende ThirdPersonCamera-Monolith in modulare Architektur refactoren. CameraBrain als Orchestrator, Pivot Rig Hierarchie, Camera Anchor für Stabilisierung, AAA Input Pipeline.
+
+**Relevante Spezifikationen:**
+- [Camera System Spezifikation](../specs/Camera_System_Spezifikation.md)
+
+**Schritte:**
+- [ ] [26.1 Package-Struktur & Grundtypen](phase-26-camera-core/26.1-package-grundtypen.md)
+- [ ] [26.2 Pivot Rig Hierarchie](phase-26-camera-core/26.2-pivot-rig.md)
+- [ ] [26.3 Camera Anchor](phase-26-camera-core/26.3-camera-anchor.md)
+- [ ] [26.4 Camera Input Pipeline](phase-26-camera-core/26.4-input-pipeline.md)
+- [ ] [26.5 CameraBrain Orchestrator](phase-26-camera-core/26.5-camera-brain.md)
+- [ ] [26.6 Migration & Editor Update](phase-26-camera-core/26.6-migration-editor.md)
+- [ ] [26.7 Unit Tests](phase-26-camera-core/26.7-unit-tests.md)
+
+**Referenz:** Spec Kapitel 2–6, 9, 11–12
+
+---
+
+### Phase 27: Camera Behaviours
+**Branch:** `integration/phase-27-camera-behaviours`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Modulare Behaviours als austauschbare Bausteine. Jedes Behaviour modifiziert den CameraState unabhängig.
+
+**Schritte (vorläufig):**
+- [ ] 27.1 ICameraBehaviour Interface
+- [ ] 27.2 OrbitBehaviour + FollowBehaviour
+- [ ] 27.3 ZoomBehaviour + CollisionBehaviour
+- [ ] 27.4 InertiaBehaviour (Spring-Damper statt Lerp)
+- [ ] 27.5 RecenterBehaviour + ShoulderOffsetBehaviour
+- [ ] 27.6 Dynamic Orbit Center
+- [ ] 27.7 Tests
+
+**Referenz:** Spec Kapitel 8, 9, 10, 12, 13
+
+---
+
+### Phase 28: Camera Intent System & Presets
+**Branch:** `integration/phase-28-camera-intents`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Prioritäts-basiertes Intent System für Konfliktlösung zwischen Systemen. ScriptableObject Presets für verschiedene Camera-Styles.
+
+**Schritte (vorläufig):**
+- [ ] 28.1 ICameraIntent Interface + Priority Resolution
+- [ ] 28.2 CameraPreset ScriptableObjects
+- [ ] 28.3 BDO Preset + ArcheAge Preset
+- [ ] 28.4 Soft Targeting
+- [ ] 28.5 Cinemachine Driver (optionale Rendering-Schicht)
+- [ ] 28.6 Tests
+
+**Referenz:** Spec Kapitel 7, 13, 15, 16
+
+---
+
+### Phase 29: Shared Orientation & Facing Integration
+**Branch:** `integration/phase-29-orientation-facing`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Camera↔Character Entkopplung über Orientation/Facing Provider. Camera-Relative Animation Space für korrekte Locomotion-Blending.
+
+**Schritte (vorläufig):**
+- [ ] 29.1 IOrientationProvider Interface + FrameSpace Implementierungen (Camera, Character, Target, Vehicle)
+- [ ] 29.2 IFacingProvider Interface + MovementFacingProvider
+- [ ] 29.3 CameraFacingProvider + TargetFacingProvider
+- [ ] 29.4 CharacterController Integration (Movement liest OrientationProvider)
+- [ ] 29.5 Camera-Relative Animation Space (WorldMoveDir→MoveX/MoveZ)
+- [ ] 29.6 Tests
+
+**Referenz:** Spec Kapitel 17–20, 23
 
 ---
 
