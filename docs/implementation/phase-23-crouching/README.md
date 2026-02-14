@@ -28,7 +28,7 @@ Toggle-basiertes Crouching-System mit dynamischer Capsule-Höhe, reduzierter Bew
 - [x] `ControllerButtons.Crouch` (bereits in Prediction-Schicht, `1 << 2`)
 - [x] Crouch Input Action im `InputSystem_Actions.inputactions` (C-Taste, bereits konfiguriert)
 - [x] `CharacterMotor.SetCapsuleDimensions()` für dynamische Capsule-Höhe
-- [ ] Crouch-Animationen (Mixamo, wird in 23.1 beschafft)
+- [x] Crouch-Animationen (Mixamo, wird in 23.1 beschafft)
 
 ---
 
