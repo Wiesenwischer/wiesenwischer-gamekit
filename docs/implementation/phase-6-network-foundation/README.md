@@ -105,6 +105,7 @@ Folgende Klassen existieren bereits und werden in Phase 6 **genutzt, nicht neu e
 
 - [x] Phase 5 (Ability System) abgeschlossen
 - [ ] FishNet Asset (kostenlos) — Download von [GitHub](https://github.com/FirstGearGames/FishNet) oder Unity Asset Store
+- [ ] ParrelSync (kostenlos) — Multiplayer-Testing mit zwei Editor-Instanzen, Installation via Git URL in UPM
 - [ ] Unity 2022.3 LTS (kompatibel mit FishNet 4.x)
 
 ---
