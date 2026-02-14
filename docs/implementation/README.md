@@ -49,7 +49,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 6 | Netzwerk | Netzwerk-Grundstruktur | — | ❌ | Offen |
 | 7 | Netzwerk | Netzwerk-Animation | — | ❌ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
-| 24 | IK | FootIK Terrain-Adaptive Verbesserungen | — | ❌ | Offen |
+| 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Offen |
 | 9 | Combat | Combat Abilities | — | ❌ | Offen |
 | 10 | Movement | Alternative Movement | — | ❌ | Offen |
 | 20 | Animation | Visual Grounding Smoother | [Features](phase-20-grounding-smoother/README.md) | ✅ | Abgeschlossen |
@@ -373,7 +373,7 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 
 ### Phase 24: FootIK Terrain-Adaptive Verbesserungen
 **Branch:** `integration/phase-24-footik-improvements`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-24-footik-improvements/README.md)
 
 **Ziel:** FootIK verbessern, damit auf flachem Boden keine gebeugten Knie entstehen. Drei gezielte Fixes: Body-Offset darf leicht nach oben, Terrain-Varianz-basierter IK-Weight und Delta-basierte Dead Zone pro Fuß.
 
@@ -381,12 +381,12 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [FootIK Verbesserungen Spezifikation](../specs/FootIK_Verbesserungen_Spezifikation.md)
 - [GameKit IK Spezifikation](../specs/GameKit_IK_Spezifikation.md)
 
-**Schritte (vorläufig):**
-- [ ] 24.1 Fix 1: Body-Offset darf leicht nach oben (`_maxBodyUpOffset`)
-- [ ] 24.2 Fix 2: Terrain-Varianz-basierter IK-Weight (`_terrainVarianceThreshold`, Normalen speichern)
-- [ ] 24.3 Fix 3: Delta-basierte Dead Zone pro Fuß (`_footDeadZone`)
-- [ ] 24.4 Unit Tests (Terrain-Varianz, Body-Offset, Dead Zone)
-- [ ] 24.5 Play Mode Verifikation
+**Schritte:**
+- [ ] [24.1 Body-Offset nach oben erlauben](phase-24-footik-improvements/24.1-body-offset-up.md)
+- [ ] [24.2 Terrain-Varianz IK-Weight](phase-24-footik-improvements/24.2-terrain-variance.md)
+- [ ] [24.3 Delta Dead Zone pro Fuß](phase-24-footik-improvements/24.3-dead-zone.md)
+- [ ] [24.4 Unit Tests](phase-24-footik-improvements/24.4-unit-tests.md)
+- [ ] [24.5 Play Mode Verifikation](phase-24-footik-improvements/24.5-play-mode-verifikation.md)
 
 ---
 
