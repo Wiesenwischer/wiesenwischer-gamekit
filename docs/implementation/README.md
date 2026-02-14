@@ -382,7 +382,7 @@ Charaktere blicken Zielen nach, Füße passen sich dem Terrain an und Hände gre
 - [GameKit IK Spezifikation](../specs/GameKit_IK_Spezifikation.md)
 
 **Schritte:**
-- [ ] [24.1 Body-Offset nach oben erlauben](phase-24-footik-improvements/24.1-body-offset-up.md)
+- [x] [24.1 Body-Offset nach oben erlauben](phase-24-footik-improvements/24.1-body-offset-up.md)
 - [ ] [24.2 Terrain-Varianz IK-Weight](phase-24-footik-improvements/24.2-terrain-variance.md)
 - [ ] [24.3 Delta Dead Zone pro Fuß](phase-24-footik-improvements/24.3-dead-zone.md)
 - [ ] [24.4 Unit Tests](phase-24-footik-improvements/24.4-unit-tests.md)
