@@ -305,7 +305,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
             public bool LedgeDetectionEnabled { get; set; } = true;
             public float MaxStableDistanceFromLedge { get; set; } = 0.5f;
             public float MaxStableDenivelationAngle { get; set; } = 60f;
-            public float MaxVelocityForLedgeSnap { get; set; } = 0f;
+            public float MaxVelocityForLedgeSnap { get; set; } = 10f;
             public float SlopeSlideSpeed { get; set; } = 8f;
             public bool UseSlopeDependentSlideSpeed { get; set; } = true;
             public float SoftLandingThreshold { get; set; } = 5f;

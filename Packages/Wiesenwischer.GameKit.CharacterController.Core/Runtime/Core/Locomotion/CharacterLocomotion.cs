@@ -57,6 +57,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         // Cached GroundInfo
         private GroundInfo _cachedGroundInfo;
 
+        // Terrain Speed Multiplier: Kombination aus Slope + Stair Modifier.
+        // Wird in UpdateVelocity berechnet, damit AnimatorParameterBridge kompensieren kann.
+        private float _currentTerrainSpeedMultiplier = 1f;
+
         /// <summary>
         /// Erstellt eine neue CharacterLocomotion. Erwartet einen existierenden CharacterMotor.
         /// </summary>
@@ -208,6 +212,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             {
                 // Sliding: Slope-Physik statt normaler Acceleration
                 newHorizontal = CalculateSlideHorizontalVelocity(deltaTime);
+                _currentTerrainSpeedMultiplier = 1f;
             }
             else
             {
@@ -259,20 +264,26 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
                 // Slope Speed Modifier: Target-Velocity bergauf reduzieren, bergab optional erhöhen.
                 // Wirkt auf Target, damit AccelerationModule natürlich zum Ziel hin beschleunigt/bremst.
+                float terrainMultiplier = 1f;
                 if (_groundDetectionStrategy.IsGrounded &&
                     _motor.GroundingStatus.IsStableOnGround &&
                     targetHorizontal.sqrMagnitude > 0.01f)
                 {
                     float slopeMultiplier = CalculateSlopeSpeedMultiplier(
                         targetHorizontal, _motor.GroundingStatus.GroundNormal);
+                    terrainMultiplier *= slopeMultiplier;
                     targetHorizontal *= slopeMultiplier;
                 }
 
                 // Stair Speed Modifier: Auf Treppen (häufige Steps) Target reduzieren.
                 if (IsOnStairs && targetHorizontal.sqrMagnitude > 0.01f)
                 {
-                    targetHorizontal *= (1f - _config.StairSpeedReduction);
+                    float stairMultiplier = 1f - _config.StairSpeedReduction;
+                    terrainMultiplier *= stairMultiplier;
+                    targetHorizontal *= stairMultiplier;
                 }
+
+                _currentTerrainSpeedMultiplier = terrainMultiplier;
 
                 float deceleration = _currentInput.DecelerationOverride > 0f
                     ? _currentInput.DecelerationOverride
@@ -410,7 +421,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void ProcessHitStabilityReport(Collider hitCollider, Vector3 hitNormal, Vector3 hitPoint, Vector3 atCharacterPosition, Quaternion atCharacterRotation, ref HitStabilityReport hitStabilityReport)
         {
-            // Stabilität nachbearbeiten
+            // Slope-Edge Fix: An scharfen Kanten von Rampen/BoxCollidern erkennt die
+            // Ledge-Detection den Übergang als unstable, obwohl die Hit-Normal im
+            // begehbaren Bereich liegt (< MaxSlopeAngle). Das führt dazu, dass der
+            // Motor die Kante als Wand behandelt und die Bewegung blockt.
+            // Fix: Wenn die Hit-Normal stabil wäre aber Ledge-Detection sie überschreibt,
+            // erzwingen wir Stabilität → Character kann über Kanten gehen.
+            if (!hitStabilityReport.IsStable && hitStabilityReport.LedgeDetected)
+            {
+                float angleFromUp = Vector3.Angle(hitNormal, Vector3.up);
+                if (angleFromUp <= _config.MaxSlopeAngle)
+                {
+                    hitStabilityReport.IsStable = true;
+                }
+            }
         }
 
         public void OnDiscreteCollisionDetected(Collider hitCollider)
@@ -441,6 +465,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool IsOnStairs => _config.StairSpeedReductionEnabled
             && _recentStepCount >= StairStepThreshold
             && (Time.time - _lastStepTime) < StairDetectionWindow;
+
+        /// <summary>
+        /// Kombinierter Terrain-Speed-Multiplikator (Slope + Stair). 1.0 = flacher Boden.
+        /// AnimatorParameterBridge kann damit die Animations-Geschwindigkeit kompensieren,
+        /// damit die Fußbewegung zur visuellen Displacement-Rate passt.
+        /// </summary>
+        public float CurrentTerrainSpeedMultiplier => _currentTerrainSpeedMultiplier;
 
         public void SetRotation(float yaw)
         {

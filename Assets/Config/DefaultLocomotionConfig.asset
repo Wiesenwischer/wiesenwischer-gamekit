@@ -43,7 +43,7 @@ MonoBehaviour:
   _ledgeDetectionEnabled: 1
   _maxStableDistanceFromLedge: 0.5
   _maxStableDenivelationAngle: 60
-  _maxVelocityForLedgeSnap: 0
+  _maxVelocityForLedgeSnap: 10
   _slopeSlideSpeed: 8
   _useSlopeDependentSlideSpeed: 1
   _softLandingThreshold: 5

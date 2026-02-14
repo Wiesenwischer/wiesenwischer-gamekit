@@ -116,6 +116,35 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 ? movementSpeed / config.RunSpeed
                 : 0f;
 
+            // Terrain-Kompensation: Auf Treppen/Slopes wird die physische Geschwindigkeit
+            // reduziert, aber die Animation soll im "Flachboden-Tempo" laufen.
+            float terrainMultiplier = _playerController.Locomotion?.CurrentTerrainSpeedMultiplier ?? 1f;
+            if (terrainMultiplier > 0.01f && terrainMultiplier < 1f)
+            {
+                if (config.FullAnimSpeedOnTerrain)
+                {
+                    // 3D-Geschwindigkeit: kompensiert sowohl Terrain-Penalty als auch
+                    // geometrische cos(angle)-Reduktion der horizontalen Geschwindigkeit.
+                    float speed3D = Mathf.Sqrt(horizontalSpeed * horizontalSpeed +
+                                               data.VerticalVelocity * data.VerticalVelocity);
+                    normalizedSpeed = config.RunSpeed > 0f ? speed3D / config.RunSpeed : 0f;
+                    normalizedSpeed /= terrainMultiplier;
+                }
+                else
+                {
+                    normalizedSpeed /= terrainMultiplier;
+                }
+            }
+
+            // Minimum Animation Speed: Wenn der Character sich physisch bewegt, muss
+            // der Speed-Parameter hoch genug sein um sichtbare Bein-Animation im Blend Tree
+            // auszulösen. Ohne dieses Minimum gleitet der Character bei niedrigen
+            // Geschwindigkeiten mit Idle-Pose über den Boden ("Ice Skating").
+            if (horizontalSpeed > 0.01f && normalizedSpeed < 0.35f)
+            {
+                normalizedSpeed = 0.35f;
+            }
+
             _animator.SetFloat(
                 AnimationParameters.SpeedHash,
                 normalizedSpeed,
@@ -181,6 +210,30 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
 
             // Redundante CrossFade-Aufrufe vermeiden (z.B. Idle→Running bleiben beide in Locomotion)
             if (_currentAnimStateHash == hash) return;
+
+            // Prüfen ob der State im Animator existiert, bevor CrossFade aufgerufen wird.
+            // Fehlende States (z.B. LightStop ohne zugewiesenen Clip) verursachen
+            // "Animator.GotoState: State could not be found" + "Invalid Layer Index '-1'"
+            // was den gesamten Animator korrumpiert und andere Animationen stört.
+            if (!_animator.HasState(AnimationParameters.BaseLayerIndex, hash))
+            {
+                Debug.LogWarning($"[AnimatorParameterBridge] State '{state}' nicht im Animator Controller gefunden. " +
+                                 "Bitte Wizard erneut ausführen: Wiesenwischer > GameKit > Prefabs > Character Setup Wizard");
+                return;
+            }
+
+            // Prüfen ob der Animator bereits im Ziel-State ist (auch wenn _currentAnimStateHash
+            // abweicht, z.B. nach Walking→LightStopping→Walking Cycling).
+            // Ohne diesen Check wird die Locomotion-Animation bei jedem Zyklus neu gestartet
+            // (CrossFade setzt die BlendTree-Clips auf Frame 0), was dazu führt, dass
+            // die Walk-Animation nur wenige Frames lang sichtbar ist.
+            var currentStateInfo = _animator.GetCurrentAnimatorStateInfo(AnimationParameters.BaseLayerIndex);
+            if (currentStateInfo.shortNameHash == hash && !_animator.IsInTransition(AnimationParameters.BaseLayerIndex))
+            {
+                _currentAnimStateHash = hash;
+                return;
+            }
+
             _currentAnimStateHash = hash;
             _canExitAnimation = false;
             _animator.CrossFade(hash, transitionDuration);
