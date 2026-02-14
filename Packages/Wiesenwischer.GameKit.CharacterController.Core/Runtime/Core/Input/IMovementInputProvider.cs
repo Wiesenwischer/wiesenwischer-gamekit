@@ -47,6 +47,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         bool WalkTogglePressed { get; }
 
         /// <summary>
+        /// Ob der Crouch-Toggle diesen Frame gedrückt wurde (einmalig pro Press).
+        /// </summary>
+        bool CrouchTogglePressed { get; }
+
+        /// <summary>
         /// Ob der Input Provider aktiv ist (z.B. für Netzwerk-Authority).
         /// </summary>
         bool IsActive { get; }

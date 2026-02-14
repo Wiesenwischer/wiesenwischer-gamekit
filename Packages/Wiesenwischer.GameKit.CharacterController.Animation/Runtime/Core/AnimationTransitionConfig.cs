@@ -49,6 +49,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         [Tooltip("CrossFade-Dauer beim Wechsel zu Slide")]
         [SerializeField] private float _slideTransitionDuration = 0.2f;
 
+        [Header("Crouching")]
+        [Tooltip("CrossFade-Dauer beim Wechsel zu Crouch")]
+        [SerializeField] private float _crouchTransitionDuration = 0.25f;
+
         public float LocomotionTransitionDuration => _locomotionTransitionDuration;
         public float JumpTransitionDuration => _jumpTransitionDuration;
         public float FallTransitionDuration => _fallTransitionDuration;
@@ -59,6 +63,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         public float MediumStopTransitionDuration => _mediumStopTransitionDuration;
         public float HardStopTransitionDuration => _hardStopTransitionDuration;
         public float SlideTransitionDuration => _slideTransitionDuration;
+        public float CrouchTransitionDuration => _crouchTransitionDuration;
 
         /// <summary>
         /// Gibt die Transition-Dauer für den angegebenen State zurück.
@@ -77,6 +82,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 case CharacterAnimationState.MediumStop: return _mediumStopTransitionDuration;
                 case CharacterAnimationState.HardStop:   return _hardStopTransitionDuration;
                 case CharacterAnimationState.Slide:     return _slideTransitionDuration;
+                case CharacterAnimationState.Crouch:    return _crouchTransitionDuration;
                 default: return 0.15f;
             }
         }
@@ -93,6 +99,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             _mediumStopTransitionDuration = Mathf.Max(0f, _mediumStopTransitionDuration);
             _hardStopTransitionDuration = Mathf.Max(0f, _hardStopTransitionDuration);
             _slideTransitionDuration = Mathf.Max(0f, _slideTransitionDuration);
+            _crouchTransitionDuration = Mathf.Max(0f, _crouchTransitionDuration);
         }
     }
 }

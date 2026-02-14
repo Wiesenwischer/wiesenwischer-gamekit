@@ -59,6 +59,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         /// <summary>Rolling State - Landing Roll bei hartem Aufprall mit Movement-Input.</summary>
         public PlayerRollingState RollingState { get; }
 
+        /// <summary>Crouching State - geduckt (Toggle-basiert).</summary>
+        public PlayerCrouchingState CrouchingState { get; }
+
         #endregion
 
         #region Hybrid State Instances
@@ -112,6 +115,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
             MediumStoppingState = new PlayerMediumStoppingState(this);
             HardStoppingState = new PlayerHardStoppingState(this);
             RollingState = new PlayerRollingState(this);
+            CrouchingState = new PlayerCrouchingState(this);
 
             // Erstelle Hybrid States
             SlidingState = new PlayerSlidingState(this);

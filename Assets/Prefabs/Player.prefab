@@ -34,7 +34,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 8452591009274859108}
+  - {fileID: 5668864153298651705}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &5074988174482147936
@@ -145,12 +145,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f9a41cb817472ec4b81b3f080c349eb1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _modelTransform: {fileID: 8452591009274859108}
+  _modelTransform: {fileID: 5668864153298651705}
   _smoothTime: 0.075
   _maxStepDelta: 0.5
   _onlyWhenGrounded: 1
   _debugLog: 0
---- !u!1001 &8270609753307113871
+--- !u!1001 &5269599231663058386
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -216,25 +216,20 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a95aadcfcddee4b448ccfd54437577e3, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1986114760411272409}
+      addedObject: {fileID: 4362247126569063437}
   m_SourcePrefab: {fileID: 100100000, guid: a95aadcfcddee4b448ccfd54437577e3, type: 3}
---- !u!4 &8452591009274859108 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: a95aadcfcddee4b448ccfd54437577e3, type: 3}
-  m_PrefabInstance: {fileID: 8270609753307113871}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &9081071118693782750 stripped
+--- !u!1 &5035034575424688259 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: a95aadcfcddee4b448ccfd54437577e3, type: 3}
-  m_PrefabInstance: {fileID: 8270609753307113871}
+  m_PrefabInstance: {fileID: 5269599231663058386}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1986114760411272409
+--- !u!114 &4362247126569063437
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9081071118693782750}
+  m_GameObject: {fileID: 5035034575424688259}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 82e038c992495be4b883ff924c46ab18, type: 3}
@@ -245,3 +240,8 @@ MonoBehaviour:
   _speedDampTime: 0.1
   _verticalVelocityDampTime: 0.05
   _stairAnimSpeedMultiplier: 1.5
+--- !u!4 &5668864153298651705 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: a95aadcfcddee4b448ccfd54437577e3, type: 3}
+  m_PrefabInstance: {fileID: 5269599231663058386}
+  m_PrefabAsset: {fileID: 0}

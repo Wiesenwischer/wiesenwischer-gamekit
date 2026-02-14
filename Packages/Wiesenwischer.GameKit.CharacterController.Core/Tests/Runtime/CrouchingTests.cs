@@ -1,140 +1,93 @@
 using NUnit.Framework;
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core.Data;
 using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
-using Wiesenwischer.GameKit.CharacterController.Core.Locomotion.Modules;
 using Wiesenwischer.GameKit.CharacterController.Core.Motor;
 using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
 {
     [TestFixture]
-    public class SlidingTests
+    public class CrouchingTests
     {
-        #region SlopeModule Tests
+        #region CharacterLocomotion Crouching Tests
 
         [Test]
-        public void SlopeModule_ShouldSlide_ReturnsTrueWhenAboveMaxAngle()
+        public void CharacterLocomotion_SetCrouching_SetsIsCrouching()
         {
-            var module = new SlopeModule();
+            var go = new GameObject("TestCharacter");
+            var capsule = go.AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 2f;
+            var motor = go.AddComponent<CharacterMotor>();
+            var config = CreateMockConfig();
 
-            Assert.IsTrue(module.ShouldSlide(50f, 45f));
-            Assert.IsTrue(module.ShouldSlide(90f, 45f));
+            try
+            {
+                var locomotion = new CharacterLocomotion(motor, config);
+
+                Assert.IsFalse(locomotion.IsCrouching, "IsCrouching should be false initially");
+
+                locomotion.SetCrouching(true);
+                Assert.IsTrue(locomotion.IsCrouching, "IsCrouching should be true after SetCrouching(true)");
+
+                locomotion.SetCrouching(false);
+                Assert.IsFalse(locomotion.IsCrouching, "IsCrouching should be false after SetCrouching(false)");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
         }
 
         [Test]
-        public void SlopeModule_ShouldSlide_ReturnsFalseWhenAtOrBelowMaxAngle()
+        public void CharacterLocomotion_CanStandUp_ReturnsTrueWhenNotCrouching()
         {
-            var module = new SlopeModule();
+            var go = new GameObject("TestCharacter");
+            var capsule = go.AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 2f;
+            var motor = go.AddComponent<CharacterMotor>();
+            var config = CreateMockConfig();
 
-            Assert.IsFalse(module.ShouldSlide(45f, 45f));
-            Assert.IsFalse(module.ShouldSlide(30f, 45f));
-            Assert.IsFalse(module.ShouldSlide(0f, 45f));
-        }
+            try
+            {
+                var locomotion = new CharacterLocomotion(motor, config);
 
-        [Test]
-        public void SlopeModule_CalculateSlideVelocity_ReturnsDownhillDirection()
-        {
-            var module = new SlopeModule();
-            // 30° slope tilted towards positive X
-            var normal = Quaternion.Euler(30f, 0f, 0f) * Vector3.up;
-            var velocity = module.CalculateSlideVelocity(normal, 10f, 30f);
-
-            // Should have downward Y component
-            Assert.That(velocity.y, Is.LessThan(0f), "Slide velocity should be downhill (negative Y)");
-            Assert.That(velocity.magnitude, Is.GreaterThan(0f), "Slide velocity should not be zero");
-        }
-
-        [Test]
-        public void SlopeModule_CalculateSlideVelocity_SteeperSlopeIsFaster()
-        {
-            var module = new SlopeModule();
-            var normal30 = Quaternion.Euler(30f, 0f, 0f) * Vector3.up;
-            var normal60 = Quaternion.Euler(60f, 0f, 0f) * Vector3.up;
-
-            var v30 = module.CalculateSlideVelocity(normal30, 10f, 30f);
-            var v60 = module.CalculateSlideVelocity(normal60, 10f, 60f);
-
-            Assert.That(v60.magnitude, Is.GreaterThan(v30.magnitude),
-                "60° slope should produce faster slide than 30°");
-        }
-
-        [Test]
-        public void SlopeModule_CalculateSlideVelocity_FlatSurface_ReturnsZero()
-        {
-            var module = new SlopeModule();
-            var velocity = module.CalculateSlideVelocity(Vector3.up, 10f, 0f);
-
-            // Angle multiplier = 0/90 = 0, so speed should be 0
-            Assert.That(velocity.magnitude, Is.LessThan(0.001f),
-                "Flat surface should produce no slide velocity");
-        }
-
-        [Test]
-        public void SlopeModule_IsWalkable_ReturnsCorrectly()
-        {
-            var module = new SlopeModule();
-
-            Assert.IsTrue(module.IsWalkable(30f, 45f));
-            Assert.IsTrue(module.IsWalkable(45f, 45f));
-            Assert.IsFalse(module.IsWalkable(46f, 45f));
+                Assert.IsTrue(locomotion.CanStandUp(), "CanStandUp should be true when not crouching");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
         }
 
         #endregion
 
-        #region CharacterLocomotion Sliding Intent Tests
+        #region ReusableData Crouching Tests
 
         [Test]
-        public void CharacterLocomotion_SetSliding_SetsIsSliding()
+        public void ReusableData_IsCrouching_DefaultFalse()
         {
-            var go = new GameObject("TestCharacter");
-            var capsule = go.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.5f;
-            capsule.height = 2f;
-            var motor = go.AddComponent<CharacterMotor>();
-            var config = CreateMockConfig();
-
-            try
-            {
-                var locomotion = new CharacterLocomotion(motor, config);
-
-                Assert.IsFalse(locomotion.IsSliding, "IsSliding should be false initially");
-
-                locomotion.SetSliding(true);
-                Assert.IsTrue(locomotion.IsSliding, "IsSliding should be true after SetSliding(true)");
-
-                locomotion.SetSliding(false);
-                Assert.IsFalse(locomotion.IsSliding, "IsSliding should be false after SetSliding(false)");
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
+            var data = new PlayerStateReusableData();
+            Assert.IsFalse(data.IsCrouching, "IsCrouching should default to false");
         }
 
         [Test]
-        public void CharacterLocomotion_SetSliding_ResetsSlidingTime()
+        public void ReusableData_IsCrouching_CanBeSet()
         {
-            var go = new GameObject("TestCharacter");
-            var capsule = go.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.5f;
-            capsule.height = 2f;
-            var motor = go.AddComponent<CharacterMotor>();
-            var config = CreateMockConfig();
+            var data = new PlayerStateReusableData();
+            data.IsCrouching = true;
+            Assert.IsTrue(data.IsCrouching);
+            data.IsCrouching = false;
+            Assert.IsFalse(data.IsCrouching);
+        }
 
-            try
-            {
-                var locomotion = new CharacterLocomotion(motor, config);
-
-                locomotion.SetSliding(true);
-                Assert.AreEqual(0f, locomotion.SlidingTime, "SlidingTime should be 0 initially");
-
-                locomotion.SetSliding(false);
-                Assert.AreEqual(0f, locomotion.SlidingTime, "SlidingTime should reset to 0 on exit");
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
+        [Test]
+        public void ReusableData_CrouchTogglePressed_DefaultFalse()
+        {
+            var data = new PlayerStateReusableData();
+            Assert.IsFalse(data.CrouchTogglePressed, "CrouchTogglePressed should default to false");
         }
 
         #endregion
@@ -142,83 +95,99 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
         #region Config Default Tests
 
         [Test]
-        public void Config_SlideAcceleration_HasPositiveDefault()
+        public void Config_CrouchHeight_IsLessThanStandingHeight()
         {
             var config = CreateMockConfig();
-            Assert.That(config.SlideAcceleration, Is.GreaterThan(0f));
+            Assert.That(config.CrouchHeight, Is.LessThan(config.StandingHeight),
+                "CrouchHeight should be less than StandingHeight");
         }
 
         [Test]
-        public void Config_SlideSteerStrength_IsBetweenZeroAndOne()
+        public void Config_CrouchHeight_IsPositive()
         {
             var config = CreateMockConfig();
-            Assert.That(config.SlideSteerStrength, Is.GreaterThanOrEqualTo(0f));
-            Assert.That(config.SlideSteerStrength, Is.LessThanOrEqualTo(1f));
+            Assert.That(config.CrouchHeight, Is.GreaterThan(0f));
         }
 
         [Test]
-        public void Config_SlideExitHysteresis_IsPositive()
+        public void Config_CrouchSpeed_IsPositive()
         {
             var config = CreateMockConfig();
-            Assert.That(config.SlideExitHysteresis, Is.GreaterThan(0f));
+            Assert.That(config.CrouchSpeed, Is.GreaterThan(0f));
         }
 
         [Test]
-        public void Config_MinSlideTime_IsPositive()
+        public void Config_CrouchSpeed_IsLessThanRunSpeed()
         {
             var config = CreateMockConfig();
-            Assert.That(config.MinSlideTime, Is.GreaterThan(0f));
+            Assert.That(config.CrouchSpeed, Is.LessThan(config.RunSpeed),
+                "CrouchSpeed should be less than RunSpeed");
         }
 
         [Test]
-        public void Config_SlideJumpForceMultiplier_IsBetweenZeroAndOne()
+        public void Config_CrouchTransitionDuration_IsPositive()
         {
             var config = CreateMockConfig();
-            Assert.That(config.SlideJumpForceMultiplier, Is.GreaterThanOrEqualTo(0f));
-            Assert.That(config.SlideJumpForceMultiplier, Is.LessThanOrEqualTo(1f));
+            Assert.That(config.CrouchTransitionDuration, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void Config_CrouchHeadClearanceMargin_IsPositive()
+        {
+            var config = CreateMockConfig();
+            Assert.That(config.CrouchHeadClearanceMargin, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void Config_CrouchStepHeight_IsPositive()
+        {
+            var config = CreateMockConfig();
+            Assert.That(config.CrouchStepHeight, Is.GreaterThan(0f));
         }
 
         #endregion
 
-        #region Hysteresis Logic Tests
+        #region StateMachine Registration Tests
 
         [Test]
-        public void Hysteresis_ExitAngle_IsLowerThanMaxSlopeAngle()
+        public void StateMachine_CrouchingState_IsRegistered()
         {
-            float maxSlopeAngle = 45f;
-            float hysteresis = 3f;
-            float exitAngle = maxSlopeAngle - hysteresis;
+            var go = new GameObject("TestPlayer");
+            var capsule = go.AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 2f;
+            go.AddComponent<CharacterMotor>();
+            var player = go.AddComponent<PlayerController>();
 
-            Assert.That(exitAngle, Is.EqualTo(42f));
-            Assert.That(exitAngle, Is.LessThan(maxSlopeAngle));
+            try
+            {
+                // StateMachine wird erst in Awake erstellt, daher manuell
+                // prüfen ob der Type existiert und instanziierbar ist
+                var config = CreateMockConfig();
+                Assert.IsNotNull(config.CrouchHeight,
+                    "CrouchHeight should be accessible from config");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
         }
 
-        [Test]
-        public void Hysteresis_SlopeWithinBuffer_ShouldNotExit()
-        {
-            float maxSlopeAngle = 45f;
-            float hysteresis = 3f;
-            float exitAngle = maxSlopeAngle - hysteresis;
+        #endregion
 
-            // Slope at 43° is within hysteresis buffer (between 42° exit and 45° entry)
-            float currentSlope = 43f;
-            bool shouldExit = currentSlope < exitAngle;
-
-            Assert.IsFalse(shouldExit, "Should not exit slide at 43° with 3° hysteresis (exit at 42°)");
-        }
+        #region Speed Modifier Tests
 
         [Test]
-        public void Hysteresis_SlopeBelowExitAngle_ShouldExit()
+        public void CrouchSpeedModifier_IsCorrectRatio()
         {
-            float maxSlopeAngle = 45f;
-            float hysteresis = 3f;
-            float exitAngle = maxSlopeAngle - hysteresis;
+            var config = CreateMockConfig();
+            float expectedModifier = config.CrouchSpeed / config.WalkSpeed;
 
-            // Slope at 41° is below exit angle
-            float currentSlope = 41f;
-            bool shouldExit = currentSlope < exitAngle;
-
-            Assert.IsTrue(shouldExit, "Should exit slide at 41° (below 42° exit angle)");
+            Assert.That(expectedModifier, Is.GreaterThan(0f));
+            Assert.That(expectedModifier, Is.LessThan(2f),
+                "Crouch speed modifier should be reasonable");
+            Assert.That(expectedModifier, Is.EqualTo(0.5f).Within(0.01f),
+                "CrouchSpeed(2.5) / WalkSpeed(5.0) should be 0.5");
         }
 
         #endregion

@@ -199,6 +199,37 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Range(0.5f, 2.0f)]
         [SerializeField] private float _rollSpeedModifier = 1.0f;
 
+        [Header("Crouching")]
+        [Tooltip("Capsule-Höhe beim Crouchen (m)")]
+        [SerializeField] private float _crouchHeight = 1.2f;
+
+        [Tooltip("Capsule-Höhe im Stehen (m) — Motor-Default")]
+        [SerializeField] private float _standingHeight = 2.0f;
+
+        [Tooltip("Bewegungsgeschwindigkeit beim Crouchen (m/s)")]
+        [SerializeField] private float _crouchSpeed = 2.5f;
+
+        [Tooltip("Beschleunigung beim Crouchen (m/s²)")]
+        [SerializeField] private float _crouchAcceleration = 8.0f;
+
+        [Tooltip("Verzögerung beim Crouchen (m/s²)")]
+        [SerializeField] private float _crouchDeceleration = 10.0f;
+
+        [Tooltip("Dauer der Capsule-Höhen-Transition (s)")]
+        [SerializeField] private float _crouchTransitionDuration = 0.25f;
+
+        [Tooltip("Sicherheitsabstand für Stand-Up-Check (m)")]
+        [SerializeField] private float _crouchHeadClearanceMargin = 0.1f;
+
+        [Tooltip("Ob aus dem Crouch gesprungen werden kann")]
+        [SerializeField] private bool _canJumpFromCrouch = true;
+
+        [Tooltip("Ob Sprint den Crouch automatisch beendet")]
+        [SerializeField] private bool _canSprintFromCrouch = true;
+
+        [Tooltip("Reduzierte Step-Höhe im Crouch (m), -1 = Motor-Default")]
+        [SerializeField] private float _crouchStepHeight = 0.2f;
+
         // Interface Implementation
         public float WalkSpeed => _walkSpeed;
         public float RunSpeed => _runSpeed;
@@ -253,6 +284,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool RollEnabled => _rollEnabled;
         public RollTriggerMode RollTriggerMode => _rollTriggerMode;
         public float RollSpeedModifier => _rollSpeedModifier;
+        public float CrouchHeight => _crouchHeight;
+        public float StandingHeight => _standingHeight;
+        public float CrouchSpeed => _crouchSpeed;
+        public float CrouchAcceleration => _crouchAcceleration;
+        public float CrouchDeceleration => _crouchDeceleration;
+        public float CrouchTransitionDuration => _crouchTransitionDuration;
+        public float CrouchHeadClearanceMargin => _crouchHeadClearanceMargin;
+        public bool CanJumpFromCrouch => _canJumpFromCrouch;
+        public bool CanSprintFromCrouch => _canSprintFromCrouch;
+        public float CrouchStepHeight => _crouchStepHeight;
 
         /// <summary>
         /// Berechnet die initiale Sprunggeschwindigkeit basierend auf Sprunghöhe und -dauer.

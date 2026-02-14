@@ -17,26 +17,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private const string ClipBasePath = "Assets/Animations/Locomotion/";
 
-        // --- Animation FBX Slots ---
-        private GameObject _animIdle;
-        private GameObject _animWalk;
-        private GameObject _animRun;
-        private GameObject _animSprint;
-        private GameObject _animJump;
-        private GameObject _animFall;
-        private GameObject _animSoftLand;
-        private GameObject _animHardLand;
-        private GameObject _animLightStop;
-        private GameObject _animMediumStop;
-        private GameObject _animHardStop;
-        private GameObject _animSlide;
-        private GameObject _animRoll;
+        // --- Animation FBX Slots (SerializeField für Persistenz über Domain Reloads) ---
+        [SerializeField] private GameObject _animIdle;
+        [SerializeField] private GameObject _animWalk;
+        [SerializeField] private GameObject _animRun;
+        [SerializeField] private GameObject _animSprint;
+        [SerializeField] private GameObject _animJump;
+        [SerializeField] private GameObject _animFall;
+        [SerializeField] private GameObject _animSoftLand;
+        [SerializeField] private GameObject _animHardLand;
+        [SerializeField] private GameObject _animLightStop;
+        [SerializeField] private GameObject _animMediumStop;
+        [SerializeField] private GameObject _animHardStop;
+        [SerializeField] private GameObject _animSlide;
+        [SerializeField] private GameObject _animRoll;
+        [SerializeField] private GameObject _animCrouchIdle;
+        [SerializeField] private GameObject _animCrouchWalk;
 
         // --- UI State ---
         private Vector2 _scrollPos;
         private bool _foldLocomotion = true;
         private bool _foldAirborne = true;
         private bool _foldStopping = true;
+        private bool _foldCrouching = true;
 
         [MenuItem("Wiesenwischer/GameKit/Animation/Animation Wizard", false, 1)]
         public static void ShowWindow()
@@ -54,7 +57,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
 
         private void OnEnable()
         {
-            AutoDetectAnimationFBXs();
+            // Beim Öffnen: Aktuell im Controller zugewiesene Clips auslesen.
+            // So sieht der User immer was tatsächlich im Controller aktiv ist.
+            ReadFromController();
         }
 
         private void OnGUI()
@@ -118,6 +123,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 EditorGUI.indentLevel--;
             }
 
+            // Crouching
+            _foldCrouching = EditorGUILayout.Foldout(_foldCrouching, "Crouching (Loop)", true, EditorStyles.foldoutHeader);
+            if (_foldCrouching)
+            {
+                EditorGUI.indentLevel++;
+                _animCrouchIdle = FbxSlot("Crouch Idle", _animCrouchIdle);
+                _animCrouchWalk = FbxSlot("Crouch Walk", _animCrouchWalk);
+                EditorGUI.indentLevel--;
+            }
+
             EditorGUILayout.Space(8);
 
             GUI.enabled = HasAnyAnimation();
@@ -164,7 +179,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 controller != null ? $"{controller.layers[0].stateMachine.states.Length} States" : null);
 
             int count = CountAnimSlots();
-            StatusRow("Animation FBXs", count > 0, $"{count}/13 zugewiesen");
+            StatusRow("Animation FBXs", count > 0, $"{count}/15 zugewiesen");
 
             // Character Model aus Prefab anzeigen (read-only)
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabCreator.OutputPath);
@@ -207,7 +222,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             return _animIdle || _animWalk || _animRun || _animSprint ||
                    _animJump || _animFall || _animSoftLand || _animHardLand ||
                    _animLightStop || _animMediumStop || _animHardStop || _animSlide ||
-                   _animRoll;
+                   _animRoll || _animCrouchIdle || _animCrouchWalk;
         }
 
         private int CountAnimSlots()
@@ -226,7 +241,79 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             if (_animHardStop) c++;
             if (_animSlide) c++;
             if (_animRoll) c++;
+            if (_animCrouchIdle) c++;
+            if (_animCrouchWalk) c++;
             return c;
+        }
+
+        #endregion
+
+        #region Read From Controller
+
+        private void ReadFromController()
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+            if (controller == null) return;
+
+            var rootSM = controller.layers[AnimationParameters.BaseLayerIndex].stateMachine;
+
+            // Locomotion Blend Tree auslesen
+            var locomotionState = FindState(rootSM, "Locomotion");
+            if (locomotionState != null && locomotionState.motion is BlendTree locomotionTree)
+            {
+                var children = locomotionTree.children;
+                if (children.Length >= 4)
+                {
+                    _animIdle = FbxFromMotion(children[0].motion);
+                    _animWalk = FbxFromMotion(children[1].motion);
+                    _animRun = FbxFromMotion(children[2].motion);
+                    _animSprint = FbxFromMotion(children[3].motion);
+                }
+            }
+
+            // Crouch Blend Tree auslesen
+            var crouchState = FindState(rootSM, "Crouch");
+            if (crouchState != null && crouchState.motion is BlendTree crouchTree)
+            {
+                var crouchChildren = crouchTree.children;
+                if (crouchChildren.Length >= 2)
+                {
+                    _animCrouchIdle = FbxFromMotion(crouchChildren[0].motion);
+                    _animCrouchWalk = FbxFromMotion(crouchChildren[1].motion);
+                }
+            }
+
+            // Einzelne States auslesen
+            _animJump = FbxFromState(rootSM, "Jump");
+            _animFall = FbxFromState(rootSM, "Fall");
+            _animSoftLand = FbxFromState(rootSM, "SoftLand");
+            _animHardLand = FbxFromState(rootSM, "HardLand");
+            _animSlide = FbxFromState(rootSM, "Slide");
+            _animRoll = FbxFromState(rootSM, "Roll");
+            _animLightStop = FbxFromState(rootSM, "LightStop");
+            _animMediumStop = FbxFromState(rootSM, "MediumStop");
+            _animHardStop = FbxFromState(rootSM, "HardStop");
+        }
+
+        private static GameObject FbxFromState(AnimatorStateMachine sm, string stateName)
+        {
+            var state = FindState(sm, stateName);
+            if (state == null) return null;
+            return FbxFromMotion(state.motion);
+        }
+
+        private static GameObject FbxFromMotion(Motion motion)
+        {
+            if (motion == null) return null;
+
+            var clip = motion as AnimationClip;
+            if (clip == null) return null;
+
+            string path = AssetDatabase.GetAssetPath(clip);
+            if (string.IsNullOrEmpty(path) || !path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
         }
 
         #endregion
@@ -248,12 +335,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             _animHardStop = LoadFbxAsset("Anim_HardStop");
             _animSlide = LoadFbxAsset("Anim_Slide");
             _animRoll = LoadFbxAsset("Anim_Roll");
+            _animCrouchIdle = LoadFbxAsset("Anim_CrouchIdle");
+            _animCrouchWalk = LoadFbxAsset("Anim_CrouchWalk");
 
             // Fallback: Anim_Land als SoftLand
             if (_animSoftLand == null)
                 _animSoftLand = LoadFbxAsset("Anim_Land");
 
-            Debug.Log($"[AnimationWizard] Auto-Erkennung: {CountAnimSlots()}/13 FBXs gefunden.");
+            Debug.Log($"[AnimationWizard] Auto-Erkennung: {CountAnimSlots()}/15 FBXs gefunden.");
         }
 
         private static GameObject LoadFbxAsset(string fbxName)
@@ -298,6 +387,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             configured += ConfigureAnim(_animLightStop, sourceAvatar, false, false, "LightStop", bakePositionXZ: false);
             configured += ConfigureAnim(_animMediumStop, sourceAvatar, false, false, "MediumStop", bakePositionXZ: false);
             configured += ConfigureAnim(_animHardStop, sourceAvatar, false, false, "HardStop", bakePositionXZ: false);
+
+            // Crouching (loop, grounded → Feet)
+            configured += ConfigureAnim(_animCrouchIdle, sourceAvatar, true, false, "CrouchIdle");
+            configured += ConfigureAnim(_animCrouchWalk, sourceAvatar, true, false, "CrouchWalk");
 
             if (configured > 0)
             {
@@ -456,6 +549,50 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 TryAssignBlendTreeChild(ref children, 2, _animRun, "Run");
                 TryAssignBlendTreeChild(ref children, 3, _animSprint, "Sprint");
                 blendTree.children = children;
+            }
+
+            // === Crouch Blend Tree ===
+            if (_animCrouchIdle != null || _animCrouchWalk != null)
+            {
+                var crouchState = FindState(rootSM, "Crouch");
+                BlendTree crouchTree = null;
+
+                if (crouchState != null && crouchState.motion is BlendTree existingCrouchTree)
+                {
+                    crouchTree = existingCrouchTree;
+                }
+                else
+                {
+                    if (crouchState != null)
+                        rootSM.RemoveState(crouchState);
+
+                    crouchTree = new BlendTree
+                    {
+                        name = "Crouch",
+                        blendType = BlendTreeType.Simple1D,
+                        blendParameter = AnimationParameters.SpeedParam,
+                        useAutomaticThresholds = false
+                    };
+
+                    var emptyClip = new AnimationClip { name = "_empty_crouch" };
+                    crouchTree.AddChild(emptyClip, 0.0f);
+                    crouchTree.AddChild(emptyClip, 0.5f);
+
+                    AssetDatabase.AddObjectToAsset(crouchTree, controller);
+
+                    crouchState = rootSM.AddState("Crouch");
+                    crouchState.motion = crouchTree;
+                    crouchState.iKOnFeet = true;
+                    crouchState.writeDefaultValues = false;
+                }
+
+                var crouchChildren = crouchTree.children;
+                if (crouchChildren.Length >= 2)
+                {
+                    TryAssignBlendTreeChild(ref crouchChildren, 0, _animCrouchIdle, "CrouchIdle");
+                    TryAssignBlendTreeChild(ref crouchChildren, 1, _animCrouchWalk, "CrouchWalk");
+                    crouchTree.children = crouchChildren;
+                }
             }
 
             // === Einzelne States ===

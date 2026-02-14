@@ -32,6 +32,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Data
         /// </summary>
         public bool ShouldWalk { get; set; }
 
+        /// <summary>Crouch-Toggle Input (einmalig pro Frame).</summary>
+        public bool CrouchTogglePressed { get; set; }
+
+        /// <summary>Ob der Character aktuell im Crouch-State ist (für Persistenz).</summary>
+        public bool IsCrouching { get; set; }
+
         #endregion
 
         #region Movement State

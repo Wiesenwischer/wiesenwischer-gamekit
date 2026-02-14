@@ -256,6 +256,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             ReusableData.JumpHeld = InputProvider.JumpHeld;
             ReusableData.SprintHeld = InputProvider.SprintHeld;
             ReusableData.DashPressed = InputProvider.DashPressed;
+            ReusableData.CrouchTogglePressed = InputProvider.CrouchTogglePressed;
 
             // Walk Toggle (MMO-Style: Taste drücken → Walk ein/aus)
             if (InputProvider.WalkTogglePressed)
