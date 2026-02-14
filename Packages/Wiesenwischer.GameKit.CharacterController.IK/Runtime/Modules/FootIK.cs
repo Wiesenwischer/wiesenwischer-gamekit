@@ -42,6 +42,10 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         [Tooltip("Maximaler Body-Offset nach oben (kompensiert footOffset).")]
         [SerializeField] private float _maxBodyUpOffset = 0.05f;
 
+        [Header("Terrain Adaptation")]
+        [Tooltip("Höhendifferenz (m) ab der IK voll aktiv wird.")]
+        [SerializeField] private float _terrainVarianceThreshold = 0.03f;
+
         [Header("Locomotion Blend")]
         [Tooltip("Ab dieser Geschwindigkeit wird FootIK ausgeblendet (m/s).")]
         [SerializeField] private float _speedBlendStart = 0.1f;
@@ -66,6 +70,11 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         // Body Offset
         private float _currentBodyOffset;
         private float _bodyOffsetVelocity;
+
+        // Terrain-Varianz
+        private float _terrainWeight = 1f;
+        private Vector3 _leftFootNormal;
+        private Vector3 _rightFootNormal;
 
         // Locomotion Blend: IK-Weight wird bei Bewegung ausgeblendet,
         // damit die Walk/Run-Animation die Beine steuert (nicht IK).
@@ -129,8 +138,20 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             Vector3 leftFoot = leftFootBone.position;
             Vector3 rightFoot = rightFootBone.position;
 
-            _leftFootHit = CastFoot(leftFoot, out _leftFootTarget, out _leftFootRotation);
-            _rightFootHit = CastFoot(rightFoot, out _rightFootTarget, out _rightFootRotation);
+            _leftFootHit = CastFoot(leftFoot, out _leftFootTarget, out _leftFootRotation, out _leftFootNormal);
+            _rightFootHit = CastFoot(rightFoot, out _rightFootTarget, out _rightFootRotation, out _rightFootNormal);
+
+            // Terrain-Varianz berechnen
+            float terrainVariance = 0f;
+            if (_leftFootHit && _rightFootHit)
+            {
+                float heightDiff = Mathf.Abs(_leftFootTarget.y - _rightFootTarget.y);
+                float leftNormalDev = 1f - Vector3.Dot(_leftFootNormal, Vector3.up);
+                float rightNormalDev = 1f - Vector3.Dot(_rightFootNormal, Vector3.up);
+                float normalDev = Mathf.Max(leftNormalDev, rightNormalDev);
+                terrainVariance = heightDiff + normalDev * 0.1f;
+            }
+            _terrainWeight = Mathf.InverseLerp(0f, _terrainVarianceThreshold, terrainVariance);
 
             // Body Offset berechnen (auch mit Locomotion Blend skaliert)
             float targetBodyOffset = 0f;
@@ -150,8 +171,8 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         {
             if (layerIndex != 0) return;
 
-            // IK-Weight × Locomotion-Blend: Bei Bewegung → 0, bei Idle → _weight
-            float effectiveWeight = _weight * _locomotionBlendWeight;
+            // IK-Weight × Locomotion-Blend × Terrain-Varianz
+            float effectiveWeight = _weight * _locomotionBlendWeight * _terrainWeight;
 
             // Body Offset anwenden (Hüfte absenken), auch mit Blend skaliert
             if (Mathf.Abs(_currentBodyOffset * _locomotionBlendWeight) > 0.001f)
@@ -190,7 +211,8 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             }
         }
 
-        private bool CastFoot(Vector3 footPos, out Vector3 targetPos, out Quaternion targetRot)
+        private bool CastFoot(Vector3 footPos, out Vector3 targetPos, out Quaternion targetRot,
+                              out Vector3 surfaceNormal)
         {
             Vector3 origin = footPos + Vector3.up * _raycastHeight;
             float distance = _raycastHeight + _raycastDepth;
@@ -200,11 +222,13 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                 targetPos = hit.point + hit.normal * _footOffset;
                 targetRot = Quaternion.FromToRotation(Vector3.up, hit.normal)
                             * transform.rotation;
+                surfaceNormal = hit.normal;
                 return true;
             }
 
             targetPos = footPos;
             targetRot = Quaternion.identity;
+            surfaceNormal = Vector3.up;
             return false;
         }
 
