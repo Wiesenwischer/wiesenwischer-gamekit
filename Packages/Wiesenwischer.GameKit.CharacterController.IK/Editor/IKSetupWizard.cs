@@ -55,6 +55,18 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Editor
             ikManagerSo.FindProperty("_disableDuringAirborne").boolValue = true;
             ikManagerSo.ApplyModifiedProperties();
 
+            // === FootLock === (VOR FootIK — Registrierungsreihenfolge!)
+            var footLock = modelGO.AddComponent<FootLock>();
+            var footLockSo = new SerializedObject(footLock);
+            footLockSo.FindProperty("_playerController").objectReferenceValue = playerController;
+            footLockSo.FindProperty("_lockVelocityThreshold").floatValue = 0.05f;
+            footLockSo.FindProperty("_releaseVelocityThreshold").floatValue = 0.15f;
+            footLockSo.FindProperty("_stableFramesRequired").intValue = 2;
+            footLockSo.FindProperty("_releaseDuration").floatValue = 0.15f;
+            footLockSo.FindProperty("_maxLockDistance").floatValue = 0.3f;
+            footLockSo.FindProperty("_weight").floatValue = 1f;
+            footLockSo.ApplyModifiedProperties();
+
             // === FootIK ===
             var footIK = modelGO.AddComponent<FootIK>();
             var footSo = new SerializedObject(footIK);
@@ -93,6 +105,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Editor
 
             Debug.Log("[IKSetupWizard] IK-Komponenten erfolgreich hinzugefügt:");
             Debug.Log("  - IKManager (Master-Weight=1, Airborne-Deaktivierung=true)");
+            Debug.Log("  - FootLock (Velocity-basiertes Foot Locking)");
             Debug.Log("  - FootIK (Raycast-basierte Fuß-Anpassung)");
             Debug.Log("  - LookAtIK (Kamera-Blickrichtung)");
             Debug.Log("  - CameraTargetProvider (Camera.main als LookAt-Ziel)");
