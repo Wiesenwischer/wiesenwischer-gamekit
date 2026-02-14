@@ -19,6 +19,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             "Packages/Wiesenwischer.GameKit.CharacterController.Animation/Resources/AnimatorControllers/CharacterAnimatorController.controller";
 
         private const string LocomotionConfigPath = "Assets/Config/DefaultLocomotionConfig.asset";
+        private const string TransitionConfigPath = "Assets/Config/DefaultAnimationTransitionConfig.asset";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         public const string OutputPath = "Assets/Prefabs/Player.prefab";
 
@@ -100,9 +101,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             animator.updateMode = AnimatorUpdateMode.Normal;
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
 
+            var transitionConfig = AssetDatabase.LoadAssetAtPath<AnimationTransitionConfig>(TransitionConfigPath);
+
             var bridge = model.AddComponent<AnimatorParameterBridge>();
             var bridgeSo = new SerializedObject(bridge);
             bridgeSo.FindProperty("_playerController").objectReferenceValue = playerController;
+            if (transitionConfig != null)
+                bridgeSo.FindProperty("_transitionConfig").objectReferenceValue = transitionConfig;
             bridgeSo.ApplyModifiedProperties();
 
             // === GroundingSmoother ===
@@ -187,9 +192,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             newAnimator.updateMode = AnimatorUpdateMode.Normal;
             newAnimator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
 
+            var transitionConfig = AssetDatabase.LoadAssetAtPath<AnimationTransitionConfig>(TransitionConfigPath);
+
             var bridge = newModel.AddComponent<AnimatorParameterBridge>();
             var bridgeSo = new SerializedObject(bridge);
             bridgeSo.FindProperty("_playerController").objectReferenceValue = playerController;
+            if (transitionConfig != null)
+                bridgeSo.FindProperty("_transitionConfig").objectReferenceValue = transitionConfig;
             bridgeSo.ApplyModifiedProperties();
 
             // GroundingSmoother: _modelTransform auf neues Modell zeigen
