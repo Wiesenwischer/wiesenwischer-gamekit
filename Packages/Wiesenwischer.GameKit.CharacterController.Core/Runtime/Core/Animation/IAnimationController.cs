@@ -81,5 +81,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Animation
         /// Setzt das Gewicht des Ability-Layers (0-1).
         /// </summary>
         void SetAbilityLayerWeight(float weight);
+
+        /// <summary>
+        /// Spielt eine Animation auf dem Ability Layer (Layer 1) ab.
+        /// Nutzt CrossFade mit der angegebenen Transition-Dauer.
+        /// </summary>
+        void PlayAbilityAnimation(string stateName, float transitionDuration) { }
     }
 }

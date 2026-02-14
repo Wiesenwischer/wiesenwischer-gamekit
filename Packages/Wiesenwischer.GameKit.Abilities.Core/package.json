@@ -1,0 +1,10 @@
+{
+  "name": "wiesenwischer.gamekit.abilities.core",
+  "version": "0.1.0",
+  "displayName": "Wiesenwischer GameKit - Abilities Core",
+  "description": "Core ability system framework: IAbility interface, AbilitySystem manager, lifecycle management.",
+  "unity": "2022.3",
+  "dependencies": {
+    "wiesenwischer.gamekit.charactercontroller.core": "0.1.0"
+  }
+}

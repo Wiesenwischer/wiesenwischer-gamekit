@@ -57,6 +57,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Der Animation Controller (optional, auf Child-Object).</summary>
         public IAnimationController AnimationController { get; private set; }
 
+        /// <summary>Das Ability System (optional).</summary>
+        public IAbilitySystem AbilitySystem { get; private set; }
+
         #endregion
 
         #region State Machine
@@ -125,6 +128,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             // 2. State Machine Update (HandleInput + Update)
             _movementStateMachine?.Update();
+
+            // 2b. Ability System Tick (nach State Machine, reagiert auf aktuellen State)
+            AbilitySystem?.Tick(Time.deltaTime);
 
             // 3. Events direkt an Locomotion weiterleiten (vor TickSystem).
             // Events sind One-Shot und dürfen nicht durch den TickSystem-Bottleneck,
@@ -232,6 +238,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             // Motor ist die EINZIGE Quelle für Ground-State
             // CharacterLocomotion implementiert ICharacterController für den Motor
             Locomotion = new CharacterLocomotion(CharacterMotor, _config);
+
+            // Optional: Ability System (kann fehlen)
+            AbilitySystem = GetComponent<IAbilitySystem>();
         }
 
         private void InitializeStateMachine()

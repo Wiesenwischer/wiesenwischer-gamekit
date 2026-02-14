@@ -303,6 +303,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             _animator.SetLayerWeight(AnimationParameters.AbilityLayerIndex, weight);
         }
 
+        public void PlayAbilityAnimation(string stateName, float transitionDuration)
+        {
+            if (!_isValid || string.IsNullOrEmpty(stateName)) return;
+            _animator.CrossFade(stateName, transitionDuration, AnimationParameters.AbilityLayerIndex);
+        }
+
         #endregion
 
         /// <summary>

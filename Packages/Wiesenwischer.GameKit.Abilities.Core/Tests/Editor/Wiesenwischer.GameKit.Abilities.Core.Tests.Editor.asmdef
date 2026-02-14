@@ -1,0 +1,25 @@
+{
+    "name": "Wiesenwischer.GameKit.Abilities.Core.Tests.Editor",
+    "rootNamespace": "Wiesenwischer.GameKit.Abilities.Core.Tests.Editor",
+    "references": [
+        "Wiesenwischer.GameKit.Abilities.Core",
+        "Wiesenwischer.GameKit.CharacterController.Core.Runtime",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
