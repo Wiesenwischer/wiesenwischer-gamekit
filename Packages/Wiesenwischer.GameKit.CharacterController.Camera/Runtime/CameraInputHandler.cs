@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -7,6 +8,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera
     /// Verbindet das Unity Input System mit der ThirdPersonCamera.
     /// Arbeitet direkt mit dem InputActionAsset — ohne PlayerInput-Component.
     /// </summary>
+    [Obsolete("Verwende CameraInputPipeline (Camera.Core Package) statt CameraInputHandler. Wird nach Phase 27 entfernt.")]
     [RequireComponent(typeof(ThirdPersonCamera))]
     public class CameraInputHandler : MonoBehaviour
     {
