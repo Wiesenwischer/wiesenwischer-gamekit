@@ -75,9 +75,17 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         private float _bodyOffsetVelocity;
 
         // Terrain-Varianz
-        private float _terrainWeight = 1f;
+        private float _terrainWeight;
         private Vector3 _leftFootNormal;
         private Vector3 _rightFootNormal;
+
+#if UNITY_EDITOR
+        [Header("Debug (Runtime)")]
+        [SerializeField] private float _debugTerrainVariance;
+        [SerializeField] private float _debugTerrainWeight;
+        [SerializeField] private float _debugEffectiveWeight;
+        [SerializeField] private float _debugBodyOffset;
+#endif
 
         // Locomotion Blend: IK-Weight wird bei Bewegung ausgeblendet,
         // damit die Walk/Run-Animation die Beine steuert (nicht IK).
@@ -156,6 +164,11 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             }
             _terrainWeight = Mathf.InverseLerp(0f, _terrainVarianceThreshold, terrainVariance);
 
+#if UNITY_EDITOR
+            _debugTerrainVariance = terrainVariance;
+            _debugTerrainWeight = _terrainWeight;
+#endif
+
             // Body Offset berechnen — nur wenn IK aktiv (terrainWeight > 0)
             float targetBodyOffset = 0f;
             if (_leftFootHit && _rightFootHit)
@@ -177,13 +190,26 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
             // IK-Weight × Locomotion-Blend × Terrain-Varianz
             float effectiveWeight = _weight * _locomotionBlendWeight * _terrainWeight;
 
-            // Body Offset anwenden (Hüfte absenken), auch mit Blend skaliert
+#if UNITY_EDITOR
+            _debugEffectiveWeight = effectiveWeight;
+            _debugBodyOffset = _currentBodyOffset;
+#endif
+
+            // Wenn IK praktisch inaktiv → komplett überspringen (keine SetIK-Aufrufe)
+            if (effectiveWeight < 0.001f && Mathf.Abs(_currentBodyOffset) < 0.001f)
+                return;
+
+            // Body Offset anwenden (Hüfte verschieben), auch mit Blend skaliert
             if (Mathf.Abs(_currentBodyOffset * _locomotionBlendWeight) > 0.001f)
             {
                 Vector3 bodyPos = animator.bodyPosition;
                 bodyPos.y += _currentBodyOffset * _locomotionBlendWeight;
                 animator.bodyPosition = bodyPos;
             }
+
+            // Wenn kein IK-Weight → nur Body-Offset anwenden, Füße nicht anfassen
+            if (effectiveWeight < 0.001f)
+                return;
 
             // Left Foot
             if (_leftFootHit)
