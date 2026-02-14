@@ -1,0 +1,10 @@
+{
+  "name": "wiesenwischer.gamekit.camera.core",
+  "displayName": "GameKit Camera Core",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "AAA Third-Person Camera Core — Brain, State, Pivot Rig und Input Pipeline.",
+  "dependencies": {
+    "com.unity.inputsystem": "1.7.0"
+  }
+}
