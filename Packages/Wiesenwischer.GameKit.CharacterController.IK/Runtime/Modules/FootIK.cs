@@ -39,6 +39,9 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
         [Tooltip("Maximaler Fuß-Versatz (verhindert Überdehnung).")]
         [SerializeField] private float _maxFootAdjustment = 0.4f;
 
+        [Tooltip("Maximaler Body-Offset nach oben (kompensiert footOffset).")]
+        [SerializeField] private float _maxBodyUpOffset = 0.05f;
+
         [Header("Locomotion Blend")]
         [Tooltip("Ab dieser Geschwindigkeit wird FootIK ausgeblendet (m/s).")]
         [SerializeField] private float _speedBlendStart = 0.1f;
@@ -136,7 +139,7 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                 float leftDelta = _leftFootTarget.y - leftFoot.y;
                 float rightDelta = _rightFootTarget.y - rightFoot.y;
                 targetBodyOffset = Mathf.Min(leftDelta, rightDelta);
-                targetBodyOffset = Mathf.Min(targetBodyOffset, 0f); // Nur nach unten
+                targetBodyOffset = Mathf.Clamp(targetBodyOffset, -_maxFootAdjustment, _maxBodyUpOffset);
             }
 
             _currentBodyOffset = Mathf.SmoothDamp(
