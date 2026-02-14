@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 7679819360221741759}
   - component: {fileID: 6970941530223990302}
   - component: {fileID: 3308492766348293921}
+  - component: {fileID: 8847291056734523891}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -132,6 +133,22 @@ MonoBehaviour:
   _isActive: 1
   _inputActions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   _actionMapName: Player
+--- !u!114 &8847291056734523891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1621985067595696583}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9a41cb817472ec4b81b3f080c349eb1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _modelTransform: {fileID: 4523652827095139177}
+  _smoothTime: 0.2
+  _maxStepDelta: 0.5
+  _onlyWhenGrounded: 1
 --- !u!1001 &4129105116958549122
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -1,21 +1,20 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
+namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
 {
     /// <summary>
-    /// Editor-Tool zum Erstellen der Animation-Test-Szene.
-    /// Menü: Wiesenwischer > GameKit > Create Animation Test Scene
+    /// Editor-Tool zum Erstellen der Playground-Szene (Umgebung ohne Player).
+    /// Menü: Wiesenwischer > GameKit > Core > Create Playground
     /// </summary>
-    public static class AnimationTestSceneCreator
+    public static class PlaygroundSceneCreator
     {
-        private const string PlayerPrefabPath = "Assets/Prefabs/Player.prefab";
-        private const string ScenePath = "Assets/Scenes/AnimationTestScene.unity";
+        private const string ScenePath = "Assets/Scenes/Playground.unity";
         private const string MaterialFolder = "Assets/Materials/TestScene";
 
-        public static void CreateTestScene()
+        [MenuItem("Wiesenwischer/GameKit/Core/Create Playground", false, 300)]
+        public static void CreatePlayground()
         {
             // Materials erstellen/laden
             EnsureMaterialFolder();
@@ -57,8 +56,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             highPlatform.transform.localScale = new Vector3(4f, 0.3f, 4f);
             highPlatform.GetComponent<Renderer>().sharedMaterial = platformMat;
 
-            // Treppe zur hohen Plattform
-            CreateStaircase(new Vector3(-10f, 0f, 5f), 10f, 20, stepMat);
+            // Steile Treppe zur hohen Plattform (0.5m Stufen — extrem)
+            CreateStaircase(new Vector3(-10f, 0f, 5f), 10f, 20, 0.5f, 3f, stepMat, "Staircase_Steep");
+
+            // === Realistische Innentreppe (18cm Stufen, 28cm Tiefe) ===
+            CreateStaircase(new Vector3(-5f, 0f, 5f), 1.44f, 8, 0.28f, 1.2f, stepMat, "Staircase_Realistic");
+
+            // Plattform oben an der realistischen Treppe
+            var realisticTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            realisticTop.name = "Platform_Realistic_Top";
+            realisticTop.transform.position = new Vector3(-5f, 1.44f, 5f - 8 * 0.28f - 1f);
+            realisticTop.transform.localScale = new Vector3(2f, 0.2f, 2.5f);
+            realisticTop.GetComponent<Renderer>().sharedMaterial = platformMat;
+
+            // === Bergweg-Treppe (unregelmäßige Stufen, aufsteigend) ===
+            CreateMountainPath(new Vector3(10f, 0f, 10f), stepMat, slopeMat);
 
             // === Sehr hohe Plattform (Extreme Hard Landing, ~20m) ===
             var veryHighPlatform = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -98,49 +110,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             slidePlatform.transform.localScale = new Vector3(3f, 0.3f, 3f);
             slidePlatform.GetComponent<Renderer>().sharedMaterial = platformMat;
 
-            // === Player Prefab platzieren ===
-            var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
-            if (playerPrefab != null)
-            {
-                var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
-                player.transform.position = new Vector3(0f, 1f, 0f);
-            }
-            else
-            {
-                Debug.LogWarning($"[AnimationTestScene] Player Prefab nicht gefunden: {PlayerPrefabPath}. " +
-                                 "Bitte zuerst 'Create Player Prefab' ausführen.");
-            }
-
-            // === Kamera positionieren ===
-            var mainCamera = Camera.main;
-            if (mainCamera != null)
-            {
-                mainCamera.transform.position = new Vector3(0f, 3f, -8f);
-                mainCamera.transform.rotation = Quaternion.Euler(15f, 0f, 0f);
-            }
-
             // === Szene speichern ===
             if (!AssetDatabase.IsValidFolder("Assets/Scenes"))
                 AssetDatabase.CreateFolder("Assets", "Scenes");
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            Debug.Log($"[AnimationTestScene] Test-Szene erstellt: {ScenePath}");
-            Debug.Log("[AnimationTestScene] Test-Checkliste:");
-            Debug.Log("  1. Play Mode starten");
-            Debug.Log("  2. Window > Animation > Animator öffnen");
-            Debug.Log("  3. WASD = Laufen, Shift = Sprint, Space = Jump");
-            Debug.Log("  4. Von Plattformen fallen für Landing-Tests");
-            Debug.Log("  5. Steile Rampen (60°) für Slope Sliding, Grenzwinkel-Rampe (47°) für Hysterese-Test");
-            Debug.Log("  6. Von Platform_Above_SteepSlope fallen für Fall→Slide Transition");
+            Debug.Log($"[Playground] Playground-Szene erstellt: {ScenePath}");
+            Debug.Log("[Playground] Enthält nur Umgebung — Player über 'Core > Place Player in Scene' hinzufügen.");
         }
 
-        private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps, Material stepMat)
+        private static void CreateStaircase(Vector3 startPos, float totalHeight, int steps,
+            float stepDepth, float stepWidth, Material stepMat, string name)
         {
             float stepHeight = totalHeight / steps;
-            float stepDepth = 0.5f;
-            float stepWidth = 3f;
 
-            var parent = new GameObject("Staircase");
+            var parent = new GameObject(name);
             parent.transform.position = startPos;
 
             for (int i = 0; i < steps; i++)
@@ -151,6 +135,57 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
                 step.transform.localPosition = new Vector3(0f, stepHeight * (i + 0.5f), -stepDepth * i);
                 step.transform.localScale = new Vector3(stepWidth, stepHeight, stepDepth);
                 step.GetComponent<Renderer>().sharedMaterial = stepMat;
+            }
+        }
+
+        private static void CreateMountainPath(Vector3 startPos, Material rockMat, Material slopeMat)
+        {
+            var parent = new GameObject("MountainPath_Stairs");
+            parent.transform.position = startPos;
+
+            // Aufsteigende Steintreppe wie ein Bergweg:
+            // Jede Stufe hat variable Höhe, Tiefe, Breite und leichten seitlichen Versatz.
+            // Die kumulative Höhe steigt mit jeder Stufe.
+            var steps = new[]
+            {
+                // (xOff, stepHeight, stepDepth, stepWidth, yRot)
+                ( 0.0f, 0.12f, 0.40f, 1.6f,   0f),   // flacher Einstieg
+                ( 0.1f, 0.18f, 0.35f, 1.4f,   3f),   // normal
+                (-0.1f, 0.10f, 0.50f, 1.8f,  -5f),   // flache breite Stufe
+                ( 0.2f, 0.22f, 0.30f, 1.2f,   8f),   // höhere schmale Stufe
+                (-0.15f,0.15f, 0.45f, 1.5f,  -3f),   // mittel
+                ( 0.0f, 0.25f, 0.28f, 1.3f,   0f),   // hoher Schritt
+                ( 0.1f, 0.12f, 0.55f, 1.7f,   5f),   // flach und lang
+                (-0.2f, 0.20f, 0.32f, 1.1f, -10f),   // schmal, verdreht
+                ( 0.15f,0.18f, 0.38f, 1.6f,   7f),   // normal
+                (-0.1f, 0.28f, 0.25f, 1.4f,  -4f),   // großer Schritt
+                ( 0.0f, 0.14f, 0.48f, 1.8f,   0f),   // breite Ruhestufe
+                ( 0.2f, 0.22f, 0.30f, 1.2f,  12f),   // schmal, stark verdreht
+                (-0.15f,0.16f, 0.42f, 1.5f,  -6f),   // mittel
+                ( 0.1f, 0.20f, 0.35f, 1.3f,   3f),   // normal
+                ( 0.0f, 0.15f, 0.40f, 1.6f,   0f),   // Abschluss
+            };
+
+            float cumulativeY = 0f;
+            float cumulativeZ = 0f;
+
+            for (int i = 0; i < steps.Length; i++)
+            {
+                var (xOff, stepHeight, stepDepth, stepWidth, yRot) = steps[i];
+
+                cumulativeY += stepHeight;
+
+                var rock = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                rock.name = $"Step_{i + 1}";
+                rock.transform.SetParent(parent.transform);
+                // Stufe reicht von cumulativeY-stepHeight bis cumulativeY
+                // Position Y = Mitte der Stufe über Ground
+                rock.transform.localPosition = new Vector3(xOff, cumulativeY - stepHeight * 0.5f, cumulativeZ);
+                rock.transform.localScale = new Vector3(stepWidth, stepHeight, stepDepth);
+                rock.transform.localRotation = Quaternion.Euler(0f, yRot, 0f);
+                rock.GetComponent<Renderer>().sharedMaterial = (i % 3 == 0) ? slopeMat : rockMat;
+
+                cumulativeZ -= stepDepth;
             }
         }
 
@@ -176,7 +211,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             var shader = Shader.Find("HDRP/Lit");
             if (shader == null)
             {
-                Debug.LogWarning($"[AnimationTestScene] HDRP/Lit Shader nicht gefunden — verwende Standard-Shader.");
+                Debug.LogWarning("[Playground] HDRP/Lit Shader nicht gefunden — verwende Standard-Shader.");
                 shader = Shader.Find("Standard");
             }
 
@@ -185,6 +220,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation.Editor
             mat.SetColor("_Color", color);
             AssetDatabase.CreateAsset(mat, path);
             return mat;
+        }
+
+        [MenuItem("Wiesenwischer/GameKit/Core/Create Playground", true)]
+        private static bool ValidateCreatePlayground()
+        {
+            return !Application.isPlaying;
         }
     }
 }

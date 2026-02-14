@@ -307,6 +307,14 @@
         "com.unity.inputsystem": "1.7.0"
       }
     },
+    "wiesenwischer.gamekit.charactercontroller.ik": {
+      "version": "file:Wiesenwischer.GameKit.CharacterController.IK",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "wiesenwischer.gamekit.charactercontroller.core": "0.1.0"
+      }
+    },
     "com.unity.modules.ai": {
       "version": "1.0.0",
       "depth": 0,

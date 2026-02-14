@@ -57,9 +57,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         // Cached GroundInfo
         private GroundInfo _cachedGroundInfo;
 
-        // Debug: Hovering-Diagnose
-        private int _debugLandingFrames;
-        private int _debugHoverLogCount;
+        // Terrain Speed Multiplier: Kombination aus Slope + Stair Modifier.
+        // Wird in UpdateVelocity berechnet, damit AnimatorParameterBridge kompensieren kann.
+        private float _currentTerrainSpeedMultiplier = 1f;
 
         /// <summary>
         /// Erstellt eine neue CharacterLocomotion. Erwartet einen existierenden CharacterMotor.
@@ -212,6 +212,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             {
                 // Sliding: Slope-Physik statt normaler Acceleration
                 newHorizontal = CalculateSlideHorizontalVelocity(deltaTime);
+                _currentTerrainSpeedMultiplier = 1f;
             }
             else
             {
@@ -263,20 +264,26 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
                 // Slope Speed Modifier: Target-Velocity bergauf reduzieren, bergab optional erhöhen.
                 // Wirkt auf Target, damit AccelerationModule natürlich zum Ziel hin beschleunigt/bremst.
+                float terrainMultiplier = 1f;
                 if (_groundDetectionStrategy.IsGrounded &&
                     _motor.GroundingStatus.IsStableOnGround &&
                     targetHorizontal.sqrMagnitude > 0.01f)
                 {
                     float slopeMultiplier = CalculateSlopeSpeedMultiplier(
                         targetHorizontal, _motor.GroundingStatus.GroundNormal);
+                    terrainMultiplier *= slopeMultiplier;
                     targetHorizontal *= slopeMultiplier;
                 }
 
                 // Stair Speed Modifier: Auf Treppen (häufige Steps) Target reduzieren.
                 if (IsOnStairs && targetHorizontal.sqrMagnitude > 0.01f)
                 {
-                    targetHorizontal *= (1f - _config.StairSpeedReduction);
+                    float stairMultiplier = 1f - _config.StairSpeedReduction;
+                    terrainMultiplier *= stairMultiplier;
+                    targetHorizontal *= stairMultiplier;
                 }
+
+                _currentTerrainSpeedMultiplier = terrainMultiplier;
 
                 float deceleration = _currentInput.DecelerationOverride > 0f
                     ? _currentInput.DecelerationOverride
@@ -339,37 +346,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
                 _motor.ForceUnground(0.1f);
             }
 
-            // DEBUG: Hovering-Diagnose
-            // Trigger 1: Nach Landung (30 Frames)
-            if (_motor.JustLanded)
-            {
-                _debugLandingFrames = 30;
-                _debugHoverLogCount = 0;
-            }
-            // Trigger 2: Persistent Gap Monitor — MOVING branch + ungewöhnlicher Gap (> 0.03)
-            {
-                var gs = _motor.GroundingStatus;
-                float charY = _motor.TransientPosition.y;
-                float groundY = gs.GroundPoint.y;
-                float gap = charY - groundY;
-                bool isMovingBranch = gs.IsStableOnGround && vertical <= 0 && newHorizontal.sqrMagnitude > 0.01f;
-                bool shouldLog = _debugLandingFrames > 0 || (isMovingBranch && gap > 0.03f && _debugHoverLogCount < 60);
-
-                if (shouldLog)
-                {
-                    if (_debugLandingFrames > 0) _debugLandingFrames--;
-                    if (isMovingBranch && gap > 0.03f) _debugHoverLogCount++;
-                    string trigger = _debugLandingFrames > 0 ? "LAND" : "GAP";
-                    Debug.Log($"[Hovering:{trigger}] gap={gap:F4} " +
-                        $"branch={(isMovingBranch ? "MOVING" : "else")} " +
-                        $"input=({_currentInput.MoveDirection.x:F2},{_currentInput.MoveDirection.y:F2}) " +
-                        $"speedMod={_currentInput.SpeedModifier:F1} " +
-                        $"motorVelIn=({currentVelocity.x:F2},{currentVelocity.y:F2},{currentVelocity.z:F2}) " +
-                        $"H={newHorizontal.magnitude:F2} V={vertical:F2} " +
-                        $"snap={_motor.GroundSnappingEnabled} stable={gs.IsStableOnGround}");
-                }
-            }
-
             // === FINALE VELOCITY ===
             // Tangentiale Projektion wenn der Motor eine stabile Surface bestätigt
             // ODER wenn der Character slidet (unstable slope, aber Bodenkontakt).
@@ -404,21 +380,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             _motor.GroundSnappingEnabled = _groundDetectionStrategy.IsGrounded || _isSliding;
 
             // Landing Velocity Cap wird in UpdateVelocity (grounded branch) behandelt.
-
-            // DEBUG: PostGrounding-Diagnose (gleicher Trigger wie UpdateVelocity)
-            {
-                var gs = _motor.GroundingStatus;
-                float postY = _motor.TransientPosition.y;
-                float postGroundY = gs.GroundPoint.y;
-                float postGap = postY - postGroundY;
-                bool postMoving = _groundDetectionStrategy.IsGrounded && _lastComputedHorizontal.sqrMagnitude > 0.01f;
-                if (_debugLandingFrames > 0 || (postMoving && postGap > 0.03f))
-                {
-                    Debug.Log($"[Hovering-Post] Y={postY:F4} groundY={postGroundY:F4} gap={postGap:F4} " +
-                        $"strategyGrounded={_groundDetectionStrategy.IsGrounded} snapEnabled={_motor.GroundSnappingEnabled} " +
-                        $"lastStable={_motor.LastGroundingStatus.IsStableOnGround} lastSnapPrev={_motor.LastGroundingStatus.SnappingPrevented}");
-                }
-            }
 
             UpdateCachedGroundInfo();
         }
@@ -460,7 +421,20 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void ProcessHitStabilityReport(Collider hitCollider, Vector3 hitNormal, Vector3 hitPoint, Vector3 atCharacterPosition, Quaternion atCharacterRotation, ref HitStabilityReport hitStabilityReport)
         {
-            // Stabilität nachbearbeiten
+            // Slope-Edge Fix: An scharfen Kanten von Rampen/BoxCollidern erkennt die
+            // Ledge-Detection den Übergang als unstable, obwohl die Hit-Normal im
+            // begehbaren Bereich liegt (< MaxSlopeAngle). Das führt dazu, dass der
+            // Motor die Kante als Wand behandelt und die Bewegung blockt.
+            // Fix: Wenn die Hit-Normal stabil wäre aber Ledge-Detection sie überschreibt,
+            // erzwingen wir Stabilität → Character kann über Kanten gehen.
+            if (!hitStabilityReport.IsStable && hitStabilityReport.LedgeDetected)
+            {
+                float angleFromUp = Vector3.Angle(hitNormal, Vector3.up);
+                if (angleFromUp <= _config.MaxSlopeAngle)
+                {
+                    hitStabilityReport.IsStable = true;
+                }
+            }
         }
 
         public void OnDiscreteCollisionDetected(Collider hitCollider)
@@ -491,6 +465,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool IsOnStairs => _config.StairSpeedReductionEnabled
             && _recentStepCount >= StairStepThreshold
             && (Time.time - _lastStepTime) < StairDetectionWindow;
+
+        /// <summary>
+        /// Kombinierter Terrain-Speed-Multiplikator (Slope + Stair). 1.0 = flacher Boden.
+        /// AnimatorParameterBridge kann damit die Animations-Geschwindigkeit kompensieren,
+        /// damit die Fußbewegung zur visuellen Displacement-Rate passt.
+        /// </summary>
+        public float CurrentTerrainSpeedMultiplier => _currentTerrainSpeedMultiplier;
 
         public void SetRotation(float yaw)
         {
