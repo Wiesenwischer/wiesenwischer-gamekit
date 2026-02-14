@@ -242,5 +242,36 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
 
         /// <summary>Geschwindigkeits-Multiplikator relativ zu RunSpeed (0.5-2.0).</summary>
         float RollSpeedModifier { get; }
+
+        // Crouching
+        /// <summary>Capsule-Höhe beim Crouchen (m).</summary>
+        float CrouchHeight { get; }
+
+        /// <summary>Capsule-Höhe im Stehen (m) — Motor-Default.</summary>
+        float StandingHeight { get; }
+
+        /// <summary>Bewegungsgeschwindigkeit beim Crouchen (m/s).</summary>
+        float CrouchSpeed { get; }
+
+        /// <summary>Beschleunigung beim Crouchen (m/s²).</summary>
+        float CrouchAcceleration { get; }
+
+        /// <summary>Verzögerung beim Crouchen (m/s²).</summary>
+        float CrouchDeceleration { get; }
+
+        /// <summary>Dauer der Capsule-Höhen-Transition (s).</summary>
+        float CrouchTransitionDuration { get; }
+
+        /// <summary>Sicherheitsabstand für Stand-Up-Check (m).</summary>
+        float CrouchHeadClearanceMargin { get; }
+
+        /// <summary>Ob aus dem Crouch gesprungen werden kann.</summary>
+        bool CanJumpFromCrouch { get; }
+
+        /// <summary>Ob Sprint den Crouch automatisch beendet.</summary>
+        bool CanSprintFromCrouch { get; }
+
+        /// <summary>Reduzierte Step-Höhe im Crouch (m), -1 = Motor-Default.</summary>
+        float CrouchStepHeight { get; }
     }
 }

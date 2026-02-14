@@ -22,6 +22,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private bool _slopeSlidingFoldout = false;
         private bool _landingFoldout = true;
         private bool _landingRollFoldout = false;
+        private bool _crouchingFoldout = false;
 
         // Serialized Properties
         private SerializedProperty _walkSpeed;
@@ -68,6 +69,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
         private SerializedProperty _rollEnabled;
         private SerializedProperty _rollTriggerMode;
         private SerializedProperty _rollSpeedModifier;
+
+        private SerializedProperty _crouchHeight;
+        private SerializedProperty _standingHeight;
+        private SerializedProperty _crouchSpeed;
+        private SerializedProperty _crouchAcceleration;
+        private SerializedProperty _crouchDeceleration;
+        private SerializedProperty _crouchTransitionDuration;
+        private SerializedProperty _crouchHeadClearanceMargin;
+        private SerializedProperty _canJumpFromCrouch;
+        private SerializedProperty _canSprintFromCrouch;
+        private SerializedProperty _crouchStepHeight;
 
         private void OnEnable()
         {
@@ -125,6 +137,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             _rollEnabled = serializedObject.FindProperty("_rollEnabled");
             _rollTriggerMode = serializedObject.FindProperty("_rollTriggerMode");
             _rollSpeedModifier = serializedObject.FindProperty("_rollSpeedModifier");
+
+            // Crouching
+            _crouchHeight = serializedObject.FindProperty("_crouchHeight");
+            _standingHeight = serializedObject.FindProperty("_standingHeight");
+            _crouchSpeed = serializedObject.FindProperty("_crouchSpeed");
+            _crouchAcceleration = serializedObject.FindProperty("_crouchAcceleration");
+            _crouchDeceleration = serializedObject.FindProperty("_crouchDeceleration");
+            _crouchTransitionDuration = serializedObject.FindProperty("_crouchTransitionDuration");
+            _crouchHeadClearanceMargin = serializedObject.FindProperty("_crouchHeadClearanceMargin");
+            _canJumpFromCrouch = serializedObject.FindProperty("_canJumpFromCrouch");
+            _canSprintFromCrouch = serializedObject.FindProperty("_canSprintFromCrouch");
+            _crouchStepHeight = serializedObject.FindProperty("_crouchStepHeight");
         }
 
         public override void OnInspectorGUI()
@@ -299,6 +323,32 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
 
+            // Crouching Section
+            _crouchingFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(_crouchingFoldout, "Crouching");
+            if (_crouchingFoldout)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.LabelField("Capsule", EditorStyles.boldLabel);
+                DrawPropertyWithTooltip(_crouchHeight, "Crouch Height", "Capsule height when crouching (m)");
+                DrawPropertyWithTooltip(_standingHeight, "Standing Height", "Capsule height when standing (m) — Motor default");
+                DrawPropertyWithTooltip(_crouchTransitionDuration, "Transition Duration", "Duration of capsule height transition (s)");
+                DrawPropertyWithTooltip(_crouchHeadClearanceMargin, "Head Clearance", "Safety margin for stand-up ceiling check (m)");
+
+                EditorGUILayout.Space(5);
+                EditorGUILayout.LabelField("Movement", EditorStyles.boldLabel);
+                DrawPropertyWithTooltip(_crouchSpeed, "Crouch Speed", "Movement speed when crouching (m/s)");
+                DrawPropertyWithTooltip(_crouchAcceleration, "Acceleration", "Acceleration when crouching (m/s²)");
+                DrawPropertyWithTooltip(_crouchDeceleration, "Deceleration", "Deceleration when crouching (m/s²)");
+                DrawPropertyWithTooltip(_crouchStepHeight, "Step Height", "Reduced step height when crouching (m), -1 = Motor default");
+
+                EditorGUILayout.Space(5);
+                EditorGUILayout.LabelField("Behavior", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(_canJumpFromCrouch, new GUIContent("Can Jump", "Allow jumping from crouch (stands up + jumps)"));
+                EditorGUILayout.PropertyField(_canSprintFromCrouch, new GUIContent("Can Sprint", "Sprint input exits crouch automatically"));
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
             serializedObject.ApplyModifiedProperties();
         }
 
@@ -467,6 +517,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             _rollEnabled.boolValue = true;
             _rollTriggerMode.enumValueIndex = 0; // MovementInput
             _rollSpeedModifier.floatValue = 1.0f;
+
+            // Crouching
+            _crouchHeight.floatValue = 1.2f;
+            _standingHeight.floatValue = 2.0f;
+            _crouchSpeed.floatValue = 2.5f;
+            _crouchAcceleration.floatValue = 8.0f;
+            _crouchDeceleration.floatValue = 10.0f;
+            _crouchTransitionDuration.floatValue = 0.25f;
+            _crouchHeadClearanceMargin.floatValue = 0.1f;
+            _canJumpFromCrouch.boolValue = true;
+            _canSprintFromCrouch.boolValue = true;
+            _crouchStepHeight.floatValue = 0.2f;
 
             serializedObject.ApplyModifiedProperties();
         }

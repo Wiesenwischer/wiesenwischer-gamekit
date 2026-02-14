@@ -284,6 +284,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
             public bool RollEnabled { get; set; } = true;
             public RollTriggerMode RollTriggerMode { get; set; } = RollTriggerMode.MovementInput;
             public float RollSpeedModifier { get; set; } = 1.0f;
+            public float CrouchHeight { get; set; } = 1.2f;
+            public float StandingHeight { get; set; } = 2.0f;
+            public float CrouchSpeed { get; set; } = 2.5f;
+            public float CrouchAcceleration { get; set; } = 8.0f;
+            public float CrouchDeceleration { get; set; } = 10.0f;
+            public float CrouchTransitionDuration { get; set; } = 0.25f;
+            public float CrouchHeadClearanceMargin { get; set; } = 0.1f;
+            public bool CanJumpFromCrouch { get; set; } = true;
+            public bool CanSprintFromCrouch { get; set; } = true;
+            public float CrouchStepHeight { get; set; } = 0.2f;
         }
 
         #endregion
