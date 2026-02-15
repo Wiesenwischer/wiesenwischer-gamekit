@@ -14,7 +14,6 @@ namespace Wiesenwischer.GameKit.Camera.Editor
         private const string ConfigPath = "Assets/Config/CameraCoreConfig.asset";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
-        [MenuItem("Wiesenwischer/GameKit/Camera/Setup Camera Brain", false, 100)]
         public static void SetupCameraBrain()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
