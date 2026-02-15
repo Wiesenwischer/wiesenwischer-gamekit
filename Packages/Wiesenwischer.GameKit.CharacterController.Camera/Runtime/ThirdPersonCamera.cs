@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Wiesenwischer.GameKit.CharacterController.Camera
@@ -6,6 +7,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Camera
     /// Third-Person Kamera Controller.
     /// Bietet Orbit-Kontrolle um ein Ziel mit Kollisionserkennung.
     /// </summary>
+    [Obsolete("Verwende CameraBrain + PivotRig + CameraAnchor (Camera.Core Package) statt ThirdPersonCamera. Wird nach Phase 27 entfernt.")]
     public class ThirdPersonCamera : MonoBehaviour
     {
         [Header("Configuration")]

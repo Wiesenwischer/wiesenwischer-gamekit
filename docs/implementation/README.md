@@ -67,8 +67,8 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 17 | Character | CP: Save/Load & Integration | — | ❌ | Offen |
 | 18 | Character | CP: DNA Space & Constraints | — | ❌ | Offen |
 | 19 | Character | CP: Morph Graph & HD Anatomy | — | ❌ | Offen |
-| 26 | Camera | Camera Core — Brain, State & Pivot Rig | [Features](phase-26-camera-core/README.md) | ✅ | Offen |
-| 27 | Camera | Camera Behaviours | — | ❌ | Offen |
+| 26 | Camera | Camera Core — Brain, State & Pivot Rig | [Features](phase-26-camera-core/README.md) | ✅ | Abgeschlossen |
+| 27 | Camera | Camera Behaviours | [Features](phase-27-camera-behaviours/README.md) | ✅ | Offen |
 | 28 | Camera | Camera Intent System & Presets | — | ❌ | Offen |
 | 29 | Camera | Shared Orientation & Facing Integration | — | ❌ | Offen |
 
@@ -674,13 +674,13 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [Camera System Spezifikation](../specs/Camera_System_Spezifikation.md)
 
 **Schritte:**
-- [ ] [26.1 Package-Struktur & Grundtypen](phase-26-camera-core/26.1-package-grundtypen.md)
-- [ ] [26.2 Pivot Rig Hierarchie](phase-26-camera-core/26.2-pivot-rig.md)
-- [ ] [26.3 Camera Anchor](phase-26-camera-core/26.3-camera-anchor.md)
-- [ ] [26.4 Camera Input Pipeline](phase-26-camera-core/26.4-input-pipeline.md)
-- [ ] [26.5 CameraBrain Orchestrator](phase-26-camera-core/26.5-camera-brain.md)
-- [ ] [26.6 Migration & Editor Update](phase-26-camera-core/26.6-migration-editor.md)
-- [ ] [26.7 Unit Tests](phase-26-camera-core/26.7-unit-tests.md)
+- [x] [26.1 Package-Struktur & Grundtypen](phase-26-camera-core/26.1-package-grundtypen.md)
+- [x] [26.2 Pivot Rig Hierarchie](phase-26-camera-core/26.2-pivot-rig.md)
+- [x] [26.3 Camera Anchor](phase-26-camera-core/26.3-camera-anchor.md)
+- [x] [26.4 Camera Input Pipeline](phase-26-camera-core/26.4-input-pipeline.md)
+- [x] [26.5 CameraBrain Orchestrator](phase-26-camera-core/26.5-camera-brain.md)
+- [x] [26.6 Migration & Editor Update](phase-26-camera-core/26.6-migration-editor.md)
+- [x] [26.7 Unit Tests](phase-26-camera-core/26.7-unit-tests.md)
 
 **Referenz:** Spec Kapitel 2–6, 9, 11–12
 
@@ -688,20 +688,22 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 
 ### Phase 27: Camera Behaviours
 **Branch:** `integration/phase-27-camera-behaviours`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-27-camera-behaviours/README.md)
 
-**Ziel:** Modulare Behaviours als austauschbare Bausteine. Jedes Behaviour modifiziert den CameraState unabhängig.
+**Ziel:** Eingebettete Logik aus CameraBrain in modulare ICameraBehaviour-Implementierungen extrahieren. Neue Behaviours: Inertia, Recenter, ShoulderOffset.
 
-**Schritte (vorläufig):**
-- [ ] 27.1 ICameraBehaviour Interface
-- [ ] 27.2 OrbitBehaviour + FollowBehaviour
-- [ ] 27.3 ZoomBehaviour + CollisionBehaviour
-- [ ] 27.4 InertiaBehaviour (Spring-Damper statt Lerp)
-- [ ] 27.5 RecenterBehaviour + ShoulderOffsetBehaviour
-- [ ] 27.6 Dynamic Orbit Center
-- [ ] 27.7 Tests
+**Relevante Spezifikationen:**
+- [Camera System Spezifikation](../specs/Camera_System_Spezifikation.md)
 
-**Referenz:** Spec Kapitel 8, 9, 10, 12, 13
+**Schritte:**
+- [ ] [27.1 Package-Struktur + OrbitBehaviour](phase-27-camera-behaviours/27.1-package-orbit.md)
+- [ ] [27.2 ZoomBehaviour + CollisionBehaviour](phase-27-camera-behaviours/27.2-zoom-collision.md)
+- [ ] [27.3 InertiaBehaviour](phase-27-camera-behaviours/27.3-inertia.md)
+- [ ] [27.4 RecenterBehaviour + ShoulderOffsetBehaviour](phase-27-camera-behaviours/27.4-recenter-shoulder.md)
+- [ ] [27.5 CameraBrain Refactor + Editor Update](phase-27-camera-behaviours/27.5-brain-refactor.md)
+- [ ] [27.6 Unit Tests](phase-27-camera-behaviours/27.6-unit-tests.md)
+
+**Referenz:** Spec Kapitel 8, 10, 12, 13
 
 ---
 

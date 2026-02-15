@@ -20,7 +20,7 @@ MonoBehaviour:
   _airControl: 0.3
   _airDrag: 0.8
   _minFallDistance: 0.5
-  _gravity: 20
+  _gravity: 50
   _maxFallSpeed: 50
   _jumpHeight: 2
   _jumpDuration: 0.4
@@ -67,3 +67,13 @@ MonoBehaviour:
   _rollEnabled: 1
   _rollTriggerMode: 0
   _rollSpeedModifier: 1
+  _crouchHeight: 1.2
+  _standingHeight: 2
+  _crouchSpeed: 2.5
+  _crouchAcceleration: 8
+  _crouchDeceleration: 10
+  _crouchTransitionDuration: 0.25
+  _crouchHeadClearanceMargin: 0.1
+  _canJumpFromCrouch: 1
+  _canSprintFromCrouch: 1
+  _crouchStepHeight: 0.2
