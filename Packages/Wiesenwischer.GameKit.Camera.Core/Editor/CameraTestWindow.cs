@@ -18,10 +18,10 @@ namespace Wiesenwischer.GameKit.Camera.Editor
         private bool _showPresets = true;
         private bool _showQuickActions = true;
 
-        [MenuItem("Wiesenwischer/GameKit/Camera/Camera Test Window", false, 200)]
+        [MenuItem("Wiesenwischer/GameKit/Camera/Setup Camera Brain", false, 100)]
         public static void ShowWindow()
         {
-            var window = GetWindow<CameraTestWindow>("Camera Test");
+            var window = GetWindow<CameraTestWindow>("Camera Setup");
             window.minSize = new Vector2(320, 400);
         }
 
@@ -253,6 +253,8 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
             if (state.ShoulderOffset != Vector3.zero)
                 EditorGUILayout.LabelField("Shoulder", $"({state.ShoulderOffset.x:F2}, {state.ShoulderOffset.y:F2})");
+
+            EditorGUILayout.LabelField("Steer Mode", _brain.IsSteerMode ? "Active" : "Inactive");
 
             EditorGUI.indentLevel--;
             EditorGUILayout.Space(4);

@@ -71,5 +71,32 @@ namespace Wiesenwischer.GameKit.Camera.Tests
             _preset.Description = "Test Preset";
             Assert.AreEqual("Test Preset", _preset.Description);
         }
+
+        [Test]
+        public void CameraPreset_OrbitActivation_DefaultIsAlwaysOn()
+        {
+            Assert.AreEqual(OrbitActivation.AlwaysOn, _preset.OrbitActivation);
+        }
+
+        [Test]
+        public void CameraPreset_OrbitActivation_CanBeSet()
+        {
+            _preset.OrbitActivation = OrbitActivation.ButtonActivated;
+            Assert.AreEqual(OrbitActivation.ButtonActivated, _preset.OrbitActivation);
+        }
+
+        [Test]
+        public void CameraContext_IsSteerMode_DefaultFalse()
+        {
+            var ctx = new CameraContext();
+            Assert.IsFalse(ctx.IsSteerMode);
+        }
+
+        [Test]
+        public void CameraInputState_OrbitMode_DefaultNone()
+        {
+            var input = new CameraInputState();
+            Assert.AreEqual(CameraOrbitMode.None, input.OrbitMode);
+        }
     }
 }

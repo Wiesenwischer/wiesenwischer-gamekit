@@ -21,6 +21,10 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
 
         public void UpdateState(ref CameraState state, CameraContext ctx)
         {
+            // Kein Orbit wenn kein Button gehalten (ButtonActivated-Modus)
+            if (ctx.Input.OrbitMode == CameraOrbitMode.None)
+                return;
+
             state.Yaw += ctx.Input.LookX;
             state.Pitch -= ctx.Input.LookY;
             state.Pitch = Mathf.Clamp(state.Pitch, _minPitch, _maxPitch);

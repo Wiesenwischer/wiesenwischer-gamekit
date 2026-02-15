@@ -35,5 +35,11 @@ namespace Wiesenwischer.GameKit.Camera
         /// Benötigt für RecenterBehaviour und DynamicOrbitCenter.
         /// </summary>
         public Vector3 CharacterForward;
+
+        /// <summary>
+        /// True wenn der aktuelle Frame im Steer-Modus ist (RMB in Tab-Target-Kameras).
+        /// Character Controller kann diesen Wert lesen und sich zur Kamerarichtung ausrichten.
+        /// </summary>
+        public bool IsSteerMode;
     }
 }

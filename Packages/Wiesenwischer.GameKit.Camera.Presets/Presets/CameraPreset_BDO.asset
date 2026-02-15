@@ -12,13 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6, type: 3}
   m_Name: CameraPreset_BDO
   m_EditorClassIdentifier:
-  Description: Black Desert Online Style - Strong follow, Inertia, Soft Targeting
+  Description: "Black Desert Online Style \u2014 Action Combat, Always-On Orbit, Inertia, Shoulder, Soft Targeting"
   DefaultFov: 55
-  PitchMin: -50
+  OrbitActivation: 0
+  PitchMin: -60
   PitchMax: 75
   DefaultDistance: 4
   MinDistance: 1.5
-  MaxDistance: 12
+  MaxDistance: 18
   ZoomDamping: 0.12
   CollisionRadius: 0.3
   CollisionRecoverySpeed: 8
@@ -27,15 +28,15 @@ MonoBehaviour:
   InertiaDamping: 0.82
   InertiaMaxOffset: 2
   RecenterEnabled: 1
-  RecenterDelay: 1.5
-  RecenterSpeed: 120
-  RecenterMinSpeed: 0.3
+  RecenterDelay: 1
+  RecenterSpeed: 70
+  RecenterMinSpeed: 1
   ShoulderEnabled: 1
   ShoulderOffsetX: 0.5
-  ShoulderOffsetY: 0.1
+  ShoulderOffsetY: 0.25
   ShoulderSwitchDamping: 0.25
   DynamicOrbitEnabled: 1
-  ForwardBias: 0.8
+  ForwardBias: 0.6
   OrbitCenterDamping: 0.12
   SoftTargetingEnabled: 1
   MovementBiasStrength: 8

@@ -31,6 +31,9 @@ namespace Wiesenwischer.GameKit.Camera
         /// <summary>Aktueller Camera State (readonly).</summary>
         public CameraState State => _state;
 
+        /// <summary>True wenn der aktuelle Frame im Steer-Modus ist (Character soll zur Kamera rotieren).</summary>
+        public bool IsSteerMode => _context != null && _context.IsSteerMode;
+
         /// <summary>Camera Forward in Welt-Space (Y=0, normalisiert).</summary>
         public Vector3 Forward
         {
@@ -84,6 +87,10 @@ namespace Wiesenwischer.GameKit.Camera
             if (preset == null) return;
 
             _state.Fov = preset.DefaultFov;
+
+            // OrbitActivation an InputPipeline weiterreichen
+            if (_inputPipeline != null)
+                _inputPipeline.OrbitActivationMode = preset.OrbitActivation;
 
             if (_behaviours != null)
             {
@@ -173,6 +180,7 @@ namespace Wiesenwischer.GameKit.Camera
             _context.AnchorPosition = _anchor != null ? _anchor.AnchorPosition : transform.position;
             _context.FollowTarget = _anchor != null ? _anchor.FollowTarget : null;
             _context.DeltaTime = dt;
+            _context.IsSteerMode = input.OrbitMode == CameraOrbitMode.SteerOrbit;
             PopulateCharacterContext();
 
             // 4. Intents anwenden (nach Priorität, aufsteigend)
