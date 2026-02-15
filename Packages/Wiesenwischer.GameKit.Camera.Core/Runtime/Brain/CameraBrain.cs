@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Wiesenwischer.GameKit.Camera
 {
     /// <summary>
-    /// Zentraler Camera-Orchestrator. Koordiniert Input, Anchor, Behaviours und PivotRig.
-    /// Enthält keine eigene Kamera-Logik — alles läuft über ICameraBehaviour[].
+    /// Zentraler Camera-Orchestrator. Koordiniert Input, Anchor, Intents, Behaviours und PivotRig.
+    /// Enthält keine eigene Kamera-Logik — alles läuft über ICameraIntent[] und ICameraBehaviour[].
     /// </summary>
     [RequireComponent(typeof(PivotRig))]
     public class CameraBrain : MonoBehaviour
@@ -17,10 +18,15 @@ namespace Wiesenwischer.GameKit.Camera
         [Header("Config")]
         [SerializeField] private CameraCoreConfig _config;
 
+        [Header("Preset")]
+        [Tooltip("Aktives Camera-Preset (optional)")]
+        [SerializeField] private CameraPreset _activePreset;
+
         private PivotRig _rig;
         private CameraState _state;
         private CameraContext _context;
         private ICameraBehaviour[] _behaviours;
+        private readonly List<ICameraIntent> _intents = new List<ICameraIntent>();
 
         /// <summary>Aktueller Camera State (readonly).</summary>
         public CameraState State => _state;
@@ -46,6 +52,46 @@ namespace Wiesenwischer.GameKit.Camera
             {
                 _context.FollowTarget = followTarget;
                 _context.LookTarget = lookTarget;
+            }
+        }
+
+        /// <summary>Registriert einen Intent. Wird bis zum Entfernen jeden Frame angewendet.</summary>
+        public void PushIntent(ICameraIntent intent)
+        {
+            if (!_intents.Contains(intent))
+            {
+                _intents.Add(intent);
+                _intents.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+            }
+        }
+
+        /// <summary>Entfernt einen zuvor registrierten Intent.</summary>
+        public void RemoveIntent(ICameraIntent intent)
+        {
+            _intents.Remove(intent);
+        }
+
+        /// <summary>Entfernt alle aktiven Intents.</summary>
+        public void ClearIntents()
+        {
+            _intents.Clear();
+        }
+
+        /// <summary>Wendet ein Preset auf alle ICameraPresetReceiver-Behaviours an.</summary>
+        public void SetPreset(CameraPreset preset)
+        {
+            _activePreset = preset;
+            if (preset == null) return;
+
+            _state.Fov = preset.DefaultFov;
+
+            if (_behaviours != null)
+            {
+                foreach (var behaviour in _behaviours)
+                {
+                    if (behaviour is ICameraPresetReceiver receiver)
+                        receiver.ApplyPreset(preset);
+                }
             }
         }
 
@@ -101,6 +147,10 @@ namespace Wiesenwischer.GameKit.Camera
                     init.InitializeState(ref _state);
             }
 
+            // Initiales Preset anwenden (überschreibt Config und Behaviour-Defaults)
+            if (_activePreset != null)
+                SetPreset(_activePreset);
+
             if (_camera == null)
                 _camera = GetComponentInChildren<UnityEngine.Camera>();
         }
@@ -123,20 +173,52 @@ namespace Wiesenwischer.GameKit.Camera
             _context.AnchorPosition = _anchor != null ? _anchor.AnchorPosition : transform.position;
             _context.FollowTarget = _anchor != null ? _anchor.FollowTarget : null;
             _context.DeltaTime = dt;
+            PopulateCharacterContext();
 
-            // 4. Behaviours evaluieren
+            // 4. Intents anwenden (nach Priorität, aufsteigend)
+            for (int i = 0; i < _intents.Count; i++)
+            {
+                if (_intents[i].IsActive)
+                    _intents[i].Apply(ref _state, _context);
+            }
+
+            // 5. Behaviours evaluieren
             foreach (var behaviour in _behaviours)
             {
                 if (behaviour.IsActive)
                     behaviour.UpdateState(ref _state, _context);
             }
 
-            // 5. Apply
+            // 6. Apply
             _rig.ApplyState(_state, _context.AnchorPosition);
 
-            // 6. FOV
+            // 7. FOV
             if (_camera != null)
                 _camera.fieldOfView = _state.Fov;
+        }
+
+        private void PopulateCharacterContext()
+        {
+            if (_anchor == null || _anchor.FollowTarget == null)
+            {
+                _context.CharacterVelocity = Vector3.zero;
+                _context.CharacterForward = Vector3.forward;
+                return;
+            }
+
+            Transform target = _anchor.FollowTarget;
+            _context.CharacterForward = target.forward;
+
+            var cc = target.GetComponent<CharacterController>();
+            if (cc != null)
+            {
+                _context.CharacterVelocity = cc.velocity;
+            }
+            else
+            {
+                var rb = target.GetComponent<Rigidbody>();
+                _context.CharacterVelocity = rb != null ? rb.velocity : Vector3.zero;
+            }
         }
 
 #if UNITY_EDITOR

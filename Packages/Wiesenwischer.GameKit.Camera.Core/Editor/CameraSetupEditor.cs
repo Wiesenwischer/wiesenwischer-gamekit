@@ -105,11 +105,30 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 Debug.Log("[CameraSetup] CameraBrain konfiguriert.");
             }
 
-            // Standard-Behaviours hinzufügen
+            // Standard-Behaviours hinzufügen (Reihenfolge wichtig!)
+            // 1. DynamicOrbitCenter muss zuerst (modifiziert AnchorPosition)
+            var dynamicOrbit = AddBehaviourIfMissing<DynamicOrbitCenterBehaviour>(cameraRoot);
+            dynamicOrbit.enabled = false;
+            // 2-4. Orbit, Recenter, Zoom
             AddBehaviourIfMissing<OrbitBehaviour>(cameraRoot);
+            AddBehaviourIfMissing<RecenterBehaviour>(cameraRoot);
             AddBehaviourIfMissing<ZoomBehaviour>(cameraRoot);
+            // 5. ShoulderOffset
+            var shoulder = AddBehaviourIfMissing<ShoulderOffsetBehaviour>(cameraRoot);
+            shoulder.enabled = false;
+            // 6. SoftTargeting
+            var softTargeting = AddBehaviourIfMissing<SoftTargetingBehaviour>(cameraRoot);
+            softTargeting.enabled = false;
+            // 7-8. Collision, Inertia
             AddBehaviourIfMissing<CollisionBehaviour>(cameraRoot);
-            Debug.Log("[CameraSetup] Standard-Behaviours hinzugefügt (Orbit, Zoom, Collision).");
+            AddBehaviourIfMissing<InertiaBehaviour>(cameraRoot);
+            Debug.Log("[CameraSetup] Alle Behaviours hinzugefügt.");
+
+#if CINEMACHINE_AVAILABLE
+            var cinemachineDriver = AddBehaviourIfMissing<CinemachineDriver>(cameraRoot);
+            cinemachineDriver.enabled = false;
+            Debug.Log("[CameraSetup] CinemachineDriver hinzugefügt (deaktiviert).");
+#endif
 
             // Snap hinter Target
             anchor.SnapToTarget();
