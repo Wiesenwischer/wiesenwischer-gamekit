@@ -68,7 +68,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 18 | Character | CP: DNA Space & Constraints | — | ❌ | Offen |
 | 19 | Character | CP: Morph Graph & HD Anatomy | — | ❌ | Offen |
 | 26 | Camera | Camera Core — Brain, State & Pivot Rig | [Features](phase-26-camera-core/README.md) | ✅ | Abgeschlossen |
-| 27 | Camera | Camera Behaviours | [Features](phase-27-camera-behaviours/README.md) | ✅ | Offen |
+| 27 | Camera | Camera Behaviours | [Features](phase-27-camera-behaviours/README.md) | ✅ | Abgeschlossen |
 | 28 | Camera | Camera Intent System & Presets | — | ❌ | Offen |
 | 29 | Camera | Shared Orientation & Facing Integration | — | ❌ | Offen |
 
@@ -701,7 +701,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [x] [27.3 InertiaBehaviour](phase-27-camera-behaviours/27.3-inertia.md)
 - [x] [27.4 RecenterBehaviour + ShoulderOffsetBehaviour](phase-27-camera-behaviours/27.4-recenter-shoulder.md)
 - [x] [27.5 CameraBrain Refactor + Editor Update](phase-27-camera-behaviours/27.5-brain-refactor.md)
-- [ ] [27.6 Unit Tests](phase-27-camera-behaviours/27.6-unit-tests.md)
+- [x] [27.6 Unit Tests](phase-27-camera-behaviours/27.6-unit-tests.md)
 
 **Referenz:** Spec Kapitel 8, 10, 12, 13
 
