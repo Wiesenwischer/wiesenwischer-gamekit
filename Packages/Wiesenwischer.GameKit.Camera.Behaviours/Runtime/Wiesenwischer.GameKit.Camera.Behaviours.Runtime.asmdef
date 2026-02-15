@@ -1,0 +1,16 @@
+{
+  "name": "Wiesenwischer.GameKit.Camera.Behaviours.Runtime",
+  "rootNamespace": "Wiesenwischer.GameKit.Camera.Behaviours",
+  "references": [
+    "Wiesenwischer.GameKit.Camera.Core.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
