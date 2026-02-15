@@ -69,7 +69,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 19 | Character | CP: Morph Graph & HD Anatomy | — | ❌ | Offen |
 | 26 | Camera | Camera Core — Brain, State & Pivot Rig | [Features](phase-26-camera-core/README.md) | ✅ | Abgeschlossen |
 | 27 | Camera | Camera Behaviours | [Features](phase-27-camera-behaviours/README.md) | ✅ | Abgeschlossen |
-| 28 | Camera | Camera Intent System & Presets | — | ❌ | Offen |
+| 28 | Camera | Camera Intent System & Presets | [Features](phase-28-camera-intents/README.md) | ✅ | Abgeschlossen |
 | 29 | Camera | Shared Orientation & Facing Integration | — | ❌ | Offen |
 
 ---
@@ -709,7 +709,8 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 
 ### Phase 28: Camera Intent System & Presets
 **Branch:** `integration/phase-28-camera-intents`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja
+**Status:** Abgeschlossen
 
 **Ziel:** Prioritäts-basiertes Intent System für Konfliktlösung zwischen Systemen. ScriptableObject Presets für verschiedene Camera-Styles.
 
@@ -720,7 +721,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [x] [28.4 DynamicOrbitCenter + Soft Targeting](phase-28-camera-intents/28.4-dynamic-orbit-soft-targeting.md)
 - [x] [28.5 CinemachineDriver (optional)](phase-28-camera-intents/28.5-cinemachine-driver.md)
 - [x] [28.6 CameraBrain Integration + Editor Update](phase-28-camera-intents/28.6-brain-integration-editor.md)
-- [ ] [28.7 Unit Tests](phase-28-camera-intents/28.7-unit-tests.md)
+- [x] [28.7 Unit Tests](phase-28-camera-intents/28.7-unit-tests.md)
 
 **Referenz:** Spec Kapitel 7, 13, 15, 16
 
