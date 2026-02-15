@@ -103,6 +103,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         float RotationSpeed { get; }
         bool RotateTowardsMovement { get; }
 
+        /// <summary>
+        /// Ob der Character im SteerOrbit-Modus (RMB) sofort zur Kamera ausgerichtet wird,
+        /// auch ohne Bewegungsinput. True = ArcheAge/WoW-Verhalten.
+        /// </summary>
+        bool SteerAlignCharacter { get; }
+
         // Step Detection
         float MaxStepHeight { get; }
         float MinStepDepth { get; }

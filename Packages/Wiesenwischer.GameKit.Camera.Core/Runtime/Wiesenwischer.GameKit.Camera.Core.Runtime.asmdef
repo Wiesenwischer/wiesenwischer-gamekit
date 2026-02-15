@@ -3,7 +3,8 @@
   "rootNamespace": "Wiesenwischer.GameKit.Camera",
   "references": [
     "Unity.InputSystem",
-    "Cinemachine"
+    "Cinemachine",
+    "Wiesenwischer.GameKit.CharacterController.Core.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

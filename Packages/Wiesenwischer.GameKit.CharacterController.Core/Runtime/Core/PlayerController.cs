@@ -74,6 +74,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         #endregion
 
+        #region Camera Integration
+
+        private ICameraOrbitProvider _orbitProvider;
+
+        #endregion
+
         #region Tick System
 
         private TickSystem _tickSystem;
@@ -119,6 +125,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             InitializeTickSystem();
             InitializeSystems();
             InitializeStateMachine();
+        }
+
+        private void Start()
+        {
+            // OrbitProvider nach Awake auflösen (CameraBrain muss zuerst initialisiert sein)
+            ResolveOrbitProvider();
         }
 
         private void Update()
@@ -339,13 +351,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         {
             if (Locomotion == null || ReusableData == null) return;
 
+            bool isSteerMode = _orbitProvider != null && _orbitProvider.IsSteerMode;
+
+            // Frame-Space: SteerOrbit → Camera-Frame, FreeOrbit/None → Character-Frame
+            Vector3 lookDir = isSteerMode
+                ? GetCameraForward()
+                : transform.forward;
+
             var input = new LocomotionInput
             {
                 MoveDirection = ReusableData.MoveInput,
-                LookDirection = GetCameraForward(),
+                LookDirection = lookDir,
                 SpeedModifier = ReusableData.MovementSpeedModifier,
                 StepDetectionEnabled = ReusableData.StepDetectionEnabled,
                 DecelerationOverride = ReusableData.DecelerationOverride,
+                IsSteerMode = isSteerMode,
             };
 
             Locomotion.Simulate(input, deltaTime);
@@ -360,17 +380,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// </summary>
         private Vector3 GetCameraForward()
         {
+            if (_orbitProvider != null)
+                return _orbitProvider.Forward;
+
             var mainCamera = Camera.main;
             if (mainCamera != null)
             {
                 Vector3 cameraForward = mainCamera.transform.forward;
                 cameraForward.y = 0f;
                 if (cameraForward.sqrMagnitude > 0.01f)
-                {
                     return cameraForward.normalized;
-                }
             }
             return transform.forward;
+        }
+
+        /// <summary>
+        /// Sucht ICameraOrbitProvider auf dem Camera.main-Hierarchy.
+        /// CameraBrain implementiert dieses Interface und sitzt als Parent über der Camera.
+        /// </summary>
+        private void ResolveOrbitProvider()
+        {
+            var mainCamera = Camera.main;
+            if (mainCamera != null)
+                _orbitProvider = mainCamera.GetComponentInParent<ICameraOrbitProvider>();
         }
 
         #endregion
