@@ -696,7 +696,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [Camera System Spezifikation](../specs/Camera_System_Spezifikation.md)
 
 **Schritte:**
-- [ ] [27.1 Package-Struktur + OrbitBehaviour](phase-27-camera-behaviours/27.1-package-orbit.md)
+- [x] [27.1 Package-Struktur + OrbitBehaviour](phase-27-camera-behaviours/27.1-package-orbit.md)
 - [ ] [27.2 ZoomBehaviour + CollisionBehaviour](phase-27-camera-behaviours/27.2-zoom-collision.md)
 - [ ] [27.3 InertiaBehaviour](phase-27-camera-behaviours/27.3-inertia.md)
 - [ ] [27.4 RecenterBehaviour + ShoulderOffsetBehaviour](phase-27-camera-behaviours/27.4-recenter-shoulder.md)
