@@ -5,7 +5,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
     /// <summary>
     /// Shoulder-Offset: Seitlicher Versatz für Over-the-Shoulder-Ansicht.
     /// </summary>
-    public class ShoulderOffsetBehaviour : MonoBehaviour, ICameraBehaviour
+    public class ShoulderOffsetBehaviour : MonoBehaviour, ICameraBehaviour, ICameraPresetReceiver
     {
         [Header("Offset")]
         [Tooltip("Seitlicher Versatz (positiv = rechte Schulter).")]
@@ -23,6 +23,14 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
         private bool _rightShoulder = true;
 
         public bool IsActive => enabled;
+
+        public void ApplyPreset(CameraPreset preset)
+        {
+            enabled = preset.ShoulderEnabled;
+            _offsetX = preset.ShoulderOffsetX;
+            _offsetY = preset.ShoulderOffsetY;
+            _switchDamping = preset.ShoulderSwitchDamping;
+        }
 
         /// <summary>Wechselt die Schulterseite.</summary>
         public void SwitchSide()

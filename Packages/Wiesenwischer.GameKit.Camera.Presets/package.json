@@ -1,0 +1,13 @@
+{
+  "name": "wiesenwischer.gamekit.camera.presets",
+  "version": "0.1.0",
+  "displayName": "Wiesenwischer GameKit - Camera Presets",
+  "description": "Vordefinierte Camera-Style Presets (BDO, ArcheAge) für das Camera System.",
+  "unity": "2022.3",
+  "dependencies": {
+    "wiesenwischer.gamekit.camera.core": "0.1.0"
+  },
+  "author": {
+    "name": "Wiesenwischer"
+  }
+}

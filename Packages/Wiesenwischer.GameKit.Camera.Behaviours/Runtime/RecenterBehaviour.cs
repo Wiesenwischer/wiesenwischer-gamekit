@@ -6,7 +6,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
     /// Auto-Recenter: Kamera dreht sich hinter den Character
     /// wenn keine Look-Eingabe vorliegt und der Character sich bewegt.
     /// </summary>
-    public class RecenterBehaviour : MonoBehaviour, ICameraBehaviour
+    public class RecenterBehaviour : MonoBehaviour, ICameraBehaviour, ICameraPresetReceiver
     {
         [Header("Recenter")]
         [Tooltip("Verzögerung bevor Recenter startet (Sekunden nach letztem Look-Input).")]
@@ -22,6 +22,14 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
         private Vector3 _lastTargetPosition;
 
         public bool IsActive => enabled;
+
+        public void ApplyPreset(CameraPreset preset)
+        {
+            enabled = preset.RecenterEnabled;
+            _delay = preset.RecenterDelay;
+            _speed = preset.RecenterSpeed;
+            _minMoveSpeed = preset.RecenterMinSpeed;
+        }
 
         public void UpdateState(ref CameraState state, CameraContext ctx)
         {

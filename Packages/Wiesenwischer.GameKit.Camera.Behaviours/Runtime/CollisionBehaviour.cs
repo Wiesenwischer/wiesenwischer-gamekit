@@ -6,7 +6,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
     /// Collision-Verhalten: Verhindert Camera-Clipping durch SphereCast.
     /// Muss nach ZoomBehaviour in der Behaviour-Liste stehen.
     /// </summary>
-    public class CollisionBehaviour : MonoBehaviour, ICameraBehaviour
+    public class CollisionBehaviour : MonoBehaviour, ICameraBehaviour, ICameraPresetReceiver
     {
         [Header("Collision")]
         [SerializeField] private float _collisionRadius = 0.3f;
@@ -19,6 +19,12 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
         private float _currentCollisionDistance;
 
         public bool IsActive => enabled;
+
+        public void ApplyPreset(CameraPreset preset)
+        {
+            _collisionRadius = preset.CollisionRadius;
+            _recoverySpeed = preset.CollisionRecoverySpeed;
+        }
 
         public void UpdateState(ref CameraState state, CameraContext ctx)
         {

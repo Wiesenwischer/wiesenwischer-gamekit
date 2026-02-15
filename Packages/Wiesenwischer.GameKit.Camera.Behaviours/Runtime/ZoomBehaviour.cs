@@ -5,7 +5,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
     /// <summary>
     /// Zoom-Verhalten: Steuert Distance basierend auf Zoom-Input.
     /// </summary>
-    public class ZoomBehaviour : MonoBehaviour, ICameraBehaviour, ICameraStateInitializer
+    public class ZoomBehaviour : MonoBehaviour, ICameraBehaviour, ICameraStateInitializer, ICameraPresetReceiver
     {
         [Header("Distance")]
         [SerializeField] private float _defaultDistance = 5f;
@@ -18,6 +18,14 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
         private float _zoomVelocity;
 
         public bool IsActive => enabled;
+
+        public void ApplyPreset(CameraPreset preset)
+        {
+            _defaultDistance = preset.DefaultDistance;
+            _minDistance = preset.MinDistance;
+            _maxDistance = preset.MaxDistance;
+            _zoomDamping = preset.ZoomDamping;
+        }
 
         public void InitializeState(ref CameraState state)
         {
