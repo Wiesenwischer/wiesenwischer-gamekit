@@ -5,10 +5,10 @@ using Wiesenwischer.GameKit.Camera.Behaviours;
 namespace Wiesenwischer.GameKit.Camera.Editor
 {
     /// <summary>
-    /// Editor-Fenster zum Testen des Camera Systems.
-    /// Zeigt den aktuellen CameraState, erlaubt Preset-Wechsel und Behaviour-Steuerung.
+    /// Editor-Fenster für Camera Brain Setup und Konfiguration.
+    /// Erlaubt Preset-Wechsel, Behaviour-Steuerung und Live-Debugging im Play Mode.
     /// </summary>
-    public class CameraTestWindow : EditorWindow
+    public class CameraBrainWindow : EditorWindow
     {
         private CameraBrain _brain;
         private CameraPreset _presetToApply;
@@ -18,10 +18,15 @@ namespace Wiesenwischer.GameKit.Camera.Editor
         private bool _showPresets = true;
         private bool _showQuickActions = true;
 
+        // Preset-Dropdown Cache
+        private CameraPreset[] _availablePresets;
+        private string[] _presetNames;
+        private int _selectedPresetIndex = -1;
+
         [MenuItem("Wiesenwischer/GameKit/Camera/Setup Camera Brain", false, 100)]
         public static void ShowWindow()
         {
-            var window = GetWindow<CameraTestWindow>("Camera Setup");
+            var window = GetWindow<CameraBrainWindow>("Camera Brain");
             window.minSize = new Vector2(320, 400);
         }
 
@@ -86,7 +91,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
         private void DrawHeader()
         {
-            EditorGUILayout.LabelField("Camera Test & Debug", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Camera Brain", EditorStyles.boldLabel);
             EditorGUILayout.Space(2);
         }
 
@@ -114,27 +119,64 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
             EditorGUI.indentLevel++;
 
-            // Preset-Feld
-            _presetToApply = (CameraPreset)EditorGUILayout.ObjectField(
-                "Preset", _presetToApply, typeof(CameraPreset), false);
+            // Preset-Dropdown (auto-discover alle CameraPreset Assets)
+            if (_availablePresets == null)
+                RefreshPresetList();
 
             EditorGUILayout.BeginHorizontal();
 
-            GUI.enabled = _presetToApply != null && Application.isPlaying;
-            if (GUILayout.Button("Apply Preset"))
-            {
-                _brain.SetPreset(_presetToApply);
-                Debug.Log($"[CameraTest] Preset '{_presetToApply.name}' angewendet.");
-            }
-            GUI.enabled = true;
+            if (GUILayout.Button("Refresh", GUILayout.Width(60)))
+                RefreshPresetList();
 
-            // Schnellzugriff auf bekannte Presets
-            if (GUILayout.Button("Find BDO"))
-                _presetToApply = FindPresetByName("CameraPreset_BDO");
-            if (GUILayout.Button("Find ArcheAge"))
-                _presetToApply = FindPresetByName("CameraPreset_ArcheAge");
+            int newIndex = EditorGUILayout.Popup(_selectedPresetIndex, _presetNames ?? System.Array.Empty<string>());
+            if (newIndex != _selectedPresetIndex && newIndex >= 0 && newIndex < _availablePresets.Length)
+            {
+                _selectedPresetIndex = newIndex;
+                _presetToApply = _availablePresets[newIndex];
+            }
 
             EditorGUILayout.EndHorizontal();
+
+            // Apply Button (Edit Mode: setzt _activePreset, Play Mode: ruft SetPreset auf)
+            GUI.enabled = _presetToApply != null;
+            if (GUILayout.Button("Apply Preset"))
+            {
+                if (Application.isPlaying)
+                {
+                    _brain.SetPreset(_presetToApply);
+                }
+                else
+                {
+                    // _activePreset Feld setzen
+                    var brainSo = new SerializedObject(_brain);
+                    brainSo.FindProperty("_activePreset").objectReferenceValue = _presetToApply;
+                    brainSo.ApplyModifiedProperties();
+
+                    // Preset auf alle Behaviours anwenden (enabled + Parameter)
+                    Undo.RecordObjects(_brain.GetComponents<Component>(), "Apply Camera Preset");
+                    foreach (var receiver in _brain.GetComponents<ICameraPresetReceiver>())
+                    {
+                        receiver.ApplyPreset(_presetToApply);
+                        if (receiver is MonoBehaviour mb)
+                            EditorUtility.SetDirty(mb);
+                    }
+
+                    // OrbitActivation auf InputPipeline setzen
+                    var inputPipeline = _brain.GetComponent<CameraInputPipeline>();
+                    if (inputPipeline != null)
+                    {
+                        Undo.RecordObject(inputPipeline, "Apply Camera Preset");
+                        var pipelineSo = new SerializedObject(inputPipeline);
+                        pipelineSo.FindProperty("_orbitActivation").enumValueIndex = (int)_presetToApply.OrbitActivation;
+                        pipelineSo.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(inputPipeline);
+                    }
+
+                    EditorUtility.SetDirty(_brain);
+                }
+                Debug.Log($"[CameraBrain] Preset '{_presetToApply.name}' angewendet.");
+            }
+            GUI.enabled = true;
 
             // Preset-Info
             if (_presetToApply != null)
@@ -153,6 +195,36 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
             EditorGUI.indentLevel--;
             EditorGUILayout.Space(4);
+        }
+
+        private void RefreshPresetList()
+        {
+            var guids = AssetDatabase.FindAssets("t:CameraPreset");
+            _availablePresets = new CameraPreset[guids.Length];
+            _presetNames = new string[guids.Length];
+
+            for (int i = 0; i < guids.Length; i++)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                _availablePresets[i] = AssetDatabase.LoadAssetAtPath<CameraPreset>(path);
+                _presetNames[i] = _availablePresets[i] != null
+                    ? _availablePresets[i].name.Replace("CameraPreset_", "")
+                    : "(null)";
+            }
+
+            // Aktuell ausgewähltes Preset im Index finden
+            _selectedPresetIndex = -1;
+            if (_presetToApply != null)
+            {
+                for (int i = 0; i < _availablePresets.Length; i++)
+                {
+                    if (_availablePresets[i] == _presetToApply)
+                    {
+                        _selectedPresetIndex = i;
+                        break;
+                    }
+                }
+            }
         }
 
         private void DrawBehaviourSection()
@@ -180,10 +252,6 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                     mb.enabled = isEnabled;
                     EditorUtility.SetDirty(mb);
                 }
-
-                // Select-Button
-                if (GUILayout.Button("Select", GUILayout.Width(50)))
-                    Selection.activeObject = mb;
 
                 EditorGUILayout.EndHorizontal();
             }
@@ -214,9 +282,6 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                     EditorUtility.SetDirty(driver);
                 }
 
-                if (GUILayout.Button("Select", GUILayout.Width(50)))
-                    Selection.activeObject = driver;
-
                 EditorGUILayout.EndHorizontal();
             }
             else
@@ -227,7 +292,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 if (GUILayout.Button("Add", GUILayout.Width(50)))
                 {
                     Undo.AddComponent<CinemachineDriver>(_brain.gameObject);
-                    Debug.Log("[CameraTest] CinemachineDriver hinzugefügt.");
+                    Debug.Log("[CameraBrain] CinemachineDriver hinzugefügt.");
                 }
                 EditorGUILayout.EndHorizontal();
             }
@@ -288,27 +353,5 @@ namespace Wiesenwischer.GameKit.Camera.Editor
             EditorGUILayout.Space(4);
         }
 
-        private static CameraPreset FindPresetByName(string name)
-        {
-            var guids = AssetDatabase.FindAssets($"t:CameraPreset {name}");
-            if (guids.Length > 0)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                return AssetDatabase.LoadAssetAtPath<CameraPreset>(path);
-            }
-
-            // Fallback: alle Presets durchsuchen
-            guids = AssetDatabase.FindAssets("t:CameraPreset");
-            foreach (var guid in guids)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                var preset = AssetDatabase.LoadAssetAtPath<CameraPreset>(path);
-                if (preset != null && preset.name == name)
-                    return preset;
-            }
-
-            Debug.LogWarning($"[CameraTest] Preset '{name}' nicht gefunden.");
-            return null;
-        }
     }
 }

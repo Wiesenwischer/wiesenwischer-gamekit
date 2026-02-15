@@ -91,6 +91,11 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 Debug.Log("[CameraSetup] CameraBrain hinzugefügt.");
             }
 
+            // Korrekte Camera-Referenz ermitteln (Child-Camera unter OffsetPivot, nicht Root-Camera)
+            var actualCamera = pivotRig.CameraTransform != null
+                ? pivotRig.CameraTransform.GetComponent<UnityEngine.Camera>()
+                : mainCamera;
+
             // Config zuweisen
             var config = FindOrCreateConfig();
             if (config != null)
@@ -99,7 +104,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 brainSo.FindProperty("_config").objectReferenceValue = config;
                 brainSo.FindProperty("_anchor").objectReferenceValue = anchor;
                 brainSo.FindProperty("_inputPipeline").objectReferenceValue = inputPipeline;
-                brainSo.FindProperty("_camera").objectReferenceValue = mainCamera;
+                brainSo.FindProperty("_camera").objectReferenceValue = actualCamera;
                 brainSo.ApplyModifiedProperties();
                 Debug.Log("[CameraSetup] CameraBrain konfiguriert.");
             }
