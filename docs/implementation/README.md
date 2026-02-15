@@ -69,7 +69,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 19 | Character | CP: Morph Graph & HD Anatomy | — | ❌ | Offen |
 | 26 | Camera | Camera Core — Brain, State & Pivot Rig | [Features](phase-26-camera-core/README.md) | ✅ | Abgeschlossen |
 | 27 | Camera | Camera Behaviours | [Features](phase-27-camera-behaviours/README.md) | ✅ | Abgeschlossen |
-| 28 | Camera | Camera Intent System & Presets | — | ❌ | Offen |
+| 28 | Camera | Camera Intent System & Presets | [Features](phase-28-camera-intents/README.md) | ✅ | Abgeschlossen |
 | 29 | Camera | Shared Orientation & Facing Integration | — | ❌ | Offen |
 
 ---
@@ -649,7 +649,7 @@ AAA-taugliche Character Platform mit Live-Preview Creator, Equipment System, DNA
 
 # AAA Third-Person Camera System
 
-Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System und austauschbaren Camera-Styles (BDO/ArcheAge). Entkopplung von Camera und Character über Shared Orientation System und Facing Provider.
+Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System und austauschbaren Camera-Styles (ActionCombat/ClassicMMO). Entkopplung von Camera und Character über Shared Orientation System und Facing Provider.
 
 **Haupt-Spezifikation (konsolidiert):**
 - [Camera System Spezifikation](../specs/Camera_System_Spezifikation.md)
@@ -657,7 +657,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 **Packages:**
 - `Wiesenwischer.GameKit.Camera.Core` — CameraBrain, CameraState, PivotRig, Anchor, Input Pipeline, CinemachineDriver
 - `Wiesenwischer.GameKit.Camera.Behaviours` — Orbit, Follow, Zoom, Collision, Inertia, Recenter, ShoulderOffset
-- `Wiesenwischer.GameKit.Camera.Presets` — CameraPreset SO, BDO/ArcheAge Presets
+- `Wiesenwischer.GameKit.Camera.Presets` — CameraPreset SO, ActionCombat/ClassicMMO Presets
 - `Wiesenwischer.GameKit.CharacterController.Core` (Erweiterung) — IOrientationProvider, IFacingProvider, FrameSpace
 
 **Bestehendes Camera-Package:** `Wiesenwischer.GameKit.CharacterController.Camera` enthält bereits eine Basis-Implementierung (ThirdPersonCamera, CameraInputHandler, CameraConfig) die in die neue Architektur migriert wird.
@@ -709,17 +709,19 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 
 ### Phase 28: Camera Intent System & Presets
 **Branch:** `integration/phase-28-camera-intents`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja
+**Status:** Abgeschlossen
 
 **Ziel:** Prioritäts-basiertes Intent System für Konfliktlösung zwischen Systemen. ScriptableObject Presets für verschiedene Camera-Styles.
 
-**Schritte (vorläufig):**
-- [ ] 28.1 ICameraIntent Interface + Priority Resolution
-- [ ] 28.2 CameraPreset ScriptableObjects
-- [ ] 28.3 BDO Preset + ArcheAge Preset
-- [ ] 28.4 Soft Targeting
-- [ ] 28.5 Cinemachine Driver (optionale Rendering-Schicht)
-- [ ] 28.6 Tests
+**Schritte:**
+- [x] [28.1 ICameraIntent Interface + CameraContext-Erweiterung](phase-28-camera-intents/28.1-intent-interface.md)
+- [x] [28.2 CameraPreset ScriptableObject + Package](phase-28-camera-intents/28.2-camera-preset.md)
+- [x] [28.3 ActionCombat + ClassicMMO Presets](phase-28-camera-intents/28.3-bdo-archage-presets.md)
+- [x] [28.4 DynamicOrbitCenter + Soft Targeting](phase-28-camera-intents/28.4-dynamic-orbit-soft-targeting.md)
+- [x] [28.5 CinemachineDriver (optional)](phase-28-camera-intents/28.5-cinemachine-driver.md)
+- [x] [28.6 CameraBrain Integration + Editor Update](phase-28-camera-intents/28.6-brain-integration-editor.md)
+- [x] [28.7 Unit Tests](phase-28-camera-intents/28.7-unit-tests.md)
 
 **Referenz:** Spec Kapitel 7, 13, 15, 16
 

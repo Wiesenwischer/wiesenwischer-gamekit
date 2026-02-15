@@ -14,7 +14,6 @@ namespace Wiesenwischer.GameKit.Camera.Editor
         private const string ConfigPath = "Assets/Config/CameraCoreConfig.asset";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
-        [MenuItem("Wiesenwischer/GameKit/Camera/Setup Camera Brain", false, 100)]
         public static void SetupCameraBrain()
         {
             var player = GameObject.FindGameObjectWithTag("Player");
@@ -92,6 +91,11 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 Debug.Log("[CameraSetup] CameraBrain hinzugefügt.");
             }
 
+            // Korrekte Camera-Referenz ermitteln (Child-Camera unter OffsetPivot, nicht Root-Camera)
+            var actualCamera = pivotRig.CameraTransform != null
+                ? pivotRig.CameraTransform.GetComponent<UnityEngine.Camera>()
+                : mainCamera;
+
             // Config zuweisen
             var config = FindOrCreateConfig();
             if (config != null)
@@ -100,16 +104,35 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 brainSo.FindProperty("_config").objectReferenceValue = config;
                 brainSo.FindProperty("_anchor").objectReferenceValue = anchor;
                 brainSo.FindProperty("_inputPipeline").objectReferenceValue = inputPipeline;
-                brainSo.FindProperty("_camera").objectReferenceValue = mainCamera;
+                brainSo.FindProperty("_camera").objectReferenceValue = actualCamera;
                 brainSo.ApplyModifiedProperties();
                 Debug.Log("[CameraSetup] CameraBrain konfiguriert.");
             }
 
-            // Standard-Behaviours hinzufügen
+            // Standard-Behaviours hinzufügen (Reihenfolge wichtig!)
+            // 1. DynamicOrbitCenter muss zuerst (modifiziert AnchorPosition)
+            var dynamicOrbit = AddBehaviourIfMissing<DynamicOrbitCenterBehaviour>(cameraRoot);
+            dynamicOrbit.enabled = false;
+            // 2-4. Orbit, Recenter, Zoom
             AddBehaviourIfMissing<OrbitBehaviour>(cameraRoot);
+            AddBehaviourIfMissing<RecenterBehaviour>(cameraRoot);
             AddBehaviourIfMissing<ZoomBehaviour>(cameraRoot);
+            // 5. ShoulderOffset
+            var shoulder = AddBehaviourIfMissing<ShoulderOffsetBehaviour>(cameraRoot);
+            shoulder.enabled = false;
+            // 6. SoftTargeting
+            var softTargeting = AddBehaviourIfMissing<SoftTargetingBehaviour>(cameraRoot);
+            softTargeting.enabled = false;
+            // 7-8. Collision, Inertia
             AddBehaviourIfMissing<CollisionBehaviour>(cameraRoot);
-            Debug.Log("[CameraSetup] Standard-Behaviours hinzugefügt (Orbit, Zoom, Collision).");
+            AddBehaviourIfMissing<InertiaBehaviour>(cameraRoot);
+            Debug.Log("[CameraSetup] Alle Behaviours hinzugefügt.");
+
+#if CINEMACHINE_AVAILABLE
+            var cinemachineDriver = AddBehaviourIfMissing<CinemachineDriver>(cameraRoot);
+            cinemachineDriver.enabled = false;
+            Debug.Log("[CameraSetup] CinemachineDriver hinzugefügt (deaktiviert).");
+#endif
 
             // Snap hinter Target
             anchor.SnapToTarget();

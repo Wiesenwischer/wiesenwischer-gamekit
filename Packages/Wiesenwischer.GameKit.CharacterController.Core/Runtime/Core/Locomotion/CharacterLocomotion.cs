@@ -239,6 +239,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void UpdateRotation(ref Quaternion currentRotation, float deltaTime)
         {
+            // SteerMode: Character sofort zur Kamera ausrichten (auch ohne Bewegung)
+            if (_currentInput.IsSteerMode && _config.SteerAlignCharacter
+                && _currentInput.LookDirection.sqrMagnitude > 0.01f)
+            {
+                _targetYaw = Mathf.Atan2(_currentInput.LookDirection.x, _currentInput.LookDirection.z) * Mathf.Rad2Deg;
+                _currentYaw = Mathf.MoveTowardsAngle(_currentYaw, _targetYaw, _config.RotationSpeed * deltaTime);
+                currentRotation = Quaternion.Euler(0, _currentYaw, 0);
+                return;
+            }
+
             // Rotation zur Bewegungsrichtung
             if (_config.RotateTowardsMovement && _lastComputedHorizontal.sqrMagnitude > 0.01f)
             {

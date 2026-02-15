@@ -23,13 +23,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
         private SmootherState Calculate(
             float deltaY,
             bool isGrounded = true,
-            bool justLanded = false,
             float maxStepDelta = DefaultMaxStepDelta,
             bool onlyWhenGrounded = true,
             float smoothTime = DefaultSmoothTime)
         {
             return CalculateOffset(
-                deltaY, isGrounded, justLanded,
+                deltaY, isGrounded,
                 maxStepDelta, onlyWhenGrounded, smoothTime,
                 _state, DeltaTime);
         }
@@ -78,7 +77,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             for (int i = 0; i < 10; i++)
             {
                 _state = CalculateOffset(
-                    0f, true, false,
+                    0f, true,
                     DefaultMaxStepDelta, true, DefaultSmoothTime,
                     _state, DeltaTime);
             }
@@ -94,7 +93,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             _state.SmoothVelocity = 0.001f;
 
             var result = CalculateOffset(
-                0f, true, false,
+                0f, true,
                 DefaultMaxStepDelta, true, DefaultSmoothTime,
                 _state, DeltaTime);
 
@@ -113,7 +112,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             for (int i = 0; i < 60; i++)
             {
                 _state = CalculateOffset(
-                    0f, true, false,
+                    0f, true,
                     DefaultMaxStepDelta, true, DefaultSmoothTime,
                     _state, DeltaTime);
             }
@@ -134,7 +133,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             _state.SmoothVelocity = -0.5f;
 
             var result = CalculateOffset(
-                2.0f, true, false,
+                2.0f, true,
                 DefaultMaxStepDelta, true, DefaultSmoothTime,
                 _state, DeltaTime);
 
@@ -150,7 +149,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             _state.SmoothOffset = 0.1f;
 
             var result = CalculateOffset(
-                -2.0f, true, false,
+                -2.0f, true,
                 DefaultMaxStepDelta, true, DefaultSmoothTime,
                 _state, DeltaTime);
 
@@ -187,7 +186,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             _state.SmoothVelocity = -0.5f;
 
             var result = CalculateOffset(
-                0.1f, isGrounded: false, false,
+                0.1f, isGrounded: false,
                 DefaultMaxStepDelta, onlyWhenGrounded: true, DefaultSmoothTime,
                 _state, DeltaTime);
 
@@ -199,31 +198,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
         public void Airborne_KeepsOffset_WhenOnlyWhenGroundedFalse()
         {
             var result = CalculateOffset(
-                0.15f, isGrounded: false, false,
+                0.15f, isGrounded: false,
                 DefaultMaxStepDelta, onlyWhenGrounded: false, DefaultSmoothTime,
                 _state, DeltaTime);
 
             Assert.AreNotEqual(0f, result.SmoothOffset,
                 "onlyWhenGrounded=false sollte Smoothing auch in der Luft erlauben");
-        }
-
-        #endregion
-
-        #region Landing Check
-
-        [Test]
-        public void JustLanded_ResetsOffset()
-        {
-            _state.SmoothOffset = -0.1f;
-            _state.SmoothVelocity = -0.5f;
-
-            var result = CalculateOffset(
-                0.05f, isGrounded: true, justLanded: true,
-                DefaultMaxStepDelta, true, DefaultSmoothTime,
-                _state, DeltaTime);
-
-            Assert.AreEqual(0f, result.SmoothOffset,
-                "JustLanded sollte Offset auf 0 setzen (kein falscher Offset nach Landing)");
         }
 
         #endregion
@@ -238,7 +218,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             for (int i = 0; i < 30; i++)
             {
                 _state = CalculateOffset(
-                    0.005f, true, false,
+                    0.005f, true,
                     DefaultMaxStepDelta, true, DefaultSmoothTime,
                     _state, DeltaTime);
             }
@@ -255,7 +235,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             for (int i = 0; i < 30; i++)
             {
                 _state = CalculateOffset(
-                    0.0087f, true, false,
+                    0.0087f, true,
                     DefaultMaxStepDelta, true, DefaultSmoothTime,
                     _state, DeltaTime);
             }
@@ -276,7 +256,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.Visual
             float afterFirstStep = _state.SmoothOffset;
 
             _state = CalculateOffset(
-                0.1f, true, false,
+                0.1f, true,
                 DefaultMaxStepDelta, true, DefaultSmoothTime,
                 _state, DeltaTime);
 

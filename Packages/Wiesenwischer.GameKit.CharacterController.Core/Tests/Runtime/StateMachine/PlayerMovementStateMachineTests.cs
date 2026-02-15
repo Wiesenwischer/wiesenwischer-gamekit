@@ -203,6 +203,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests.StateMachine
         public float MaxSlopeAngle { get; set; } = 45f;
         public float RotationSpeed { get; set; } = 720f;
         public bool RotateTowardsMovement { get; set; } = true;
+            public bool SteerAlignCharacter { get; set; } = true;
         public float MaxStepHeight { get; set; } = 0.3f;
         public float MinStepDepth { get; set; } = 0.1f;
         public bool LedgeDetectionEnabled { get; set; } = true;

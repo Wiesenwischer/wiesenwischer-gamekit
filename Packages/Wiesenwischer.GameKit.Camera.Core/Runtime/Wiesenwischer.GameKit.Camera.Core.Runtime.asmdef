@@ -2,7 +2,9 @@
   "name": "Wiesenwischer.GameKit.Camera.Core.Runtime",
   "rootNamespace": "Wiesenwischer.GameKit.Camera",
   "references": [
-    "Unity.InputSystem"
+    "Unity.InputSystem",
+    "Cinemachine",
+    "Wiesenwischer.GameKit.CharacterController.Core.Runtime"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
@@ -11,6 +13,12 @@
   "precompiledReferences": [],
   "autoReferenced": true,
   "defineConstraints": [],
-  "versionDefines": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.cinemachine",
+      "expression": "2.0.0",
+      "define": "CINEMACHINE_AVAILABLE"
+    }
+  ],
   "noEngineReferences": false
 }
