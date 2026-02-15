@@ -1,12 +1,13 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Wiesenwischer.GameKit.Camera.Behaviours;
 
 namespace Wiesenwischer.GameKit.Camera.Editor
 {
     /// <summary>
-    /// Editor-Tools für das neue modulare Camera-Setup.
-    /// Erstellt CameraBrain + PivotRig + CameraAnchor + CameraInputPipeline.
+    /// Editor-Tools für das modulare Camera-Setup.
+    /// Erstellt CameraBrain + PivotRig + CameraAnchor + CameraInputPipeline + Standard-Behaviours.
     /// </summary>
     public static class CameraSetupEditor
     {
@@ -104,6 +105,12 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 Debug.Log("[CameraSetup] CameraBrain konfiguriert.");
             }
 
+            // Standard-Behaviours hinzufügen
+            AddBehaviourIfMissing<OrbitBehaviour>(cameraRoot);
+            AddBehaviourIfMissing<ZoomBehaviour>(cameraRoot);
+            AddBehaviourIfMissing<CollisionBehaviour>(cameraRoot);
+            Debug.Log("[CameraSetup] Standard-Behaviours hinzugefügt (Orbit, Zoom, Collision).");
+
             // Snap hinter Target
             anchor.SnapToTarget();
             brain.SnapBehindTarget();
@@ -112,6 +119,16 @@ namespace Wiesenwischer.GameKit.Camera.Editor
             EditorGUIUtility.PingObject(cameraRoot);
 
             Debug.Log("[CameraSetup] Camera Brain Setup abgeschlossen!");
+        }
+
+        private static T AddBehaviourIfMissing<T>(GameObject go) where T : Component
+        {
+            var existing = go.GetComponent<T>();
+            if (existing != null) return existing;
+
+            var component = go.AddComponent<T>();
+            Debug.Log($"[CameraSetup] {typeof(T).Name} hinzugefügt.");
+            return component;
         }
 
         private static CameraCoreConfig FindOrCreateConfig()

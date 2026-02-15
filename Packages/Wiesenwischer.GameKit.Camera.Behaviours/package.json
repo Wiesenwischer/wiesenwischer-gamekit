@@ -1,0 +1,10 @@
+{
+  "name": "wiesenwischer.gamekit.camera.behaviours",
+  "displayName": "GameKit Camera Behaviours",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Modulare Camera Behaviours — Orbit, Zoom, Collision, Inertia, Recenter, ShoulderOffset.",
+  "dependencies": {
+    "wiesenwischer.gamekit.camera.core": "0.1.0"
+  }
+}

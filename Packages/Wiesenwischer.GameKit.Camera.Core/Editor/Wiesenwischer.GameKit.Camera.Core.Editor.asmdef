@@ -3,6 +3,7 @@
   "rootNamespace": "Wiesenwischer.GameKit.Camera.Editor",
   "references": [
     "Wiesenwischer.GameKit.Camera.Core.Runtime",
+    "Wiesenwischer.GameKit.Camera.Behaviours.Runtime",
     "Unity.InputSystem"
   ],
   "includePlatforms": [
