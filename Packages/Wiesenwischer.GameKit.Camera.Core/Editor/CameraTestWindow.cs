@@ -188,8 +188,53 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 EditorGUILayout.EndHorizontal();
             }
 
+            // CinemachineDriver (kein ICameraBehaviour, daher separater Toggle)
+            DrawCinemachineToggle();
+
             EditorGUI.indentLevel--;
             EditorGUILayout.Space(4);
+        }
+
+        private void DrawCinemachineToggle()
+        {
+#if CINEMACHINE_AVAILABLE
+            var driver = _brain.GetComponent<CinemachineDriver>();
+            if (driver != null)
+            {
+                EditorGUILayout.Space(2);
+                EditorGUILayout.BeginHorizontal();
+
+                bool wasEnabled = driver.enabled;
+                bool isEnabled = EditorGUILayout.ToggleLeft("CinemachineDriver", driver.enabled);
+
+                if (isEnabled != wasEnabled)
+                {
+                    Undo.RecordObject(driver, "Toggle CinemachineDriver");
+                    driver.enabled = isEnabled;
+                    EditorUtility.SetDirty(driver);
+                }
+
+                if (GUILayout.Button("Select", GUILayout.Width(50)))
+                    Selection.activeObject = driver;
+
+                EditorGUILayout.EndHorizontal();
+            }
+            else
+            {
+                EditorGUILayout.Space(2);
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("CinemachineDriver", "Nicht vorhanden");
+                if (GUILayout.Button("Add", GUILayout.Width(50)))
+                {
+                    Undo.AddComponent<CinemachineDriver>(_brain.gameObject);
+                    Debug.Log("[CameraTest] CinemachineDriver hinzugefügt.");
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+#else
+            EditorGUILayout.Space(2);
+            EditorGUILayout.LabelField("CinemachineDriver", "Cinemachine nicht installiert");
+#endif
         }
 
         private void DrawStateSection()
