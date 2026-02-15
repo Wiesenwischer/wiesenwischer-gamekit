@@ -7,7 +7,7 @@ namespace Wiesenwischer.GameKit.Camera
     /// AAA Camera Input Pipeline.
     /// Transformiert rohen Look-/Zoom-Input durch Deadzone, Acceleration
     /// und Smoothing zu einem gefilterten CameraInputState.
-    /// Unterstützt AlwaysOn (BDO) und ButtonActivated (ArcheAge/WoW) Orbit-Modi.
+    /// Unterstützt AlwaysOn (Action Combat) und ButtonActivated (Classic MMO) Orbit-Modi.
     /// </summary>
     public class CameraInputPipeline : MonoBehaviour
     {
@@ -17,7 +17,7 @@ namespace Wiesenwischer.GameKit.Camera
         [SerializeField] private string _zoomActionName = "ScrollWheel";
 
         [Header("Orbit Activation")]
-        [Tooltip("AlwaysOn = Maus steuert immer Kamera (BDO). ButtonActivated = Nur bei LMB/RMB (ArcheAge).")]
+        [Tooltip("AlwaysOn = Maus steuert immer Kamera (Action Combat). ButtonActivated = Nur bei LMB/RMB (Classic MMO).")]
         [SerializeField] private OrbitActivation _orbitActivation = OrbitActivation.AlwaysOn;
 
         [Header("Orbit Buttons (nur bei ButtonActivated)")]
@@ -168,11 +168,11 @@ namespace Wiesenwischer.GameKit.Camera
         {
             if (_orbitActivation == OrbitActivation.AlwaysOn)
             {
-                // BDO-Style: Immer FreeOrbit (Character wird nie von Kamera gesteuert)
+                // AlwaysOn: Immer FreeOrbit (Character wird nie von Kamera gesteuert)
                 return CameraOrbitMode.FreeOrbit;
             }
 
-            // ButtonActivated (ArcheAge/WoW-Style)
+            // ButtonActivated (Classic MMO)
             // Gamepad: Rechter Stick = immer FreeOrbit
             if (_isGamepad)
                 return CameraOrbitMode.FreeOrbit;

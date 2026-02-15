@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6, type: 3}
-  m_Name: CameraPreset_ArcheAge
+  m_Name: CameraPreset_ClassicMMO
   m_EditorClassIdentifier:
-  Description: "ArcheAge Style \u2014 Tab-Target, Button-Activated Orbit (LMB=FreeLook, RMB=Steer), Direct Camera"
+  Description: "Classic MMO \u2014 Button-Activated Orbit (LMB=FreeLook, RMB=Steer), Free Cursor, Direct Camera"
   DefaultFov: 60
   OrbitActivation: 1
   PitchMin: -50

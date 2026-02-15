@@ -22,7 +22,7 @@ namespace Wiesenwischer.GameKit.Camera
         public float DefaultFov = 60f;
 
         [Header("Orbit Mode")]
-        [Tooltip("AlwaysOn = Maus steuert immer (BDO). ButtonActivated = Nur bei LMB/RMB (ArcheAge/WoW).")]
+        [Tooltip("AlwaysOn = Maus steuert immer (Action Combat). ButtonActivated = Nur bei LMB/RMB (Classic MMO).")]
         public OrbitActivation OrbitActivation = OrbitActivation.AlwaysOn;
 
         [Header("Orbit")]

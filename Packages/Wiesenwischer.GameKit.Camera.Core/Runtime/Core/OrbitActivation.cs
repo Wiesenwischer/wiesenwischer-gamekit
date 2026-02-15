@@ -5,10 +5,10 @@ namespace Wiesenwischer.GameKit.Camera
     /// </summary>
     public enum OrbitActivation
     {
-        /// <summary>Maus steuert immer die Kamera. Cursor immer gelockt. (BDO/Action Combat)</summary>
+        /// <summary>Maus steuert immer die Kamera. Cursor immer gelockt. (Action Combat)</summary>
         AlwaysOn,
 
-        /// <summary>Orbit nur bei gedrücktem LMB/RMB. Cursor sonst frei. (ArcheAge/WoW/Tab-Target)</summary>
+        /// <summary>Orbit nur bei gedrücktem LMB/RMB. Cursor sonst frei. (Classic MMO)</summary>
         ButtonActivated
     }
 }

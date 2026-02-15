@@ -2,19 +2,21 @@
 
 ## Problem
 
-Das aktuelle Kamerasystem behandelt allen Look-Input gleich: Mausbewegung wird immer als Kamerarotation angewendet, der Cursor ist immer gelockt. Das entspricht dem BDO-Style (Action Combat), bildet aber **nicht** den fundamentalen Unterschied zwischen Action-Combat- und Tab-Target-Kameras ab.
+Das aktuelle Kamerasystem behandelt allen Look-Input gleich: Mausbewegung wird immer als Kamerarotation angewendet, der Cursor ist immer gelockt. Das entspricht dem Action-Combat-Paradigma, bildet aber **nicht** den fundamentalen Unterschied zwischen Action-Combat- und Classic-MMO-Kameras ab.
 
-### BDO-Style (Action Combat)
+### Action Combat (Preset: ActionCombat)
 - Cursor **immer** gelockt
 - Maus steuert **immer** die Kamera
 - Character dreht sich **unabhängig** von der Kamera (Movement-Richtung oder Combat-Facing)
 - Kein Button nötig für Kamerarotation
+- Beispiele: Black Desert Online, TERA, Guild Wars 2
 
-### ArcheAge/WoW-Style (Tab-Target)
+### Classic MMO (Preset: ClassicMMO)
 - Cursor **standardmäßig frei** (sichtbar, unlocked)
 - **LMB gehalten + Drag** = Free Orbit (nur Kamera dreht, Character bleibt)
 - **RMB gehalten + Drag** = Steer Orbit (Kamera + Character drehen zusammen)
 - **Beide Buttons** = Character läuft vorwärts in Kamerarichtung
+- Beispiele: World of Warcraft, ArcheAge, Final Fantasy XIV
 
 ## Lösung
 
@@ -34,8 +36,8 @@ Konfiguriert **wann** Orbit-Input gelesen wird:
 
 | Wert | Verhalten | Typisch für |
 |------|-----------|-------------|
-| `AlwaysOn` | Maus steuert immer Kamera, Cursor immer gelockt | BDO, Action RPGs |
-| `ButtonActivated` | Orbit nur bei gedrücktem LMB/RMB | ArcheAge, WoW, Tab-Target MMOs |
+| `AlwaysOn` | Maus steuert immer Kamera, Cursor immer gelockt | Action Combat (BDO, TERA, GW2) |
+| `ButtonActivated` | Orbit nur bei gedrücktem LMB/RMB | Classic MMO (WoW, ArcheAge, FFXIV) |
 
 ### Datenfluss
 
@@ -84,8 +86,8 @@ Character Controller liest IsSteerMode → alignt sich zu CameraBrain.Forward
 
 | Preset | OrbitActivation | FreeOrbit | SteerOrbit |
 |--------|----------------|-----------|------------|
-| BDO | `AlwaysOn` | Immer aktiv | N/A |
-| ArcheAge | `ButtonActivated` | LMB | RMB |
+| ActionCombat | `AlwaysOn` | Immer aktiv | N/A |
+| ClassicMMO | `ButtonActivated` | LMB | RMB |
 
 ## Abhängigkeit: Character Controller
 
