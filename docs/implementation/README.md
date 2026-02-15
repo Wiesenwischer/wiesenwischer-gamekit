@@ -717,7 +717,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [x] [28.1 ICameraIntent Interface + CameraContext-Erweiterung](phase-28-camera-intents/28.1-intent-interface.md)
 - [x] [28.2 CameraPreset ScriptableObject + Package](phase-28-camera-intents/28.2-camera-preset.md)
 - [x] [28.3 BDO + ArcheAge Presets](phase-28-camera-intents/28.3-bdo-archage-presets.md)
-- [ ] [28.4 DynamicOrbitCenter + Soft Targeting](phase-28-camera-intents/28.4-dynamic-orbit-soft-targeting.md)
+- [x] [28.4 DynamicOrbitCenter + Soft Targeting](phase-28-camera-intents/28.4-dynamic-orbit-soft-targeting.md)
 - [ ] [28.5 CinemachineDriver (optional)](phase-28-camera-intents/28.5-cinemachine-driver.md)
 - [ ] [28.6 CameraBrain Integration + Editor Update](phase-28-camera-intents/28.6-brain-integration-editor.md)
 - [ ] [28.7 Unit Tests](phase-28-camera-intents/28.7-unit-tests.md)
