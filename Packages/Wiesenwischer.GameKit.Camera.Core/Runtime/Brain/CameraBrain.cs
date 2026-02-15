@@ -4,6 +4,7 @@ namespace Wiesenwischer.GameKit.Camera
 {
     /// <summary>
     /// Zentraler Camera-Orchestrator. Koordiniert Input, Anchor, Behaviours und PivotRig.
+    /// Enthält keine eigene Kamera-Logik — alles läuft über ICameraBehaviour[].
     /// </summary>
     [RequireComponent(typeof(PivotRig))]
     public class CameraBrain : MonoBehaviour
@@ -16,14 +17,10 @@ namespace Wiesenwischer.GameKit.Camera
         [Header("Config")]
         [SerializeField] private CameraCoreConfig _config;
 
-        [Header("Behaviours (Phase 27)")]
-        [Tooltip("Externe Behaviours. Werden nach der eingebetteten Logik evaluiert.")]
-        [SerializeField] private MonoBehaviour[] _behaviourComponents;
-
         private PivotRig _rig;
         private CameraState _state;
         private CameraContext _context;
-        private float _zoomVelocity;
+        private ICameraBehaviour[] _behaviours;
 
         /// <summary>Aktueller Camera State (readonly).</summary>
         public CameraState State => _state;
@@ -46,7 +43,10 @@ namespace Wiesenwischer.GameKit.Camera
                 _anchor.FollowTarget = followTarget;
 
             if (_context != null)
+            {
+                _context.FollowTarget = followTarget;
                 _context.LookTarget = lookTarget;
+            }
         }
 
         /// <summary>Teleportiert Kamera sofort hinter das Target.</summary>
@@ -57,9 +57,27 @@ namespace Wiesenwischer.GameKit.Camera
                 _anchor.SnapToTarget();
                 _state.Yaw = _anchor.FollowTarget.eulerAngles.y;
                 _state.Pitch = 0f;
-                _state.Distance = _config != null ? _config.DefaultDistance : 5f;
+
+                // Behaviours mit InitializeState aufrufen (z.B. ZoomBehaviour → Distance)
+                if (_behaviours != null)
+                {
+                    foreach (var b in _behaviours)
+                    {
+                        if (b is ICameraStateInitializer init)
+                            init.InitializeState(ref _state);
+                        if (b is ICameraSnappable snap)
+                            snap.Snap(_anchor.AnchorPosition);
+                    }
+                }
+
                 _rig.ApplyState(_state, _anchor.AnchorPosition);
             }
+        }
+
+        /// <summary>Behaviour-Liste neu einlesen (z.B. nach AddComponent).</summary>
+        public void RefreshBehaviours()
+        {
+            _behaviours = GetComponents<ICameraBehaviour>();
         }
 
         private void Awake()
@@ -68,10 +86,20 @@ namespace Wiesenwischer.GameKit.Camera
             _rig.EnsureHierarchy();
 
             _context = new CameraContext();
-
             _state = CameraState.Default;
+
             if (_config != null)
-                _state.Distance = _config.DefaultDistance;
+                _state.Fov = _config.DefaultFov;
+
+            // Auto-discover Behaviours auf diesem GameObject
+            _behaviours = GetComponents<ICameraBehaviour>();
+
+            // Behaviours mit InitializeState aufrufen
+            foreach (var b in _behaviours)
+            {
+                if (b is ICameraStateInitializer init)
+                    init.InitializeState(ref _state);
+            }
 
             if (_camera == null)
                 _camera = GetComponentInChildren<UnityEngine.Camera>();
@@ -93,80 +121,22 @@ namespace Wiesenwischer.GameKit.Camera
             // 3. Context
             _context.Input = input;
             _context.AnchorPosition = _anchor != null ? _anchor.AnchorPosition : transform.position;
+            _context.FollowTarget = _anchor != null ? _anchor.FollowTarget : null;
             _context.DeltaTime = dt;
 
-            // 4. Eingebettete Logik (migriert aus ThirdPersonCamera)
-            UpdateOrbit(input);
-            UpdateZoom(input, dt);
-
-            // 5. Externe Behaviours (Phase 27)
-            if (_behaviourComponents != null)
+            // 4. Behaviours evaluieren
+            foreach (var behaviour in _behaviours)
             {
-                foreach (var comp in _behaviourComponents)
-                {
-                    if (comp is ICameraBehaviour behaviour && behaviour.IsActive)
-                        behaviour.UpdateState(ref _state, _context);
-                }
+                if (behaviour.IsActive)
+                    behaviour.UpdateState(ref _state, _context);
             }
 
-            // 6. Collision
-            float collisionDistance = CheckCollision();
-            float appliedDistance = Mathf.Min(_state.Distance, collisionDistance);
+            // 5. Apply
+            _rig.ApplyState(_state, _context.AnchorPosition);
 
-            var rigState = _state;
-            rigState.Distance = appliedDistance;
-
-            // 7. Apply
-            _rig.ApplyState(rigState, _context.AnchorPosition);
-
-            // 8. FOV
+            // 6. FOV
             if (_camera != null)
                 _camera.fieldOfView = _state.Fov;
-        }
-
-        private void UpdateOrbit(CameraInputState input)
-        {
-            _state.Yaw += input.LookX;
-            _state.Pitch -= input.LookY;
-
-            if (_config != null)
-                _state.Pitch = Mathf.Clamp(_state.Pitch, _config.MinVerticalAngle, _config.MaxVerticalAngle);
-            else
-                _state.Pitch = Mathf.Clamp(_state.Pitch, -40f, 70f);
-        }
-
-        private void UpdateZoom(CameraInputState input, float deltaTime)
-        {
-            if (_config == null) return;
-
-            float targetDistance = _state.Distance - input.Zoom;
-            targetDistance = Mathf.Clamp(targetDistance, _config.MinDistance, _config.MaxDistance);
-
-            _state.Distance = Mathf.SmoothDamp(
-                _state.Distance, targetDistance, ref _zoomVelocity,
-                _config.ZoomDamping, Mathf.Infinity, deltaTime);
-        }
-
-        private float CheckCollision()
-        {
-            if (_config == null) return _state.Distance;
-
-            Vector3 origin = _context.AnchorPosition;
-            Vector3 direction = _rig.GetCameraWorldPosition() - origin;
-            float maxDistance = direction.magnitude;
-
-            if (maxDistance < 0.01f) return _state.Distance;
-
-            direction /= maxDistance;
-
-            if (Physics.SphereCast(origin, _config.CollisionRadius, direction,
-                out RaycastHit hit, maxDistance, Physics.DefaultRaycastLayers,
-                QueryTriggerInteraction.Ignore))
-            {
-                return hit.distance - _config.CollisionRadius;
-            }
-
-            return _state.Distance;
         }
 
 #if UNITY_EDITOR
@@ -176,12 +146,6 @@ namespace Wiesenwischer.GameKit.Camera
 
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(_anchor.AnchorPosition, 0.1f);
-
-            if (_config != null)
-            {
-                Gizmos.color = Color.red;
-                Gizmos.DrawWireSphere(_rig.GetCameraWorldPosition(), _config.CollisionRadius);
-            }
         }
 #endif
     }
