@@ -228,7 +228,7 @@ namespace Wiesenwischer.GameKit.Camera
             Transform target = _anchor.FollowTarget;
             _context.CharacterForward = target.forward;
 
-            var cc = target.GetComponent<CharacterController>();
+            var cc = target.GetComponent<UnityEngine.CharacterController>();
             if (cc != null)
             {
                 _context.CharacterVelocity = cc.velocity;
