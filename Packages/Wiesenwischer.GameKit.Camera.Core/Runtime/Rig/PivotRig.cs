@@ -22,7 +22,12 @@ namespace Wiesenwischer.GameKit.Camera
         /// </summary>
         public void ApplyState(CameraState state, Vector3 anchorPosition)
         {
+            // NaN-Guard: ungültige Werte nicht auf Transforms anwenden
+            if (float.IsNaN(state.Yaw) || float.IsNaN(state.Pitch) || float.IsNaN(state.Distance))
+                return;
+
             transform.position = anchorPosition;
+            transform.rotation = Quaternion.identity;
             _yawPivot.localRotation = Quaternion.Euler(0f, state.Yaw, 0f);
             _pitchPivot.localRotation = Quaternion.Euler(state.Pitch, 0f, 0f);
             _offsetPivot.localPosition = state.ShoulderOffset;
@@ -40,13 +45,46 @@ namespace Wiesenwischer.GameKit.Camera
                 _pitchPivot = CreateChild(_yawPivot, "PitchPivot");
             if (_offsetPivot == null)
                 _offsetPivot = CreateChild(_pitchPivot, "OffsetPivot");
+            // Validierung: _cameraTransform muss Kind von _offsetPivot sein
+            if (_cameraTransform != null && !_cameraTransform.IsChildOf(_offsetPivot))
+                _cameraTransform = null;
+
             if (_cameraTransform == null)
             {
-                var cam = GetComponentInChildren<UnityEngine.Camera>();
+                // Check for camera already under offset pivot (correct setup)
+                var cam = _offsetPivot.GetComponentInChildren<UnityEngine.Camera>();
                 if (cam != null)
+                {
                     _cameraTransform = cam.transform;
+                }
                 else
-                    _cameraTransform = CreateChild(_offsetPivot, "Camera");
+                {
+                    // Create camera child under offset pivot
+                    var camGO = CreateChild(_offsetPivot, "Camera");
+
+                    // Migrate root camera if it exists (common: Camera on Main Camera root)
+                    var rootCam = GetComponent<UnityEngine.Camera>();
+                    if (rootCam != null)
+                    {
+                        var newCam = camGO.gameObject.AddComponent<UnityEngine.Camera>();
+                        newCam.CopyFrom(rootCam);
+                        rootCam.enabled = false;
+
+                        // Migrate AudioListener
+                        var rootListener = GetComponent<AudioListener>();
+                        if (rootListener != null)
+                        {
+                            camGO.gameObject.AddComponent<AudioListener>();
+                            rootListener.enabled = false;
+                        }
+
+                        // Ensure Camera.main still works
+                        if (gameObject.CompareTag("MainCamera"))
+                            camGO.gameObject.tag = "MainCamera";
+                    }
+
+                    _cameraTransform = camGO;
+                }
             }
         }
 

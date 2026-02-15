@@ -13,7 +13,7 @@ namespace Wiesenwischer.GameKit.Camera
 
         [Header("Smoothing")]
         [Tooltip("SmoothDamp-Zeit für horizontale Bewegung (XZ). Niedrig = wenig Lag.")]
-        [SerializeField] private float _horizontalDamping = 0.02f;
+        [SerializeField] private float _horizontalDamping = 0.08f;
 
         [Tooltip("SmoothDamp-Zeit für vertikale Bewegung (Y). Höher = stärkere Glättung.")]
         [SerializeField] private float _verticalDamping = 0.08f;
@@ -49,6 +49,16 @@ namespace Wiesenwischer.GameKit.Camera
 
             Vector3 targetPos = _followTarget.position + _targetOffset;
             Vector3 current = AnchorPosition;
+
+            // Snap wenn sehr nah am Target (verhindert Micro-Jitter durch Idle-Animation)
+            float distSq = (targetPos - current).sqrMagnitude;
+            if (distSq < 0.000001f) // < 1mm
+            {
+                AnchorPosition = targetPos;
+                _velocityXZ = Vector3.zero;
+                _velocityY = 0f;
+                return;
+            }
 
             float smoothedX = Mathf.SmoothDamp(current.x, targetPos.x, ref _velocityXZ.x, _horizontalDamping, Mathf.Infinity, deltaTime);
             float smoothedZ = Mathf.SmoothDamp(current.z, targetPos.z, ref _velocityXZ.z, _horizontalDamping, Mathf.Infinity, deltaTime);

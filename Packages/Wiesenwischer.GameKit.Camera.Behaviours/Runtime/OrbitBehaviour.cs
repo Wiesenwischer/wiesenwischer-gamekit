@@ -15,6 +15,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
 
         public void ApplyPreset(CameraPreset preset)
         {
+            enabled = true;
             _minPitch = preset.PitchMin;
             _maxPitch = preset.PitchMax;
         }

@@ -8,6 +8,7 @@ namespace Wiesenwischer.GameKit.Camera
     /// Enthält keine eigene Kamera-Logik — alles läuft über ICameraIntent[] und ICameraBehaviour[].
     /// </summary>
     [RequireComponent(typeof(PivotRig))]
+    [DefaultExecutionOrder(100)] // Nach Animator und Character-Scripts ausführen
     public class CameraBrain : MonoBehaviour
     {
         [Header("References")]
@@ -158,6 +159,13 @@ namespace Wiesenwischer.GameKit.Camera
             if (_activePreset != null)
                 SetPreset(_activePreset);
 
+            // Camera IMMER über PivotRig auflösen (serialisierte Referenz kann auf alte Root-Camera zeigen)
+            if (_rig.CameraTransform != null)
+            {
+                var rigCam = _rig.CameraTransform.GetComponent<UnityEngine.Camera>();
+                if (rigCam != null)
+                    _camera = rigCam;
+            }
             if (_camera == null)
                 _camera = GetComponentInChildren<UnityEngine.Camera>();
         }
@@ -165,6 +173,7 @@ namespace Wiesenwischer.GameKit.Camera
         private void LateUpdate()
         {
             float dt = Time.deltaTime;
+            if (dt <= 0f) return;
 
             // 1. Input
             CameraInputState input = default;
