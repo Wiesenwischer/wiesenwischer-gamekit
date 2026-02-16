@@ -1,0 +1,81 @@
+using FishNet.Object;
+using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core;
+using Wiesenwischer.GameKit.CharacterController.Core.Input;
+
+namespace Wiesenwischer.GameKit.Network
+{
+    /// <summary>
+    /// Root NetworkBehaviour für einen Spieler.
+    /// Wraps PlayerController und stellt Network-Authority-Kontext bereit.
+    /// </summary>
+    [RequireComponent(typeof(PlayerController))]
+    public class NetworkPlayer : NetworkBehaviour, INetworkRole
+    {
+        /// <summary>Wird gefeuert wenn der lokale Spieler bereit ist. Parameter: Player Transform.</summary>
+        public static event System.Action<Transform> OnLocalPlayerReady;
+
+        /// <summary>Wird gefeuert wenn der lokale Spieler entfernt wird.</summary>
+        public static event System.Action OnLocalPlayerRemoved;
+
+        private PlayerController _playerController;
+
+        // INetworkRole Implementation — delegates to FishNet NetworkBehaviour
+        bool INetworkRole.IsOwner => base.IsOwner;
+        public bool IsServer => base.IsServerStarted;
+        public bool IsClient => base.IsClientStarted;
+        public bool IsNetworkActive => true;
+
+        public override void OnStartNetwork()
+        {
+            base.OnStartNetwork();
+            _playerController = GetComponent<PlayerController>();
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+
+            if (IsOwner)
+            {
+                EnableLocalPlayer();
+            }
+            else
+            {
+                DisableRemotePlayerInput();
+            }
+        }
+
+        public override void OnStopClient()
+        {
+            base.OnStopClient();
+            if (IsOwner)
+                OnLocalPlayerRemoved?.Invoke();
+        }
+
+        private void EnableLocalPlayer()
+        {
+            Debug.Log("[NetworkPlayer] Lokaler Spieler initialisiert.");
+            OnLocalPlayerReady?.Invoke(transform);
+        }
+
+        private void DisableRemotePlayerInput()
+        {
+            // Input immer deaktivieren für Remote-Player
+            var inputProvider = GetComponent<IMovementInputProvider>();
+            if (inputProvider is MonoBehaviour inputMono)
+                inputMono.enabled = false;
+
+            // Motor nur auf reinen Clients deaktivieren (Interpolator übernimmt Position).
+            // Auf dem Server muss der Motor aktiv bleiben für serverseitige Simulation.
+            if (!IsServerStarted)
+            {
+                var motor = GetComponent<CharacterController.Core.Motor.CharacterMotor>();
+                if (motor != null)
+                    motor.enabled = false;
+            }
+
+            Debug.Log($"[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor={(!IsServerStarted ? "deaktiviert" : "aktiv (Server)")}");
+        }
+    }
+}
