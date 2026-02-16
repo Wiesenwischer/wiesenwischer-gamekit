@@ -140,6 +140,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void Update()
         {
+            // Nur der Owner simuliert Input + Prediction.
+            // Im Offline-Modus: OfflineNetworkRole.IsOwner == true → alles läuft wie bisher.
+            if (!NetworkRole.IsOwner) return;
+
             // 1. Input lesen und in ReusableData schreiben
             UpdateInput();
 
