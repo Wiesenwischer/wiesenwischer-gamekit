@@ -739,7 +739,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [AAA Camera Settings & Steuerung](../specs/Wiesenwischer_AAA_Camera_Settings_und_Steuerung.md)
 
 **Schritte:**
-- [ ] [29.1 IOrientationProvider + IFacingProvider Interfaces](phase-29-orientation-facing/29.1-orientation-facing-interfaces.md)
+- [x] [29.1 IOrientationProvider + IFacingProvider Interfaces](phase-29-orientation-facing/29.1-orientation-facing-interfaces.md)
 - [ ] [29.2 ICameraInputStrategy + Pipeline Refactoring](phase-29-orientation-facing/29.2-input-strategy-refactoring.md)
 - [ ] [29.3 CameraOrientationProvider Implementierung](phase-29-orientation-facing/29.3-camera-orientation-provider.md)
 - [ ] [29.4 CharacterController Integration](phase-29-orientation-facing/29.4-character-controller-integration.md)
