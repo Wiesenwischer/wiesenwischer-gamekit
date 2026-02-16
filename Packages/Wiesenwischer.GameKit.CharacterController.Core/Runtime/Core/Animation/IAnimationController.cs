@@ -67,6 +67,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Animation
         bool CanExitAnimation => false;
 
         /// <summary>
+        /// Aktuelle normalisierte Geschwindigkeit (0 = Idle, 1 = Run, 1.5 = Sprint).
+        /// Wird für Netzwerk-Sync benötigt.
+        /// </summary>
+        float CurrentSpeed => 0f;
+
+        /// <summary>
+        /// Aktuelle vertikale Velocity für Jump/Fall Blending.
+        /// Wird für Netzwerk-Sync benötigt.
+        /// </summary>
+        float CurrentVerticalVelocity => 0f;
+
+        /// <summary>
         /// Setzt die Bewegungsgeschwindigkeit (0 = Idle, 1 = Run, 1.5 = Sprint).
         /// Wird für die Locomotion Blend Tree benötigt.
         /// </summary>
