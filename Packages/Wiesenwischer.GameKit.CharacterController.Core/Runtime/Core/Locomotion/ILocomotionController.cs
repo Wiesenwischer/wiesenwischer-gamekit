@@ -122,6 +122,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public bool IsSteerMode;
 
         /// <summary>
+        /// Wie soll der Character rotieren?
+        /// Default (0 = MovementDirection) = bestehendes Verhalten.
+        /// </summary>
+        public FacingMode FacingMode;
+
+        /// <summary>
+        /// Zielrichtung für CameraForward/TargetLockOn Modi.
+        /// Nur relevant wenn FacingMode != MovementDirection.
+        /// </summary>
+        public Vector3 FacingDirection;
+
+        /// <summary>
         /// Erstellt einen leeren Locomotion Input.
         /// </summary>
         public static LocomotionInput Empty => new LocomotionInput
