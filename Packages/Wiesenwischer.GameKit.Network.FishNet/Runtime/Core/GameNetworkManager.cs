@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using FishNet.Connection;
 using FishNet.Managing;
 using FishNet.Object;
 using FishNet.Transporting;
@@ -21,6 +23,9 @@ namespace Wiesenwischer.GameKit.Network
         private NetworkManager _networkManager;
         private bool _initialized;
 
+        /// <summary>Tracks which connections already have a spawned player (prevents double-spawn).</summary>
+        private readonly HashSet<int> _spawnedConnections = new();
+
         public bool IsServer => _networkManager != null && _networkManager.IsServerStarted;
         public bool IsClient => _networkManager != null && _networkManager.ClientManager != null && _networkManager.ClientManager.Started;
 
@@ -40,6 +45,7 @@ namespace Wiesenwischer.GameKit.Network
             }
 
             _networkManager.ServerManager.OnServerConnectionState += OnServerConnectionState;
+            _networkManager.ServerManager.OnRemoteConnectionState += OnRemoteConnectionState;
             _networkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             _networkManager.SceneManager.OnClientLoadedStartScenes += OnClientLoadedScenes;
             _initialized = true;
@@ -52,6 +58,7 @@ namespace Wiesenwischer.GameKit.Network
             if (_networkManager != null && _initialized)
             {
                 _networkManager.ServerManager.OnServerConnectionState -= OnServerConnectionState;
+                _networkManager.ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
                 _networkManager.ClientManager.OnClientConnectionState -= OnClientConnectionState;
                 _networkManager.SceneManager.OnClientLoadedStartScenes -= OnClientLoadedScenes;
             }
@@ -65,6 +72,7 @@ namespace Wiesenwischer.GameKit.Network
                 Debug.LogError("[GameNetworkManager] Nicht initialisiert — kann Host nicht starten.");
                 return;
             }
+            _spawnedConnections.Clear();
             Debug.Log($"[GameNetworkManager] Starte Host auf Port {_port}...");
             _networkManager.ServerManager.StartConnection(_port);
             _networkManager.ClientManager.StartConnection(_address, _port);
@@ -78,6 +86,7 @@ namespace Wiesenwischer.GameKit.Network
                 Debug.LogError("[GameNetworkManager] Nicht initialisiert — kann Server nicht starten.");
                 return;
             }
+            _spawnedConnections.Clear();
             Debug.Log($"[GameNetworkManager] Starte Server auf Port {_port}...");
             _networkManager.ServerManager.StartConnection(_port);
         }
@@ -100,6 +109,7 @@ namespace Wiesenwischer.GameKit.Network
         public void Stop()
         {
             if (_networkManager == null) return;
+            _spawnedConnections.Clear();
             if (_networkManager.IsServerStarted)
                 _networkManager.ServerManager.StopConnection(true);
             if (_networkManager.ClientManager != null && _networkManager.ClientManager.Started)
@@ -109,6 +119,15 @@ namespace Wiesenwischer.GameKit.Network
         private void OnServerConnectionState(ServerConnectionStateArgs args)
         {
             Debug.Log($"[GameNetworkManager] Server: {args.ConnectionState}");
+            if (args.ConnectionState == LocalConnectionState.Stopped)
+                _spawnedConnections.Clear();
+        }
+
+        private void OnRemoteConnectionState(NetworkConnection conn, RemoteConnectionStateArgs args)
+        {
+            Debug.Log($"[GameNetworkManager] Remote Client {conn.ClientId}: {args.ConnectionState}");
+            if (args.ConnectionState == RemoteConnectionState.Stopped)
+                _spawnedConnections.Remove(conn.ClientId);
         }
 
         private void OnClientConnectionState(ClientConnectionStateArgs args)
@@ -116,15 +135,26 @@ namespace Wiesenwischer.GameKit.Network
             Debug.Log($"[GameNetworkManager] Client: {args.ConnectionState}");
         }
 
-        private void OnClientLoadedScenes(
-            FishNet.Connection.NetworkConnection conn, bool asServer)
+        private void OnClientLoadedScenes(NetworkConnection conn, bool asServer)
         {
             if (!asServer) return;
-            if (_playerPrefab == null) return;
+
+            if (_playerPrefab == null)
+            {
+                Debug.LogError($"[GameNetworkManager] Kein Player Prefab zugewiesen! Connection {conn.ClientId} bekommt keinen Player.");
+                return;
+            }
+
+            // Guard against double-spawn (callback can fire multiple times for host)
+            if (!_spawnedConnections.Add(conn.ClientId))
+            {
+                Debug.LogWarning($"[GameNetworkManager] Player für Connection {conn.ClientId} existiert bereits — überspringe Spawn.");
+                return;
+            }
 
             var player = Instantiate(_playerPrefab);
             _networkManager.ServerManager.Spawn(player, conn);
-            Debug.Log($"[GameNetworkManager] Player gespawnt für Connection {conn.ClientId}");
+            Debug.Log($"[GameNetworkManager] Player gespawnt für Connection {conn.ClientId} (Aktive Spieler: {_spawnedConnections.Count})");
         }
     }
 }
