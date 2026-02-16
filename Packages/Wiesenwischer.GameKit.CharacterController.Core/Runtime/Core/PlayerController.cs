@@ -77,6 +77,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         #region Camera Integration
 
         private ICameraOrbitProvider _orbitProvider;
+        private IOrientationProvider _orientationProvider;
+        private IFacingProvider _facingProvider;
 
         #endregion
 
@@ -129,8 +131,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void Start()
         {
-            // OrbitProvider nach Awake auflösen (CameraBrain muss zuerst initialisiert sein)
-            ResolveOrbitProvider();
+            // Provider nach Awake auflösen (CameraBrain muss zuerst initialisiert sein)
+            ResolveProviders();
         }
 
         private void Update()
@@ -351,12 +353,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         {
             if (Locomotion == null || ReusableData == null) return;
 
-            bool isSteerMode = _orbitProvider != null && _orbitProvider.IsSteerMode;
+            // Frame-Space: Worin wird WASD interpretiert?
+            Vector3 lookDir = _orientationProvider != null
+                ? _orientationProvider.GetMovementForward()
+                : GetCameraForward(); // Fallback auf Legacy
 
-            // Frame-Space: SteerOrbit → Camera-Frame, FreeOrbit/None → Character-Frame
-            Vector3 lookDir = isSteerMode
-                ? GetCameraForward()
-                : transform.forward;
+            // Facing: Wie soll Character rotieren?
+            FacingMode facingMode = _facingProvider?.GetFacingMode()
+                ?? FacingMode.MovementDirection;
+            Vector3 facingDir = _facingProvider?.GetFacingDirection()
+                ?? Vector3.zero;
+
+            bool isSteerMode = _orbitProvider != null && _orbitProvider.IsSteerMode;
 
             var input = new LocomotionInput
             {
@@ -366,6 +374,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 StepDetectionEnabled = ReusableData.StepDetectionEnabled,
                 DecelerationOverride = ReusableData.DecelerationOverride,
                 IsSteerMode = isSteerMode,
+                FacingMode = facingMode,
+                FacingDirection = facingDir,
             };
 
             Locomotion.Simulate(input, deltaTime);
@@ -395,14 +405,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         }
 
         /// <summary>
-        /// Sucht ICameraOrbitProvider auf dem Camera.main-Hierarchy.
-        /// CameraBrain implementiert dieses Interface und sitzt als Parent über der Camera.
+        /// Löst Orientation-, Facing- und OrbitProvider auf.
+        /// IOrientationProvider/IFacingProvider sind die bevorzugten Interfaces (Phase 29).
+        /// ICameraOrbitProvider bleibt als Fallback für IsSteerMode.
         /// </summary>
-        private void ResolveOrbitProvider()
+        private void ResolveProviders()
         {
             var mainCamera = Camera.main;
-            if (mainCamera != null)
-                _orbitProvider = mainCamera.GetComponentInParent<ICameraOrbitProvider>();
+            if (mainCamera == null) return;
+
+            // Neue Provider vom CameraBrain-Hierarchy auflösen
+            _orientationProvider = mainCamera.GetComponentInParent<IOrientationProvider>();
+            _facingProvider = mainCamera.GetComponentInParent<IFacingProvider>();
+
+            // Legacy OrbitProvider (für IsSteerMode Fallback)
+            _orbitProvider = mainCamera.GetComponentInParent<ICameraOrbitProvider>();
         }
 
         #endregion
