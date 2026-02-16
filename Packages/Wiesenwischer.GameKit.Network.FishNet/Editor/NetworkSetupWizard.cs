@@ -215,10 +215,22 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 bool hasNetworkDebugUI = existingManager.GetComponent<NetworkDebugUI>() != null;
                 bool hasTugboat = existingManager.GetComponent<Tugboat>() != null;
 
+                // Player Prefab Zuweisung prüfen
+                bool hasPlayerPrefab = false;
+                var gnm = existingManager.GetComponent<GameNetworkManager>();
+                if (gnm != null)
+                {
+                    var so = new SerializedObject(gnm);
+                    var prefabProp = so.FindProperty("_playerPrefab");
+                    hasPlayerPrefab = prefabProp != null && prefabProp.objectReferenceValue != null;
+                }
+
                 DrawStatusLine("NetworkManager (FishNet)", true);
                 DrawStatusLine("Tugboat Transport", hasTugboat);
                 DrawStatusLine("GameNetworkManager", hasGameNetworkManager);
                 DrawStatusLine("NetworkDebugUI", hasNetworkDebugUI);
+                if (hasGameNetworkManager)
+                    DrawStatusLine("Player Prefab zugewiesen", hasPlayerPrefab);
 
                 bool allPresent = hasGameNetworkManager && hasNetworkDebugUI && hasTugboat;
 
@@ -227,6 +239,13 @@ namespace Wiesenwischer.GameKit.Network.Editor
                     EditorGUILayout.Space(4);
                     if (GUILayout.Button("Fehlende Komponenten hinzufügen", GUILayout.Height(28)))
                         AddMissingManagerComponents(existingManager.gameObject);
+                }
+
+                if (hasGameNetworkManager && !hasPlayerPrefab && _playerPrefab != null)
+                {
+                    EditorGUILayout.Space(4);
+                    if (GUILayout.Button("Player Prefab zuweisen"))
+                        AssignPlayerPrefabToManager(existingManager.gameObject);
                 }
 
                 EditorGUILayout.Space(4);
@@ -288,6 +307,9 @@ namespace Wiesenwischer.GameKit.Network.Editor
             Undo.AddComponent<GameNetworkManager>(go);
             Undo.AddComponent<NetworkDebugUI>(go);
 
+            // Player Prefab zuweisen falls im Wizard ausgewählt
+            AssignPlayerPrefabToManager(go);
+
             Selection.activeGameObject = go;
             Debug.Log("[NetworkSetupWizard] NetworkManager erstellt mit allen Komponenten.");
         }
@@ -320,8 +342,31 @@ namespace Wiesenwischer.GameKit.Network.Editor
             if (go.GetComponent<NetworkDebugUI>() == null)
                 Undo.AddComponent<NetworkDebugUI>(go);
 
+            // Player Prefab zuweisen falls im Wizard ausgewählt
+            AssignPlayerPrefabToManager(go);
+
             Undo.CollapseUndoOperations(undoGroup);
             Debug.Log("[NetworkSetupWizard] Fehlende Komponenten hinzugefügt.");
+        }
+
+        private void AssignPlayerPrefabToManager(GameObject managerGo)
+        {
+            if (_playerPrefab == null) return;
+
+            var networkObject = _playerPrefab.GetComponent<NetworkObject>();
+            if (networkObject == null) return;
+
+            var gameNetworkManager = managerGo.GetComponent<GameNetworkManager>();
+            if (gameNetworkManager == null) return;
+
+            var so = new SerializedObject(gameNetworkManager);
+            var prefabProp = so.FindProperty("_playerPrefab");
+            if (prefabProp != null)
+            {
+                prefabProp.objectReferenceValue = networkObject;
+                so.ApplyModifiedProperties();
+                Debug.Log($"[NetworkSetupWizard] Player Prefab zugewiesen: {_playerPrefab.name}");
+            }
         }
 
         #endregion
