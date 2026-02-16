@@ -30,7 +30,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 |------|--------|--------|
 | [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | In Arbeit |
-| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
+| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | In Arbeit |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Abgeschlossen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Abgeschlossen |
@@ -336,14 +336,14 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 **Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-6-network-foundation/README.md)
 
 **Schritte:**
-- [ ] [6.1 FishNet Installation & Network Package](phase-6-network-foundation/6.1-fishnet-package-setup.md)
-- [ ] [6.2 Network Abstractions in Core](phase-6-network-foundation/6.2-network-abstractions.md)
-- [ ] [6.3 NetworkManager & Connection Setup](phase-6-network-foundation/6.3-network-manager.md)
-- [ ] [6.4 NetworkPlayer Component](phase-6-network-foundation/6.4-network-player.md)
-- [ ] [6.5 Input Sync (Client → Server)](phase-6-network-foundation/6.5-input-sync.md)
-- [ ] [6.6 State Sync & Reconciliation](phase-6-network-foundation/6.6-state-sync.md)
-- [ ] [6.7 Remote Player Interpolation](phase-6-network-foundation/6.7-remote-interpolation.md)
-- [ ] [6.8 Unit Tests & Verifikation](phase-6-network-foundation/6.8-unit-tests.md)
+- [x] [6.1 FishNet Installation & Network Package](phase-6-network-foundation/6.1-fishnet-package-setup.md)
+- [x] [6.2 Network Abstractions in Core](phase-6-network-foundation/6.2-network-abstractions.md)
+- [x] [6.3 NetworkManager & Connection Setup](phase-6-network-foundation/6.3-network-manager.md)
+- [x] [6.4 NetworkPlayer Component](phase-6-network-foundation/6.4-network-player.md)
+- [x] [6.5 Input Sync (Client → Server)](phase-6-network-foundation/6.5-input-sync.md)
+- [x] [6.6 State Sync & Reconciliation](phase-6-network-foundation/6.6-state-sync.md)
+- [x] [6.7 Remote Player Interpolation](phase-6-network-foundation/6.7-remote-interpolation.md)
+- [x] [6.8 Unit Tests & Verifikation](phase-6-network-foundation/6.8-unit-tests.md)
 
 ---
 
