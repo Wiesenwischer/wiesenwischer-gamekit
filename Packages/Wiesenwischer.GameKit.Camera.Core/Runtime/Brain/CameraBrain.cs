@@ -37,6 +37,18 @@ namespace Wiesenwischer.GameKit.Camera
         /// <summary>True wenn der aktuelle Frame im Steer-Modus ist (Character soll zur Kamera rotieren).</summary>
         public bool IsSteerMode => _context != null && _context.IsSteerMode;
 
+        /// <summary>Aktueller OrbitActivation-Modus aus dem Preset.</summary>
+        public OrbitActivation OrbitActivation => _inputPipeline != null
+            ? _inputPipeline.OrbitActivationMode
+            : OrbitActivation.AlwaysOn;
+
+        /// <summary>Aktueller OrbitMode aus dem letzten Input-Frame.</summary>
+        public CameraOrbitMode CurrentOrbitMode => _context?.Input.OrbitMode
+            ?? CameraOrbitMode.FreeOrbit;
+
+        /// <summary>Das Follow-Target (Character Transform).</summary>
+        public Transform FollowTarget => _context?.FollowTarget;
+
         /// <summary>Camera Forward in Welt-Space (Y=0, normalisiert).</summary>
         public Vector3 Forward
         {
