@@ -7,7 +7,7 @@ namespace Wiesenwischer.GameKit.Camera
     /// AAA Camera Input Pipeline.
     /// Transformiert rohen Look-/Zoom-Input durch Deadzone, Acceleration
     /// und Smoothing zu einem gefilterten CameraInputState.
-    /// Unterstützt AlwaysOn (Action Combat) und ButtonActivated (Classic MMO) Orbit-Modi.
+    /// Nutzt ICameraInputStrategy für mode-spezifische Input-Interpretation.
     /// </summary>
     public class CameraInputPipeline : MonoBehaviour
     {
@@ -54,9 +54,21 @@ namespace Wiesenwischer.GameKit.Camera
         private Vector2 _smoothedLook;
         private Vector2 _smoothVelocity;
         private bool _isGamepad;
+        private ICameraInputStrategy _strategy = new AlwaysOnInputStrategy();
 
         /// <summary>Aktueller gefilterter Input-State.</summary>
         public CameraInputState CurrentInput { get; private set; }
+
+        /// <summary>Strategy austauschen (wird von CameraBrain bei SetPreset aufgerufen).</summary>
+        public ICameraInputStrategy Strategy
+        {
+            get => _strategy;
+            set
+            {
+                _strategy = value ?? new AlwaysOnInputStrategy();
+                ApplyCursorState(_strategy.InitialCursorState);
+            }
+        }
 
         /// <summary>Aktueller OrbitActivation-Modus. Kann von CameraBrain gesetzt werden.</summary>
         public OrbitActivation OrbitActivationMode
@@ -66,7 +78,12 @@ namespace Wiesenwischer.GameKit.Camera
             {
                 if (_orbitActivation == value) return;
                 _orbitActivation = value;
-                UpdateCursorState(CameraOrbitMode.None);
+                Strategy = value switch
+                {
+                    OrbitActivation.AlwaysOn => new AlwaysOnInputStrategy(),
+                    OrbitActivation.ButtonActivated => new ButtonActivatedInputStrategy(),
+                    _ => new AlwaysOnInputStrategy()
+                };
             }
         }
 
@@ -85,11 +102,16 @@ namespace Wiesenwischer.GameKit.Camera
             _freeLookAction?.Enable();
             _steerAction?.Enable();
 
-            // Initial Cursor State
-            if (_orbitActivation == OrbitActivation.AlwaysOn)
-                UpdateCursorState(CameraOrbitMode.FreeOrbit);
-            else
-                UpdateCursorState(CameraOrbitMode.None);
+            // Sync Strategy mit serialisiertem _orbitActivation
+            _strategy = _orbitActivation switch
+            {
+                OrbitActivation.AlwaysOn => new AlwaysOnInputStrategy(),
+                OrbitActivation.ButtonActivated => new ButtonActivatedInputStrategy(),
+                _ => new AlwaysOnInputStrategy()
+            };
+
+            // Initial Cursor State über Strategy
+            ApplyCursorState(_strategy.InitialCursorState);
         }
 
         private void OnDisable()
@@ -109,15 +131,15 @@ namespace Wiesenwischer.GameKit.Camera
         /// </summary>
         public CameraInputState ProcessInput(float deltaTime)
         {
-            // 0. Orbit Mode bestimmen
+            // 0. Orbit Mode über Strategy bestimmen
             CameraOrbitMode orbitMode = DetermineOrbitMode();
-            UpdateCursorState(orbitMode);
+            ApplyCursorState(_strategy.GetCursorState(orbitMode));
 
             Vector2 rawLook = Vector2.zero;
             float rawZoom = _zoomAction?.ReadValue<Vector2>().y ?? 0f;
 
-            // Look-Input nur lesen wenn Orbit aktiv
-            if (orbitMode != CameraOrbitMode.None)
+            // Look-Input nur lesen wenn Strategy es erlaubt
+            if (_strategy.ShouldReadLookInput(orbitMode))
                 rawLook = _lookAction?.ReadValue<Vector2>() ?? Vector2.zero;
 
             // 1. Device Detection
@@ -139,7 +161,7 @@ namespace Wiesenwischer.GameKit.Camera
             scaledLook = ApplyAcceleration(scaledLook);
 
             // 4. Adaptive Smoothing
-            if (orbitMode != CameraOrbitMode.None)
+            if (_strategy.ShouldReadLookInput(orbitMode))
             {
                 scaledLook = ApplySmoothing(scaledLook, deltaTime);
             }
@@ -166,41 +188,15 @@ namespace Wiesenwischer.GameKit.Camera
 
         private CameraOrbitMode DetermineOrbitMode()
         {
-            if (_orbitActivation == OrbitActivation.AlwaysOn)
-            {
-                // AlwaysOn: Immer FreeOrbit (Character wird nie von Kamera gesteuert)
-                return CameraOrbitMode.FreeOrbit;
-            }
-
-            // ButtonActivated (Classic MMO)
-            // Gamepad: Rechter Stick = immer FreeOrbit
-            if (_isGamepad)
-                return CameraOrbitMode.FreeOrbit;
-
-            bool steerHeld = _steerAction?.IsPressed() ?? false;
             bool freeLookHeld = _freeLookAction?.IsPressed() ?? false;
-
-            // Steer hat Priorität (wenn beide gedrückt → Steer)
-            if (steerHeld)
-                return CameraOrbitMode.SteerOrbit;
-            if (freeLookHeld)
-                return CameraOrbitMode.FreeOrbit;
-
-            return CameraOrbitMode.None;
+            bool steerHeld = _steerAction?.IsPressed() ?? false;
+            return _strategy.DetermineOrbitMode(freeLookHeld, steerHeld, _isGamepad);
         }
 
-        private void UpdateCursorState(CameraOrbitMode mode)
+        private void ApplyCursorState(CursorLockMode lockMode)
         {
-            if (mode != CameraOrbitMode.None)
-            {
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-            }
-            else
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
+            Cursor.lockState = lockMode;
+            Cursor.visible = lockMode == CursorLockMode.None;
         }
 
         private Vector2 ApplyDeadzone(Vector2 input)
