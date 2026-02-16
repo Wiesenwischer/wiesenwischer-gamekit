@@ -6,7 +6,6 @@ namespace Wiesenwischer.GameKit.Camera
     /// Runtime-konfigurierbare Input-Settings für die Kamera.
     /// Als ScriptableObject: Änderungen über UI-Slider wirken sofort.
     /// </summary>
-    [CreateAssetMenu(menuName = "GameKit/Camera/Input Settings")]
     public class CameraInputSettings : ScriptableObject
     {
         [Header("Mouse Sensitivity")]
