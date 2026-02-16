@@ -1,5 +1,6 @@
 using FishNet.Object;
 using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Animation;
 using Wiesenwischer.GameKit.CharacterController.Core;
 using Wiesenwischer.GameKit.CharacterController.Core.Input;
 
@@ -74,6 +75,11 @@ namespace Wiesenwischer.GameKit.Network
                 if (motor != null)
                     motor.enabled = false;
             }
+
+            // Animation Bridge in Remote-Modus setzen
+            var animBridge = GetComponentInChildren<AnimatorParameterBridge>();
+            if (animBridge != null)
+                animBridge.IsRemoteMode = true;
 
             Debug.Log($"[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor={(!IsServerStarted ? "deaktiviert" : "aktiv (Server)")}");
         }

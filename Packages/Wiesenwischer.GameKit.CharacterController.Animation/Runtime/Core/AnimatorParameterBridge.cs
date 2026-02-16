@@ -41,6 +41,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private bool _canExitAnimation;
         private float _currentNormalizedSpeed;
         private float _currentVerticalVelocity;
+        private bool _isRemoteMode;
+
+        /// <summary>
+        /// Im Remote-Modus berechnet die Bridge keine eigenen Parameter-Werte.
+        /// Stattdessen werden Werte extern gesetzt (via Network Sync).
+        /// </summary>
+        public bool IsRemoteMode
+        {
+            get => _isRemoteMode;
+            set => _isRemoteMode = value;
+        }
 
 #if UNITY_EDITOR
         private int _prevAnimStateHash;
@@ -64,6 +75,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         {
             if (!_isValid) return;
 
+            if (_isRemoteMode)
+            {
+                // Remote: Nur extern gesetzte Werte an den Animator weiterleiten
+                ApplyParametersToAnimator();
+                return;
+            }
+
             UpdateParameters();
         }
 
@@ -71,7 +89,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         {
             _isValid = _animator != null
                        && _animator.runtimeAnimatorController != null
-                       && _playerController != null;
+                       && (_playerController != null || _isRemoteMode);
 
             if (_animator != null && _animator.runtimeAnimatorController == null)
             {
@@ -185,6 +203,25 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 _prevAnimStateHash = stateInfo.fullPathHash;
             }
 #endif
+        }
+
+        /// <summary>
+        /// Wendet die aktuellen Parameter-Werte auf den Animator an.
+        /// Wird im Remote-Mode verwendet, wo Werte extern via SetSpeed/SetVerticalVelocity gesetzt werden.
+        /// </summary>
+        private void ApplyParametersToAnimator()
+        {
+            _animator.SetFloat(
+                AnimationParameters.SpeedHash,
+                _currentNormalizedSpeed,
+                _speedDampTime,
+                Time.deltaTime);
+
+            _animator.SetFloat(
+                AnimationParameters.VerticalVelocityHash,
+                _currentVerticalVelocity,
+                _verticalVelocityDampTime,
+                Time.deltaTime);
         }
 
         #region IAnimationController
@@ -301,13 +338,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         public void SetSpeed(float speed)
         {
             if (!_isValid) return;
-            _animator.SetFloat(AnimationParameters.SpeedHash, speed);
+            _currentNormalizedSpeed = speed;
+            if (!_isRemoteMode)
+                _animator.SetFloat(AnimationParameters.SpeedHash, speed);
         }
 
         public void SetVerticalVelocity(float velocity)
         {
             if (!_isValid) return;
-            _animator.SetFloat(AnimationParameters.VerticalVelocityHash, velocity);
+            _currentVerticalVelocity = velocity;
+            if (!_isRemoteMode)
+                _animator.SetFloat(AnimationParameters.VerticalVelocityHash, velocity);
         }
 
         public void SetAbilityLayerWeight(float weight)

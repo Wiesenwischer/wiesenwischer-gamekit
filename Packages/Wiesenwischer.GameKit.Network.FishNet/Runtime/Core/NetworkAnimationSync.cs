@@ -1,4 +1,5 @@
 using FishNet.Object;
+using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
 using UnityEngine;
 using Wiesenwischer.GameKit.CharacterController.Core.Animation;
@@ -7,7 +8,7 @@ namespace Wiesenwischer.GameKit.Network
 {
     /// <summary>
     /// Synchronisiert Animation-State-Wechsel und Parameter über das Netzwerk.
-    /// State-Wechsel: Event-basiert (bei Änderung), reliable.
+    /// State-Wechsel: Event-basiert (bei Änderung), reliable + SyncVar für Late-Joiner.
     /// Parameter (Speed, VerticalVelocity): Periodisch, unreliable, quantisiert.
     /// </summary>
     [RequireComponent(typeof(NetworkPlayer))]
@@ -23,6 +24,12 @@ namespace Wiesenwischer.GameKit.Network
 
         private AnimationSnapshot _lastSnapshot;
         private int _framesSinceLastParamSync;
+
+        /// <summary>
+        /// SyncVar für Initial State Sync: Neue Clients erhalten den aktuellen State sofort.
+        /// </summary>
+        [SyncVar(OnChange = nameof(OnSyncAnimStateChanged))]
+        private byte _syncAnimState;
 
         public override void OnStartNetwork()
         {
@@ -57,12 +64,23 @@ namespace Wiesenwischer.GameKit.Network
 
             if (IsServerStarted)
             {
+                // Host: SyncVar direkt setzen + an Observer broadcasten
+                _syncAnimState = (byte)state;
                 ObserverRpcAnimationState((byte)state);
             }
             else
             {
                 ServerRpcAnimationState((byte)state);
             }
+        }
+
+        private void OnSyncAnimStateChanged(byte prev, byte next, bool asServer)
+        {
+            if (IsOwner) return;
+            if (_animController == null) return;
+
+            var state = (CharacterAnimationState)next;
+            _animController.PlayState(state);
         }
 
         private void SyncParameters()
@@ -91,6 +109,8 @@ namespace Wiesenwischer.GameKit.Network
         [ServerRpc]
         private void ServerRpcAnimationState(byte stateValue)
         {
+            // SyncVar aktualisieren für Late-Joiner
+            _syncAnimState = stateValue;
             ObserverRpcAnimationState(stateValue);
         }
 

@@ -3,6 +3,7 @@
     "rootNamespace": "Wiesenwischer.GameKit.Network",
     "references": [
         "Wiesenwischer.GameKit.CharacterController.Core.Runtime",
+        "Wiesenwischer.GameKit.CharacterController.Animation.Runtime",
         "FishNet.Runtime"
     ],
     "includePlatforms": [],
