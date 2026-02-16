@@ -57,6 +57,15 @@ namespace Wiesenwischer.GameKit.CharacterController.IK.Modules
                 _target = GetComponent<IIKTargetProvider>();
         }
 
+        /// <summary>
+        /// Setzt den Target Provider zur Laufzeit.
+        /// Wird für Netzwerk-Sync verwendet (Remote-Spieler nutzen NetworkLookAtTargetProvider).
+        /// </summary>
+        public void SetTargetProvider(IIKTargetProvider provider)
+        {
+            _target = provider;
+        }
+
         private void OnEnable()
         {
             _ikManager?.RegisterModule(this);
