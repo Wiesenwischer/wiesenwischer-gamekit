@@ -4,6 +4,7 @@ using Wiesenwischer.GameKit.CharacterController.Core.Data;
 using Wiesenwischer.GameKit.CharacterController.Core.Input;
 using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 using Wiesenwischer.GameKit.CharacterController.Core.Motor;
+using Wiesenwischer.GameKit.CharacterController.Core.Prediction;
 using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core
@@ -456,6 +457,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         {
             ReusableData?.ResetMovementData();
             Locomotion?.StopMovement();
+        }
+
+        /// <summary>
+        /// Wendet einen ControllerInput an und simuliert einen Tick.
+        /// Wird vom Server aufgerufen (über NetworkInputSync).
+        /// </summary>
+        public void ApplyNetworkInput(ControllerInput input, float tickDelta)
+        {
+            if (ReusableData == null) return;
+
+            ReusableData.MoveInput = input.MoveDirection;
+            ReusableData.JumpPressed = input.Jump;
+            ReusableData.SprintHeld = input.Sprint;
+            ReusableData.CrouchTogglePressed = input.Crouch;
+
+            _movementStateMachine?.Update();
+            ConsumeMovementEvents();
+            ApplyMovement(tickDelta);
         }
 
         #endregion
