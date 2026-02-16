@@ -192,7 +192,10 @@ namespace Wiesenwischer.GameKit.Camera
             // 1. Input
             CameraInputState input = default;
             if (_inputPipeline != null)
+            {
+                _inputPipeline.SetCurrentFov(_state.Fov);
                 input = _inputPipeline.ProcessInput(dt);
+            }
 
             // 2. Anchor
             if (_anchor != null)

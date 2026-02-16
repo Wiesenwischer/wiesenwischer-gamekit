@@ -47,6 +47,10 @@ namespace Wiesenwischer.GameKit.Camera
         [Header("Options")]
         [SerializeField] private bool _invertY;
 
+        [Header("Runtime Settings (optional)")]
+        [Tooltip("Runtime-konfigurierbare Input-Settings. Ohne Zuweisung: Standard-Werte.")]
+        [SerializeField] private CameraInputSettings _inputSettings;
+
         private InputAction _lookAction;
         private InputAction _zoomAction;
         private InputAction _freeLookAction;
@@ -54,10 +58,14 @@ namespace Wiesenwischer.GameKit.Camera
         private Vector2 _smoothedLook;
         private Vector2 _smoothVelocity;
         private bool _isGamepad;
+        private float _currentFov = 60f;
         private ICameraInputStrategy _strategy = new AlwaysOnInputStrategy();
 
         /// <summary>Aktueller gefilterter Input-State.</summary>
         public CameraInputState CurrentInput { get; private set; }
+
+        /// <summary>Aktuellen FOV für Sensitivity-Scaling setzen.</summary>
+        public void SetCurrentFov(float fov) => _currentFov = fov;
 
         /// <summary>Strategy austauschen (wird von CameraBrain bei SetPreset aufgerufen).</summary>
         public ICameraInputStrategy Strategy
@@ -144,6 +152,35 @@ namespace Wiesenwischer.GameKit.Camera
 
             // 1. Device Detection
             _isGamepad = IsGamepadInput();
+
+            // 1b. Runtime-Settings Sensitivity (Multiplikator auf Raw-Input)
+            if (_inputSettings != null)
+            {
+                if (_isGamepad)
+                {
+                    rawLook.x *= _inputSettings.GamepadSensitivityX;
+                    rawLook.y *= _inputSettings.GamepadSensitivityY;
+                }
+                else
+                {
+                    rawLook.x *= _inputSettings.MouseSensitivityX;
+                    rawLook.y *= _inputSettings.MouseSensitivityY;
+                }
+
+                if (_inputSettings.InvertY)
+                    rawLook.y *= -1f;
+
+                if (_inputSettings.EnableFovScaling && _currentFov > 0f)
+                {
+                    float fovScale = Mathf.Tan(_currentFov * 0.5f * Mathf.Deg2Rad)
+                                   / Mathf.Tan(_inputSettings.BaseFov * 0.5f * Mathf.Deg2Rad);
+                    rawLook *= fovScale;
+                }
+
+                rawZoom *= _inputSettings.ScrollSensitivity;
+            }
+
+            // 2. Base Sensitivity
             float sensitivity = _isGamepad ? _gamepadSensitivity : _mouseSensitivity;
 
             // Gamepad: Input ist pro Frame, muss mit DeltaTime skaliert werden
