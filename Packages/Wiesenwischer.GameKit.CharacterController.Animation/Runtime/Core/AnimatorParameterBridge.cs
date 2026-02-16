@@ -35,6 +35,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         [SerializeField] private float _stairAnimSpeedMultiplier = 1.5f;
 
         private Animator _animator;
+        private IAnimationNetworkSync _networkSync;
         private bool _isValid;
         private int _currentAnimStateHash;
         private bool _canExitAnimation;
@@ -46,6 +47,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private void Awake()
         {
             _animator = GetComponent<Animator>();
+            _networkSync = GetComponentInParent<IAnimationNetworkSync>();
 
             if (_playerController == null)
                 _playerController = GetComponentInParent<PlayerController>();
@@ -240,6 +242,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             _currentAnimStateHash = hash;
             _canExitAnimation = false;
             _animator.CrossFade(hash, transitionDuration);
+
+            // Network: State-Wechsel melden
+            _networkSync?.OnLocalStateChanged(state);
         }
 
         public float GetAnimationNormalizedTime()
