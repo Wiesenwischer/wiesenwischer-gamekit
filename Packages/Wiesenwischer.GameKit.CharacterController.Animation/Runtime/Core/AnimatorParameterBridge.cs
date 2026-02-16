@@ -39,6 +39,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private bool _isValid;
         private int _currentAnimStateHash;
         private bool _canExitAnimation;
+        private float _currentNormalizedSpeed;
+        private float _currentVerticalVelocity;
 
 #if UNITY_EDITOR
         private int _prevAnimStateHash;
@@ -145,6 +147,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             {
                 normalizedSpeed = 0.35f;
             }
+
+            _currentNormalizedSpeed = normalizedSpeed;
+            _currentVerticalVelocity = data.VerticalVelocity;
 
             _animator.SetFloat(
                 AnimationParameters.SpeedHash,
@@ -289,6 +294,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         }
 
         public bool CanExitAnimation => _canExitAnimation;
+
+        public float CurrentSpeed => _currentNormalizedSpeed;
+        public float CurrentVerticalVelocity => _currentVerticalVelocity;
 
         public void SetSpeed(float speed)
         {
