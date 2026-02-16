@@ -418,6 +418,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             _orientationProvider = mainCamera.GetComponentInParent<IOrientationProvider>();
             _facingProvider = mainCamera.GetComponentInParent<IFacingProvider>();
 
+            if (_orientationProvider == null || _facingProvider == null)
+                Debug.LogWarning($"[PlayerController] IOrientationProvider/IFacingProvider nicht gefunden! " +
+                    "CameraOrientationProvider auf dem CameraBrain-GameObject hinzufügen. " +
+                    "Fallback: Camera-Forward für alle Modi.");
+
             // Legacy OrbitProvider (für IsSteerMode Fallback)
             _orbitProvider = mainCamera.GetComponentInParent<ICameraOrbitProvider>();
         }

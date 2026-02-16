@@ -138,7 +138,8 @@ namespace Wiesenwischer.GameKit.Camera
                     }
                 }
 
-                _rig.ApplyState(_state, _anchor.AnchorPosition);
+                if (_rig != null)
+                    _rig.ApplyState(_state, _anchor.AnchorPosition);
             }
         }
 
