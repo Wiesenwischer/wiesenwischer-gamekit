@@ -129,6 +129,38 @@ Prüfe ob die neue Phase Auswirkungen auf **bestehende Editor-Tools und Wizards*
 
 **Falls keine Editor-UI betroffen:** Weiter mit Schritt 6.
 
+### 5d. Spec-zu-Schritt-Zuordnung erstellen (PFLICHT wenn Specs vorhanden)
+
+Bevor die Schritt-Dateien erstellt werden, eine Zuordnungstabelle erstellen:
+
+**Für jeden geplanten Schritt identifizieren:**
+1. Welche Spezifikations-Dokumente sind für diesen Schritt relevant?
+2. Welche **konkreten Sektionen/Kapitel** in diesen Docs sind relevant?
+3. **Warum** ist dieses Dokument für diesen Schritt wichtig?
+
+**Quellen für relevante Specs:**
+- Haupt-Spezifikation des Epics (im Master-Plan beim Epic verlinkt)
+- Phase-spezifische Spezifikationen (in der Phase-README verlinkt)
+- Weitere Specs in `docs/specs/` und Unterordnern die thematisch passen
+- Übergeordnete Architektur-Docs die Kontext liefern
+
+**Regeln für die Zuordnung:**
+- Jeder Schritt bekommt nur die Specs die für IHN relevant sind (nicht alle Specs der Phase)
+- Kritische Schritte (Kern-Architektur, komplexe Integration) bekommen MEHR Referenzen
+- Einfache Schritte (Cleanup, Config-Änderung) bekommen WENIGER Referenzen
+- Konkrete Sektionsnamen angeben, nicht nur "gesamtes Dokument" (es sei denn wirklich alles relevant ist)
+
+**Beispiel-Zuordnung:**
+```
+Schritt 10.1 (Package-Struktur):
+  → Konsolidierte Spec Kap. 4 (Packages) — Package-Schnitt und Abhängigkeiten
+  → Master Architecture — Package-Konventionen
+
+Schritt 10.5 (CatalogProvider):
+  → Konsolidierte Spec Kap. 6 (Katalog-Runtime) — API-Design, Lazy Loading
+  → Konsolidierte Spec Kap. 8 (Addressables) — Async Loading Pattern
+```
+
 ### 6. Phase-Dokumentation erstellen
 
 Erstelle für die Phase:
@@ -138,6 +170,7 @@ Erstelle für die Phase:
 - Epic-Zugehörigkeit
 - Abhängigkeiten (welche Phasen müssen vorher abgeschlossen sein)
 - Ziel der Phase
+- Relevante Spezifikationen (Links zu Haupt-Specs des Epics und der Phase)
 - Tabelle aller Schritte mit Commit-Messages und empfohlenem Feature-Branch-Typ
 - Voraussetzungen
 - Erwartetes Ergebnis
@@ -146,12 +179,25 @@ Erstelle für die Phase:
 **Für jeden Schritt eine eigene Datei** mit:
 - Commit-Message
 - Empfohlener Branch-Name und -Typ (z.B. `feat/cc-appearance-model`)
+- **Relevante Spezifikationen** (aus der Zuordnung in Schritt 5d, als Tabelle mit Dokument, relevante Sektionen, und warum relevant)
 - Ziel des Schritts
 - Detaillierte Anweisungen
 - Code-Beispiele (falls relevant)
 - Verifikations-Checkliste
 - Erwartete Dateien nach dem Schritt
 - Link zum nächsten Schritt
+
+**Format für `## Relevante Spezifikationen` in Schritt-Dateien:**
+```markdown
+## Relevante Spezifikationen
+
+Vor der Implementierung **PFLICHT** lesen:
+
+| Dokument | Relevante Sektionen | Warum relevant |
+|----------|---------------------|----------------|
+| [Spec Name](../../specs/pfad.md) | "Kapitel X", "Abschnitt Y" | Kurze Begründung |
+| [Andere Spec](../../specs/pfad.md) | Gesamtes Dokument | Kurze Begründung |
+```
 
 **Hinweis zum Branch-Modell:**
 - Die Phase hat einen langlebigen `integration/`-Branch
