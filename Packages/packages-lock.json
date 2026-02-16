@@ -289,12 +289,28 @@
         "wiesenwischer.gamekit.charactercontroller.core": "0.1.0"
       }
     },
+    "wiesenwischer.gamekit.camera.behaviours": {
+      "version": "file:Wiesenwischer.GameKit.Camera.Behaviours",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "wiesenwischer.gamekit.camera.core": "0.1.0"
+      }
+    },
     "wiesenwischer.gamekit.camera.core": {
       "version": "file:Wiesenwischer.GameKit.Camera.Core",
       "depth": 0,
       "source": "embedded",
       "dependencies": {
         "com.unity.inputsystem": "1.7.0"
+      }
+    },
+    "wiesenwischer.gamekit.camera.presets": {
+      "version": "file:Wiesenwischer.GameKit.Camera.Presets",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "wiesenwischer.gamekit.camera.core": "0.1.0"
       }
     },
     "wiesenwischer.gamekit.charactercontroller.animation": {

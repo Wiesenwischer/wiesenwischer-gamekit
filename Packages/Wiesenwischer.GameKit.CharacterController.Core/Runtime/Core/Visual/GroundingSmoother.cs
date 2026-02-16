@@ -41,10 +41,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
         internal const float StepThreshold = 0.01f;
         internal const float SnapThreshold = 0.001f;
 
+        // Micro-Bouncing Grace: Motor kann IsStableOnGround jeden zweiten Frame toggeln.
+        // Erst nach N Frames wirklich als "Airborne" behandeln.
+        private const int AirborneGraceFrames = 3;
+
         private float _previousY;
         private float _smoothOffset;
         private float _smoothVelocity;
         private CharacterMotor _motor;
+        private int _airborneFrames;
 
         private void Awake()
         {
@@ -80,6 +85,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             _previousY = transform.position.y;
             _smoothOffset = 0f;
             _smoothVelocity = 0f;
+            _airborneFrames = 0;
         }
 
         private void LateUpdate()
@@ -104,20 +110,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
             }
 
             // Airborne-Check: In der Luft → Offset sofort auflösen
-            if (_onlyWhenGrounded && !_motor.GroundingStatus.IsStableOnGround)
+            // Verwendet Grace-Frames um Micro-Bouncing zu ignorieren (Motor kann
+            // IsStableOnGround bei bestimmten Collider-Konfigurationen jeden zweiten
+            // FixedUpdate-Frame toggeln → Airborne/Grounded-Flicker)
+            bool isGrounded = _motor.GroundingStatus.IsStableOnGround;
+            if (!isGrounded)
+                _airborneFrames++;
+            else
+                _airborneFrames = 0;
+
+            bool effectivelyAirborne = _airborneFrames >= AirborneGraceFrames;
+
+            if (_onlyWhenGrounded && effectivelyAirborne)
             {
                 if (_debugLog && _smoothOffset != 0f)
                     Debug.Log($"[GS] AIRBORNE reset offset={_smoothOffset:F4}");
-                _smoothOffset = 0f;
-                _smoothVelocity = 0f;
-                ApplyOffset();
-                return;
-            }
-
-            // Landing-Check: Gerade gelandet → kein Offset aufbauen
-            if (_motor.JustLanded)
-            {
-                if (_debugLog) Debug.Log($"[GS] LANDED reset offset={_smoothOffset:F4}");
                 _smoothOffset = 0f;
                 _smoothVelocity = 0f;
                 ApplyOffset();
@@ -166,7 +173,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
         internal static SmootherState CalculateOffset(
             float deltaY,
             bool isGrounded,
-            bool justLanded,
             float maxStepDelta,
             bool onlyWhenGrounded,
             float smoothTime,
@@ -179,10 +185,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Visual
 
             // Airborne-Check
             if (onlyWhenGrounded && !isGrounded)
-                return new SmootherState { SmoothOffset = 0f, SmoothVelocity = 0f };
-
-            // Landing-Check
-            if (justLanded)
                 return new SmootherState { SmoothOffset = 0f, SmoothVelocity = 0f };
 
             // Step-Up: Offset aufbauen (StepThreshold filtert Slopes)

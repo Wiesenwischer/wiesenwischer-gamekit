@@ -29,7 +29,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours.Tests
         {
             var state = CameraState.Default;
             float initialYaw = state.Yaw;
-            _ctx.Input = new CameraInputState { LookX = 5f };
+            _ctx.Input = new CameraInputState { LookX = 5f, OrbitMode = CameraOrbitMode.FreeOrbit };
 
             _orbit.UpdateState(ref state, _ctx);
 
@@ -41,7 +41,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours.Tests
         {
             var state = CameraState.Default;
             float initialPitch = state.Pitch;
-            _ctx.Input = new CameraInputState { LookY = 10f };
+            _ctx.Input = new CameraInputState { LookY = 10f, OrbitMode = CameraOrbitMode.FreeOrbit };
 
             _orbit.UpdateState(ref state, _ctx);
 
@@ -52,7 +52,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours.Tests
         public void UpdateState_ClampsPitch()
         {
             var state = CameraState.Default;
-            _ctx.Input = new CameraInputState { LookY = -200f };
+            _ctx.Input = new CameraInputState { LookY = -200f, OrbitMode = CameraOrbitMode.FreeOrbit };
 
             _orbit.UpdateState(ref state, _ctx);
 
@@ -67,12 +67,50 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours.Tests
             var state = CameraState.Default;
             float initialYaw = state.Yaw;
             float initialPitch = state.Pitch;
-            _ctx.Input = new CameraInputState { LookX = 0f, LookY = 0f };
+            _ctx.Input = new CameraInputState { LookX = 0f, LookY = 0f, OrbitMode = CameraOrbitMode.FreeOrbit };
 
             _orbit.UpdateState(ref state, _ctx);
 
             Assert.AreEqual(initialYaw, state.Yaw, 0.001f);
             Assert.AreEqual(initialPitch, state.Pitch, 0.001f);
+        }
+
+        [Test]
+        public void OrbitModeNone_IgnoresInput()
+        {
+            var state = CameraState.Default;
+            float initialYaw = state.Yaw;
+            float initialPitch = state.Pitch;
+            _ctx.Input = new CameraInputState { LookX = 10f, LookY = 5f, OrbitMode = CameraOrbitMode.None };
+
+            _orbit.UpdateState(ref state, _ctx);
+
+            Assert.AreEqual(initialYaw, state.Yaw, 0.001f);
+            Assert.AreEqual(initialPitch, state.Pitch, 0.001f);
+        }
+
+        [Test]
+        public void SteerOrbit_AppliesInput()
+        {
+            var state = CameraState.Default;
+            float initialYaw = state.Yaw;
+            _ctx.Input = new CameraInputState { LookX = 5f, OrbitMode = CameraOrbitMode.SteerOrbit };
+
+            _orbit.UpdateState(ref state, _ctx);
+
+            Assert.AreEqual(initialYaw + 5f, state.Yaw, 0.001f);
+        }
+
+        [Test]
+        public void FreeOrbit_AppliesInput()
+        {
+            var state = CameraState.Default;
+            float initialYaw = state.Yaw;
+            _ctx.Input = new CameraInputState { LookX = 5f, OrbitMode = CameraOrbitMode.FreeOrbit };
+
+            _orbit.UpdateState(ref state, _ctx);
+
+            Assert.AreEqual(initialYaw + 5f, state.Yaw, 0.001f);
         }
     }
 }

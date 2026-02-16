@@ -21,5 +21,25 @@ namespace Wiesenwischer.GameKit.Camera
 
         /// <summary>Frame DeltaTime.</summary>
         public float DeltaTime;
+
+        /// <summary>
+        /// Welt-Geschwindigkeit des Follow-Targets (Character).
+        /// Wird vom CameraBrain aus dem CharacterController gelesen.
+        /// Benötigt für DynamicOrbitCenter und Soft Targeting.
+        /// </summary>
+        public Vector3 CharacterVelocity;
+
+        /// <summary>
+        /// Forward-Richtung des Follow-Targets (Character).
+        /// Wird vom CameraBrain aus FollowTarget.forward gelesen.
+        /// Benötigt für RecenterBehaviour und DynamicOrbitCenter.
+        /// </summary>
+        public Vector3 CharacterForward;
+
+        /// <summary>
+        /// True wenn der aktuelle Frame im Steer-Modus ist (RMB in Tab-Target-Kameras).
+        /// Character Controller kann diesen Wert lesen und sich zur Kamerarichtung ausrichten.
+        /// </summary>
+        public bool IsSteerMode;
     }
 }

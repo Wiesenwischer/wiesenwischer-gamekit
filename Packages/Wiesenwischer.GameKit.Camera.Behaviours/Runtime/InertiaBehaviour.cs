@@ -6,7 +6,7 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
     /// Inertia-Verhalten: Spring-Damper-System für cinematic Camera-Lag.
     /// Glättet die Anchor-Position mit physik-inspiriertem Nachschwingen.
     /// </summary>
-    public class InertiaBehaviour : MonoBehaviour, ICameraBehaviour, ICameraSnappable
+    public class InertiaBehaviour : MonoBehaviour, ICameraBehaviour, ICameraSnappable, ICameraPresetReceiver
     {
         [Header("Spring-Damper")]
         [Tooltip("Stiffness der Feder. Höher = enger am Target.")]
@@ -24,6 +24,14 @@ namespace Wiesenwischer.GameKit.Camera.Behaviours
         private bool _initialized;
 
         public bool IsActive => enabled;
+
+        public void ApplyPreset(CameraPreset preset)
+        {
+            enabled = preset.InertiaEnabled;
+            _stiffness = preset.InertiaStiffness;
+            _damping = preset.InertiaDamping;
+            _maxOffset = preset.InertiaMaxOffset;
+        }
 
         public void UpdateState(ref CameraState state, CameraContext ctx)
         {

@@ -115,6 +115,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float DecelerationOverride;
 
         /// <summary>
+        /// Ob der Character im Steer-Modus ist (RMB bei ClassicMMO).
+        /// Wenn true, wird der Character sofort zur LookDirection ausgerichtet,
+        /// auch ohne Bewegungsinput (konfigurierbar via SteerAlignCharacter).
+        /// </summary>
+        public bool IsSteerMode;
+
+        /// <summary>
         /// Erstellt einen leeren Locomotion Input.
         /// </summary>
         public static LocomotionInput Empty => new LocomotionInput

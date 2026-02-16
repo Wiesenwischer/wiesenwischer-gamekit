@@ -16,5 +16,8 @@ namespace Wiesenwischer.GameKit.Camera
 
         /// <summary>True wenn der Input von einem Gamepad kommt.</summary>
         public bool IsGamepad;
+
+        /// <summary>Aktueller Orbit-Modus (None, FreeOrbit, SteerOrbit).</summary>
+        public CameraOrbitMode OrbitMode;
     }
 }

@@ -92,6 +92,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         [Tooltip("Ob der Character sich zur Bewegungsrichtung dreht")]
         [SerializeField] private bool _rotateTowardsMovement = true;
 
+        [Tooltip("Im SteerOrbit-Modus (RMB) Character sofort zur Kamera ausrichten, auch ohne Bewegung (ArcheAge/WoW-Style)")]
+        [SerializeField] private bool _steerAlignCharacter = true;
+
         [Header("Step Detection")]
         [Tooltip("Maximale Stufenhöhe, die automatisch überwunden wird (m)")]
         [SerializeField] private float _maxStepHeight = 0.3f;
@@ -255,6 +258,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         public float GroundToFallRayDistance => _groundToFallRayDistance;
         public float RotationSpeed => _rotationSpeed;
         public bool RotateTowardsMovement => _rotateTowardsMovement;
+        public bool SteerAlignCharacter => _steerAlignCharacter;
         public float MaxStepHeight => _maxStepHeight;
         public float MinStepDepth => _minStepDepth;
         public bool StairSpeedReductionEnabled => _stairSpeedReductionEnabled;

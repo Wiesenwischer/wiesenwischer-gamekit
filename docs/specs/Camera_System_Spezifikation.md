@@ -13,8 +13,8 @@
 
 AAA-Level Third-Person Camera System mit:
 
-- **Black Desert Online** Style Camera (Strong follow, Orbit always active, Soft targeting, Shoulder offset, Strong inertia)
-- **ArcheAge** Style Camera (Orbit on input, Weak follow, No recenter, Minimal inertia)
+- **Action Combat** Style Camera (Strong follow, Orbit always active, Soft targeting, Shoulder offset, Strong inertia)
+- **Classic MMO** Style Camera (Orbit on input, Weak follow, No recenter, Minimal inertia)
 - Modularer Aufbau (Unity Packages)
 - MMO-fähige Architektur (Camera rein lokal, nie synchronisiert)
 - Erweiterbar für Combat, Mount, Glide, Build Mode, First Person, Photo Mode
@@ -323,7 +323,7 @@ Presets definieren den gesamten Camera Style als konfigurierbares Asset.
 - Soft targeting enabled
 - Shoulder offset
 
-### ArcheAge Preset
+### ClassicMMO Preset
 
 - Orbit on input only
 - Weak follow
@@ -370,8 +370,8 @@ Der Frame Space bestimmt den Referenzraum für Movement-Input:
 
 | Frame | Referenz | Verwendung |
 |-------|----------|------------|
-| **CameraFrame** | Kamera Forward/Right | BDO-Style (Standard) |
-| **CharacterFrame** | Character Forward/Right | ArcheAge-Style, Tank Controls |
+| **CameraFrame** | Kamera Forward/Right | Action Combat (Standard) |
+| **CharacterFrame** | Character Forward/Right | Classic MMO, Tank Controls |
 | **TargetFrame** | Richtung zum Lock-On Target | Combat Lock-On |
 | **VehicleFrame** | Mount/Fahrzeug Forward | Reiten, Fliegen |
 
@@ -448,7 +448,7 @@ public interface IFacingProvider
 | Provider | Verhalten | Verwendung |
 |----------|-----------|------------|
 | **MovementFacingProvider** | Character schaut in Bewegungsrichtung | Standard-Locomotion (aktuelles System) |
-| **CameraFacingProvider** | Character schaut Richtung Kamera | BDO-Style Strafing (Erweiterung) |
+| **CameraFacingProvider** | Character schaut Richtung Kamera | Action Combat Strafing (Erweiterung) |
 | **TargetFacingProvider** | Character schaut Gegner an | Lock-On Combat |
 
 ### Resolver Pipeline
@@ -501,7 +501,7 @@ animator.SetFloat("Speed", localMove.magnitude);
 
 ### Ergebnis
 
-- Bewegung & Animation fühlen sich camera-gestützt an (BDO)
+- Bewegung & Animation fühlen sich camera-gestützt an (Action Combat)
 - Facing bleibt unabhängig steuerbar
 - Lock-On kann auf TargetFrame wechseln, ohne BlendTrees zu zerstören
 
@@ -591,7 +591,7 @@ Move Direction == Facing Direction
 - Stabil für Networking
 - Einfache State Machine
 
-### Später: Strafing / BDO Style (Erweiterung)
+### Später: Strafing / Action Combat Style (Erweiterung)
 
 ```
 Move Direction ≠ Facing Direction
@@ -637,8 +637,8 @@ Wiesenwischer.GameKit.Camera.Behaviours
 
 Wiesenwischer.GameKit.Camera.Presets
 ├── CameraPreset (ScriptableObject)
-├── BDOPreset
-├── ArcheAgePreset
+├── ActionCombatPreset
+├── ClassicMMOPreset
 
 Wiesenwischer.GameKit.CharacterController.Core (Erweiterung)
 ├── IOrientationProvider
