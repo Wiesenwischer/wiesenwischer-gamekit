@@ -126,8 +126,23 @@ Nach Abschluss der Phase:
 
 ---
 
-## Naechste Phase
+## Naechste Phase (WICHTIG — nicht vergessen!)
 
-Die naechste Netzwerk-Phase waere eine optionale Optimierung:
-- Adaptive Reconciliation (Smooth Blend, Error-Threshold)
+**Phase 31: Adaptive Reconciliation** (MUSS nach Phase 30 folgen!)
+
+Phase 30 nutzt FishNet's Standard-Reconcile: Hard Restore + Replay. Das bedeutet bei jeder Server-Korrektur ein **hartes Snap/Teleport**. Fuer ein MMO ist das inakzeptabel — der Spieler muss smooth korrigiert werden.
+
+**Was Phase 31 liefern muss:**
+- **Error-Threshold:** `if(error > threshold) snap; else smooth blend` — kleine Abweichungen werden weich korrigiert, grosse sofort
+- **FishNet PredictionManager** Konfiguration: Smoother-Optionen, Interpolation-Settings
+- **Visual Smoothing:** Reconcile-Korrektur ueber mehrere Frames visuell glaetten statt sofort anwenden
+
+**Warum kritisch:**
+- Ohne Adaptive Reconciliation sieht der Spieler bei JEDER kleinen Server-Korrektur ein sichtbares Teleport/Snap
+- Selbst bei gutem Prediction-Code gibt es regelmaessig kleine Abweichungen (Floating Point, Timing)
+- AAA-MMOs (WoW, GW2, FF14) haben alle einen Smoother — hard snap ist sofort als "billig" erkennbar
+
+**Weitere Netzwerk-Phasen:**
 - Lag Compensation fuer Combat (Phase 9 Abhaengigkeit)
+- Server-Authority Validation (Anti-Cheat)
+- NPC-spezifische Netzwerk-Simulation

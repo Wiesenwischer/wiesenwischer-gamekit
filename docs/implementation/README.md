@@ -30,7 +30,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 |------|--------|--------|
 | [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | In Arbeit |
-| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7, 30 | In Arbeit |
+| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7, 30–31 | In Arbeit |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Abgeschlossen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Abgeschlossen |
@@ -50,6 +50,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | Abgeschlossen |
 | 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Abgeschlossen |
 | 30 | Netzwerk | FishNet Native Prediction Migration | [Features](phase-30-fishnet-prediction/README.md) | ✅ | Offen |
+| 31 | Netzwerk | Adaptive Reconciliation & Smooth Correction | — | ❌ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
 | 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Abgeschlossen |
@@ -90,6 +91,7 @@ Fähigkeiten & Action Combat
 
 MMO-Netzwerk
   Phase 5 ──> Phase 6 ──> Phase 7 ──> Phase 30 (FishNet Native Prediction)
+                                                       └──> Phase 31 (Adaptive Reconciliation)
                              ↑
                           Phase 8 (IK Target Sync benötigt IK-Module)
 
@@ -383,6 +385,25 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [ ] [30.7 Alten Prediction-Code aufräumen](phase-30-fishnet-prediction/30.7-prediction-cleanup.md)
 - [ ] [30.8 NetworkAnimationSync Replay-Guard](phase-30-fishnet-prediction/30.8-animation-sync-replay.md)
 - [ ] [30.9 Tests + Verifikation](phase-30-fishnet-prediction/30.9-tests-verification.md)
+
+---
+
+### Phase 31: Adaptive Reconciliation & Smooth Correction
+**Branch:** `integration/phase-31-adaptive-reconciliation`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Hard-Snap bei Server-Korrekturen durch Smooth Blending ersetzen. Error-Threshold basierte Strategie: kleine Abweichungen werden über mehrere Frames visuell geglättet, große Abweichungen sofort korrigiert. Ohne diesen Schritt ist jede Reconciliation als Teleport sichtbar — für ein MMO inakzeptabel.
+
+**Relevante Spezifikationen:**
+- [Phase 30 Spec — Anmerkung "Adaptive Reconciliation"](../specs/networking/Wiesenwischer_Phase30_FishNet_Native_Prediction_Migration.md)
+- FishNet `PredictionManager` Dokumentation
+
+**Schritte (vorläufig):**
+- [ ] 31.1 Error-Threshold Konfiguration (ScriptableObject)
+- [ ] 31.2 Smooth Reconciliation Strategie (Blend over N Frames)
+- [ ] 31.3 FishNet PredictionManager / Smoother Integration
+- [ ] 31.4 Visual Correction Smoothing (Transform-Ebene)
+- [ ] 31.5 Tests & Tuning (verschiedene Latenz-Szenarien)
 
 ---
 
