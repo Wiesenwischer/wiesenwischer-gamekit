@@ -31,9 +31,9 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | In Arbeit |
 | [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Offen |
-| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Offen |
+| [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Abgeschlossen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
-| [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Offen |
+| [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Abgeschlossen |
 | [Character Platform](#character-platform) | 11–19 | Offen |
 
 ---
@@ -47,7 +47,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 3 | Animation | Animation-Integration | [Features](phase-3-animation-integration/README.md) | ✅ | Abgeschlossen |
 | 4 | Animation | Fortgeschrittene Lokomotion | [Features](phase-4-locomotion-features/README.md) | ✅ | Abgeschlossen |
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Abgeschlossen |
-| 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | Offen |
+| 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | In Arbeit |
 | 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
