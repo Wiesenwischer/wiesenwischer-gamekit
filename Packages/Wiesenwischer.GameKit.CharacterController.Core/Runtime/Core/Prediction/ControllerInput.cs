@@ -32,6 +32,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
         public float Rotation;
 
         /// <summary>
+        /// Kamera-Yaw zum Zeitpunkt des Inputs (Y-Achse in Grad).
+        /// Wird für serverseitige Movement-Interpretation benötigt,
+        /// da der Server die Client-Kamera nicht kennt.
+        /// </summary>
+        public float CameraYaw;
+
+        /// <summary>
         /// Gedrückte Buttons als Bit-Flags.
         /// </summary>
         public ControllerButtons Buttons;
@@ -82,6 +89,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
                 MoveDirection = Vector2.zero,
                 LookDirection = Vector2.zero,
                 Rotation = 0f,
+                CameraYaw = 0f,
                 Buttons = ControllerButtons.None,
                 Timestamp = 0f
             };
@@ -90,7 +98,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
         /// <summary>
         /// Erstellt einen Input mit Bewegungsdaten.
         /// </summary>
-        public static ControllerInput Create(int tick, Vector2 move, Vector2 look, float rotation, ControllerButtons buttons)
+        public static ControllerInput Create(int tick, Vector2 move, Vector2 look, float rotation, float cameraYaw, ControllerButtons buttons)
         {
             return new ControllerInput
             {
@@ -98,6 +106,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
                 MoveDirection = move,
                 LookDirection = look,
                 Rotation = rotation,
+                CameraYaw = cameraYaw,
                 Buttons = buttons,
                 Timestamp = Time.time
             };
@@ -109,6 +118,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
                    MoveDirection.Equals(other.MoveDirection) &&
                    LookDirection.Equals(other.LookDirection) &&
                    Mathf.Approximately(Rotation, other.Rotation) &&
+                   Mathf.Approximately(CameraYaw, other.CameraYaw) &&
                    Buttons == other.Buttons;
         }
 
@@ -119,7 +129,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Tick, MoveDirection, LookDirection, Rotation, Buttons);
+            return HashCode.Combine(Tick, MoveDirection, LookDirection, Rotation, CameraYaw, Buttons);
         }
 
         public static bool operator ==(ControllerInput left, ControllerInput right)

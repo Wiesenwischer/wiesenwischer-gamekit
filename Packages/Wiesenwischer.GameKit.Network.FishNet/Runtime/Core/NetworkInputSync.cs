@@ -60,11 +60,19 @@ namespace Wiesenwischer.GameKit.Network
             if (inputProvider.SprintHeld) buttons |= ControllerButtons.Sprint;
             if (inputProvider.CrouchTogglePressed) buttons |= ControllerButtons.Crouch;
 
+            // Camera Yaw: Referenzrahmen in dem WASD interpretiert wurde.
+            // Server braucht diesen Wert um Input in Weltkoordinaten zu transformieren.
+            float cameraYaw = _player.transform.eulerAngles.y;
+            var mainCamera = Camera.main;
+            if (mainCamera != null)
+                cameraYaw = mainCamera.transform.eulerAngles.y;
+
             return ControllerInput.Create(
                 tick: _player.CurrentTick,
                 move: inputProvider.MoveInput,
                 look: inputProvider.LookInput,
                 rotation: _player.transform.eulerAngles.y,
+                cameraYaw: cameraYaw,
                 buttons: buttons
             );
         }
