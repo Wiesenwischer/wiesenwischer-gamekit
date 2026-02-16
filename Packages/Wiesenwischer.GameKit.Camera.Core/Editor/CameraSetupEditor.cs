@@ -12,6 +12,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
     public static class CameraSetupEditor
     {
         private const string ConfigPath = "Assets/Config/CameraCoreConfig.asset";
+        private const string InputSettingsPath = "Assets/Config/CameraInputSettings.asset";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
 
         public static void SetupCameraBrain()
@@ -69,18 +70,29 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 Debug.Log("[CameraSetup] CameraInputPipeline hinzugefügt.");
             }
 
-            // InputActionAsset zuweisen
-            var inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
-            if (inputActions != null)
+            // InputActionAsset + InputSettings zuweisen
             {
                 var inputSo = new SerializedObject(inputPipeline);
-                inputSo.FindProperty("_inputActions").objectReferenceValue = inputActions;
+
+                var inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+                if (inputActions != null)
+                {
+                    inputSo.FindProperty("_inputActions").objectReferenceValue = inputActions;
+                    Debug.Log("[CameraSetup] InputActionAsset zugewiesen.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[CameraSetup] InputActionAsset nicht gefunden: {InputActionsPath}");
+                }
+
+                var inputSettings = FindOrCreateInputSettings();
+                if (inputSettings != null)
+                {
+                    inputSo.FindProperty("_inputSettings").objectReferenceValue = inputSettings;
+                    Debug.Log("[CameraSetup] CameraInputSettings zugewiesen.");
+                }
+
                 inputSo.ApplyModifiedProperties();
-                Debug.Log("[CameraSetup] InputActionAsset zugewiesen.");
-            }
-            else
-            {
-                Debug.LogWarning($"[CameraSetup] InputActionAsset nicht gefunden: {InputActionsPath}");
             }
 
             // CameraBrain
@@ -173,6 +185,27 @@ namespace Wiesenwischer.GameKit.Camera.Editor
             Debug.Log($"[CameraSetup] CameraCoreConfig erstellt: {ConfigPath}");
 
             return config;
+        }
+
+        private static CameraInputSettings FindOrCreateInputSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<CameraInputSettings>(InputSettingsPath);
+            if (settings != null) return settings;
+
+            var guids = AssetDatabase.FindAssets("t:CameraInputSettings");
+            if (guids.Length > 0)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                return AssetDatabase.LoadAssetAtPath<CameraInputSettings>(path);
+            }
+
+            EnsureDirectoryExists("Assets/Config");
+            settings = ScriptableObject.CreateInstance<CameraInputSettings>();
+            AssetDatabase.CreateAsset(settings, InputSettingsPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[CameraSetup] CameraInputSettings erstellt: {InputSettingsPath}");
+
+            return settings;
         }
 
         private static void EnsureDirectoryExists(string path)
