@@ -41,6 +41,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private bool _canExitAnimation;
         private float _currentNormalizedSpeed;
         private float _currentVerticalVelocity;
+        private float _targetSpeed;
+        private float _targetVerticalVelocity;
         private bool _isRemoteMode;
 
         /// <summary>
@@ -207,10 +209,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
 
         /// <summary>
         /// Wendet die aktuellen Parameter-Werte auf den Animator an.
-        /// Wird im Remote-Mode verwendet, wo Werte extern via SetSpeed/SetVerticalVelocity gesetzt werden.
+        /// Im Remote-Mode werden Ziel-Werte sanft interpoliert (Smoothing bei Packet Loss).
         /// </summary>
         private void ApplyParametersToAnimator()
         {
+            if (_isRemoteMode)
+            {
+                // Remote: Sanft zum Zielwert dampen
+                _currentNormalizedSpeed = Mathf.MoveTowards(
+                    _currentNormalizedSpeed, _targetSpeed,
+                    Time.deltaTime * 10f);
+                _currentVerticalVelocity = Mathf.MoveTowards(
+                    _currentVerticalVelocity, _targetVerticalVelocity,
+                    Time.deltaTime * 50f);
+            }
+
             _animator.SetFloat(
                 AnimationParameters.SpeedHash,
                 _currentNormalizedSpeed,
@@ -338,17 +351,25 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         public void SetSpeed(float speed)
         {
             if (!_isValid) return;
+            if (_isRemoteMode)
+            {
+                _targetSpeed = speed;
+                return;
+            }
             _currentNormalizedSpeed = speed;
-            if (!_isRemoteMode)
-                _animator.SetFloat(AnimationParameters.SpeedHash, speed);
+            _animator.SetFloat(AnimationParameters.SpeedHash, speed);
         }
 
         public void SetVerticalVelocity(float velocity)
         {
             if (!_isValid) return;
+            if (_isRemoteMode)
+            {
+                _targetVerticalVelocity = velocity;
+                return;
+            }
             _currentVerticalVelocity = velocity;
-            if (!_isRemoteMode)
-                _animator.SetFloat(AnimationParameters.VerticalVelocityHash, velocity);
+            _animator.SetFloat(AnimationParameters.VerticalVelocityHash, velocity);
         }
 
         public void SetAbilityLayerWeight(float weight)
