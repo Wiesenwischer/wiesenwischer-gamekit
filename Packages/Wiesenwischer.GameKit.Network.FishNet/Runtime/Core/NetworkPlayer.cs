@@ -58,7 +58,12 @@ namespace Wiesenwischer.GameKit.Network
                 inputMono.enabled = false;
             }
 
-            Debug.Log("[NetworkPlayer] Remote Spieler — Input deaktiviert.");
+            // CharacterMotor deaktivieren (Interpolator übernimmt Position für Remote)
+            var motor = GetComponent<CharacterController.Core.Motor.CharacterMotor>();
+            if (motor != null)
+                motor.enabled = false;
+
+            Debug.Log("[NetworkPlayer] Remote Spieler — Input + Motor deaktiviert.");
         }
     }
 }

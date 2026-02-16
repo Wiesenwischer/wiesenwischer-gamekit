@@ -38,10 +38,13 @@ namespace Wiesenwischer.GameKit.Network
         private bool _hasPendingCorrection;
         private Vector3 _correctionTarget;
 
+        private RemotePlayerInterpolator _interpolator;
+
         public override void OnStartNetwork()
         {
             base.OnStartNetwork();
             _player = GetComponent<PlayerController>();
+            _interpolator = GetComponent<RemotePlayerInterpolator>();
 
             _predictionBuffer = new PredictionBuffer(capacity: 256);
             _inputBuffer = new InputBuffer<ControllerInput>(
@@ -161,6 +164,9 @@ namespace Wiesenwischer.GameKit.Network
         private void HandleRemoteState(PredictionState serverState)
         {
             _predictionBuffer.Add(serverState);
+
+            if (_interpolator != null)
+                _interpolator.OnRemoteStateReceived(serverState);
         }
 
         // === Hilfsmethoden ===
