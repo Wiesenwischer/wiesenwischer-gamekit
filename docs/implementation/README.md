@@ -741,7 +741,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 **Schritte:**
 - [x] [29.1 IOrientationProvider + IFacingProvider Interfaces](phase-29-orientation-facing/29.1-orientation-facing-interfaces.md)
 - [x] [29.2 ICameraInputStrategy + Pipeline Refactoring](phase-29-orientation-facing/29.2-input-strategy-refactoring.md)
-- [ ] [29.3 CameraOrientationProvider Implementierung](phase-29-orientation-facing/29.3-camera-orientation-provider.md)
+- [x] [29.3 CameraOrientationProvider Implementierung](phase-29-orientation-facing/29.3-camera-orientation-provider.md)
 - [ ] [29.4 CharacterController Integration](phase-29-orientation-facing/29.4-character-controller-integration.md)
 - [ ] [29.5 CameraInputSettings & Sensitivität](phase-29-orientation-facing/29.5-camera-input-settings.md)
 - [ ] [29.6 LookAt-System Reparatur](phase-29-orientation-facing/29.6-lookat-reparatur.md)
