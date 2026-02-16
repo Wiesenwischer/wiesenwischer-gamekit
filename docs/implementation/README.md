@@ -746,7 +746,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [x] [29.5 CameraInputSettings & Sensitivität](phase-29-orientation-facing/29.5-camera-input-settings.md)
 - [x] [29.6 LookAt-System Reparatur](phase-29-orientation-facing/29.6-lookat-reparatur.md)
 - [x] [29.7 Camera-Relative Animation Space (Vorbereitung)](phase-29-orientation-facing/29.7-animation-space.md)
-- [ ] [29.8 Unit Tests](phase-29-orientation-facing/29.8-unit-tests.md)
+- [x] [29.8 Unit Tests](phase-29-orientation-facing/29.8-unit-tests.md)
 - [ ] [29.9 Play Mode Verifikation](phase-29-orientation-facing/29.9-play-mode-verifikation.md)
 
 **Referenz:** Spec Kapitel 17–20, 23
