@@ -1,6 +1,6 @@
 using UnityEngine;
 using Wiesenwischer.GameKit.Camera;
-using Wiesenwischer.GameKit.Network;
+using NetworkPlayer = Wiesenwischer.GameKit.Network.NetworkPlayer;
 
 /// <summary>
 /// Scene-Coordinator: Verbindet den lokal gespawnten Netzwerk-Spieler mit der Kamera.
