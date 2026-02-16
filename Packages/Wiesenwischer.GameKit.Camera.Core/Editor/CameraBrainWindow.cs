@@ -232,6 +232,41 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                     MessageType.None);
             }
 
+            // Preset Switcher (F1 zum Durchschalten im Play Mode)
+            EditorGUILayout.Space(4);
+            var switcher = _brain.GetComponent<CameraPresetSwitcher>();
+            if (switcher == null)
+            {
+                if (GUILayout.Button("Preset Switcher hinzufügen (F1)"))
+                {
+                    switcher = Undo.AddComponent<CameraPresetSwitcher>(_brain.gameObject);
+                    ConfigurePresetSwitcher(switcher);
+                }
+            }
+            else
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Preset Switcher", "Aktiv (F1)");
+                if (GUILayout.Button("Aktualisieren", GUILayout.Width(90)))
+                    ConfigurePresetSwitcher(switcher);
+                EditorGUILayout.EndHorizontal();
+            }
+
+            // Settings UI (F2 im Play Mode)
+            var settingsUI = _brain.GetComponent<CameraSettingsUI>();
+            if (settingsUI == null)
+            {
+                if (GUILayout.Button("Settings UI hinzufügen (F2)"))
+                {
+                    settingsUI = Undo.AddComponent<CameraSettingsUI>(_brain.gameObject);
+                    EditorUtility.SetDirty(settingsUI);
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Settings UI", "Aktiv (F2)");
+            }
+
             // Re-Run Button für existierendes Setup
             EditorGUILayout.Space(4);
             if (GUILayout.Button("Re-Run Setup (Reparatur)"))
@@ -271,6 +306,25 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                     }
                 }
             }
+        }
+
+        private void ConfigurePresetSwitcher(CameraPresetSwitcher switcher)
+        {
+            if (_availablePresets == null)
+                RefreshPresetList();
+
+            Undo.RecordObject(switcher, "Configure Preset Switcher");
+            var so = new SerializedObject(switcher);
+            so.FindProperty("_brain").objectReferenceValue = _brain;
+
+            var presetsArr = so.FindProperty("_presets");
+            presetsArr.arraySize = _availablePresets.Length;
+            for (int i = 0; i < _availablePresets.Length; i++)
+                presetsArr.GetArrayElementAtIndex(i).objectReferenceValue = _availablePresets[i];
+
+            so.ApplyModifiedProperties();
+            EditorUtility.SetDirty(switcher);
+            Debug.Log($"[CameraBrain] PresetSwitcher konfiguriert mit {_availablePresets.Length} Presets.");
         }
 
         #endregion
