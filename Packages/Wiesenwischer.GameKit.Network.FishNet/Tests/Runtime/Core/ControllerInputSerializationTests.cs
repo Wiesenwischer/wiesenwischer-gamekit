@@ -15,6 +15,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
                 move: new Vector2(0.5f, -0.3f),
                 look: new Vector2(1f, 0f),
                 rotation: 180f,
+                cameraYaw: 180f,
                 buttons: ControllerButtons.Jump | ControllerButtons.Sprint);
 
             Assert.AreEqual(42, input.Tick);
@@ -38,11 +39,11 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void ControllerInput_Equality_WorksCorrectly()
         {
-            var a = ControllerInput.Create(1, Vector2.up, Vector2.zero, 0f,
+            var a = ControllerInput.Create(1, Vector2.up, Vector2.zero, 0f, 0f,
                 ControllerButtons.Jump);
-            var b = ControllerInput.Create(1, Vector2.up, Vector2.zero, 0f,
+            var b = ControllerInput.Create(1, Vector2.up, Vector2.zero, 0f, 0f,
                 ControllerButtons.Jump);
-            var c = ControllerInput.Create(2, Vector2.up, Vector2.zero, 0f,
+            var c = ControllerInput.Create(2, Vector2.up, Vector2.zero, 0f, 0f,
                 ControllerButtons.Jump);
 
             Assert.AreEqual(a, b);

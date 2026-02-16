@@ -27,6 +27,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
                     move: UnityEngine.Vector2.up,
                     look: UnityEngine.Vector2.zero,
                     rotation: 0f,
+                    cameraYaw: 0f,
                     buttons: ControllerButtons.None));
             }
 
@@ -46,6 +47,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
                     move: UnityEngine.Vector2.zero,
                     look: UnityEngine.Vector2.zero,
                     rotation: 0f,
+                    cameraYaw: 0f,
                     buttons: ControllerButtons.None));
             }
 
@@ -64,6 +66,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
                 move: UnityEngine.Vector2.zero,
                 look: UnityEngine.Vector2.zero,
                 rotation: 0f,
+                cameraYaw: 0f,
                 buttons: ControllerButtons.Jump | ControllerButtons.Sprint);
 
             Assert.IsTrue(input.Jump);
