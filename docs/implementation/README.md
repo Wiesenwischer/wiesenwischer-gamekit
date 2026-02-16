@@ -30,7 +30,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 |------|--------|--------|
 | [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | In Arbeit |
-| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | In Arbeit |
+| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Abgeschlossen |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Abgeschlossen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Abgeschlossen |
@@ -48,7 +48,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 4 | Animation | Fortgeschrittene Lokomotion | [Features](phase-4-locomotion-features/README.md) | ✅ | Abgeschlossen |
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Abgeschlossen |
 | 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | Abgeschlossen |
-| 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Offen |
+| 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Abgeschlossen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
 | 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Abgeschlossen |
@@ -352,13 +352,13 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 **Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-7-network-animation/README.md)
 
 **Schritte:**
-- [ ] [7.1 Animation State Sync](phase-7-network-animation/7.1-animation-state-sync.md)
-- [ ] [7.2 Animator Parameter Sync](phase-7-network-animation/7.2-parameter-sync.md)
-- [ ] [7.3 Remote Player Animation Setup](phase-7-network-animation/7.3-remote-animation-setup.md)
-- [ ] [7.4 Ability Animation Sync](phase-7-network-animation/7.4-ability-animation-sync.md)
-- [ ] [7.5 IK Target Sync](phase-7-network-animation/7.5-ik-target-sync.md)
-- [ ] [7.6 Lag Compensation & Smoothing](phase-7-network-animation/7.6-lag-compensation.md)
-- [ ] [7.7 Unit Tests & Verifikation](phase-7-network-animation/7.7-unit-tests.md)
+- [x] [7.1 Animation State Sync](phase-7-network-animation/7.1-animation-state-sync.md)
+- [x] [7.2 Animator Parameter Sync](phase-7-network-animation/7.2-parameter-sync.md)
+- [x] [7.3 Remote Player Animation Setup](phase-7-network-animation/7.3-remote-animation-setup.md)
+- [x] [7.4 Ability Animation Sync](phase-7-network-animation/7.4-ability-animation-sync.md)
+- [x] [7.5 IK Target Sync](phase-7-network-animation/7.5-ik-target-sync.md)
+- [x] [7.6 Lag Compensation & Smoothing](phase-7-network-animation/7.6-lag-compensation.md)
+- [x] [7.7 Unit Tests & Verifikation](phase-7-network-animation/7.7-unit-tests.md)
 
 ---
 
