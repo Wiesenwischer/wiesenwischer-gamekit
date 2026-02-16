@@ -113,11 +113,25 @@ namespace Wiesenwischer.GameKit.Network
 
         private void SimulateOnServer(ControllerInput input)
         {
-            // Server wendet den Input auf PlayerController an
-            // und erzeugt den autoritativen State.
-            // → Wird von NetworkStateSync (6.6) gelesen und broadcastet.
-            if (_player?.TickSystem != null)
-                _player.ApplyNetworkInput(input, _player.TickSystem.TickDelta);
+            if (_player?.TickSystem == null) return;
+
+            float tickDelta = _player.TickSystem.TickDelta;
+            _player.ApplyNetworkInput(input, tickDelta);
+
+            // State an alle Clients broadcasten
+            var stateSync = GetComponent<NetworkStateSync>();
+            if (stateSync != null)
+            {
+                var state = PredictionState.Create(
+                    tick: input.Tick,
+                    position: _player.transform.position,
+                    rotation: _player.transform.eulerAngles.y,
+                    velocity: _player.Velocity,
+                    stateName: _player.MovementStateMachine?.CurrentStateName ?? "Unknown",
+                    isGrounded: _player.IsGrounded
+                );
+                stateSync.BroadcastState(input.Tick, state);
+            }
         }
     }
 }
