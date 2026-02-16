@@ -64,6 +64,12 @@ namespace Wiesenwischer.GameKit.Camera
         /// <summary>Aktueller gefilterter Input-State.</summary>
         public CameraInputState CurrentInput { get; private set; }
 
+        /// <summary>
+        /// Wenn true, wird sämtlicher Input ignoriert (Look + Zoom).
+        /// Für UI-Overlays die Maus-Input benötigen.
+        /// </summary>
+        public bool InputSuppressed { get; set; }
+
         /// <summary>Aktuellen FOV für Sensitivity-Scaling setzen.</summary>
         public void SetCurrentFov(float fov) => _currentFov = fov;
 
@@ -141,10 +147,19 @@ namespace Wiesenwischer.GameKit.Camera
         {
             // 0. Orbit Mode über Strategy bestimmen
             CameraOrbitMode orbitMode = DetermineOrbitMode();
+
+            // Input unterdrückt (z.B. Settings-UI offen)
+            if (InputSuppressed)
+            {
+                CurrentInput = new CameraInputState { OrbitMode = orbitMode };
+                return CurrentInput;
+            }
+
             ApplyCursorState(_strategy.GetCursorState(orbitMode));
 
             Vector2 rawLook = Vector2.zero;
-            float rawZoom = _zoomAction?.ReadValue<Vector2>().y ?? 0f;
+            // ScrollWheel liefert Pixel-Werte (~120 pro Notch) — normalisieren auf ±1
+            float rawZoom = (_zoomAction?.ReadValue<Vector2>().y ?? 0f) / 120f;
 
             // Look-Input nur lesen wenn Strategy es erlaubt
             if (_strategy.ShouldReadLookInput(orbitMode))

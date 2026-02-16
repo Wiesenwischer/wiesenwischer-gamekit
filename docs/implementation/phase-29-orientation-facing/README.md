@@ -1,6 +1,6 @@
 # Phase 29: Shared Orientation & Facing Integration
 
-> **Status:** Ausgearbeitet
+> **Status:** Abgeschlossen
 > **Branch:** `integration/phase-29-orientation-facing`
 > **Abhängigkeiten:** Phase 28 (Camera Intents, muss abgeschlossen sein), Phase 4 (Locomotion)
 

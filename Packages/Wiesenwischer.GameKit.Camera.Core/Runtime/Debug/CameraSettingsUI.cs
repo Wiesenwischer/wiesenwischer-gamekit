@@ -16,22 +16,21 @@ namespace Wiesenwischer.GameKit.Camera
         [SerializeField] private KeyCode _toggleKey = KeyCode.F2;
 
         private bool _visible;
-        private Rect _windowRect = new Rect(20, 60, 300, 0);
+        private Rect _windowRect = new Rect(0, 0, 300, 0);
+        private bool _needsCenter = true;
+        private CameraInputPipeline _pipeline;
 
         private void Awake()
         {
-            if (_settings != null) return;
+            _pipeline = FindObjectOfType<CameraInputPipeline>();
 
-            // Auto-discover über CameraInputPipeline
-            var pipeline = FindObjectOfType<CameraInputPipeline>();
-            if (pipeline != null)
+            if (_settings == null && _pipeline != null)
             {
-                var so = new UnityEngine.Object[] { pipeline };
                 // Reflection-Fallback: Feld direkt lesen
                 var field = typeof(CameraInputPipeline).GetField("_inputSettings",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (field != null)
-                    _settings = field.GetValue(pipeline) as CameraInputSettings;
+                    _settings = field.GetValue(_pipeline) as CameraInputSettings;
             }
 
             if (_settings == null)
@@ -48,6 +47,13 @@ namespace Wiesenwischer.GameKit.Camera
             {
                 _visible = !_visible;
 
+                if (_visible)
+                    _needsCenter = true;
+
+                // Pipeline-Input unterdrücken solange UI offen
+                if (_pipeline != null)
+                    _pipeline.InputSuppressed = _visible;
+
                 // Cursor freigeben wenn UI offen
                 if (_visible)
                 {
@@ -63,6 +69,13 @@ namespace Wiesenwischer.GameKit.Camera
 
             _windowRect = GUILayout.Window(
                 947201, _windowRect, DrawWindow, "Camera Settings [F2]");
+
+            if (_needsCenter && _windowRect.height > 0)
+            {
+                _windowRect.x = (Screen.width - _windowRect.width) * 0.5f;
+                _windowRect.y = (Screen.height - _windowRect.height) * 0.5f;
+                _needsCenter = false;
+            }
         }
 
         private void DrawWindow(int id)
@@ -87,8 +100,9 @@ namespace Wiesenwischer.GameKit.Camera
 
             GUILayout.Space(4);
 
-            // Scroll
-            _settings.ScrollSensitivity = DrawSlider("Scroll Speed",
+            // Zoom
+            GUILayout.Label("Zoom", GUI.skin.box);
+            _settings.ScrollSensitivity = DrawSlider("Zoom Speed",
                 _settings.ScrollSensitivity, 0.1f, 5f);
 
             GUILayout.Space(4);

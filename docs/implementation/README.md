@@ -70,7 +70,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 26 | Camera | Camera Core — Brain, State & Pivot Rig | [Features](phase-26-camera-core/README.md) | ✅ | Abgeschlossen |
 | 27 | Camera | Camera Behaviours | [Features](phase-27-camera-behaviours/README.md) | ✅ | Abgeschlossen |
 | 28 | Camera | Camera Intent System & Presets | [Features](phase-28-camera-intents/README.md) | ✅ | Abgeschlossen |
-| 29 | Camera | Shared Orientation & Facing Integration | [Features](phase-29-orientation-facing/README.md) | ✅ | Offen |
+| 29 | Camera | Shared Orientation & Facing Integration | [Features](phase-29-orientation-facing/README.md) | ✅ | Abgeschlossen |
 
 ---
 
@@ -747,7 +747,7 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [x] [29.6 LookAt-System Reparatur](phase-29-orientation-facing/29.6-lookat-reparatur.md)
 - [x] [29.7 Camera-Relative Animation Space (Vorbereitung)](phase-29-orientation-facing/29.7-animation-space.md)
 - [x] [29.8 Unit Tests](phase-29-orientation-facing/29.8-unit-tests.md)
-- [ ] [29.9 Play Mode Verifikation](phase-29-orientation-facing/29.9-play-mode-verifikation.md)
+- [x] [29.9 Play Mode Verifikation](phase-29-orientation-facing/29.9-play-mode-verifikation.md)
 
 **Referenz:** Spec Kapitel 17–20, 23
 
