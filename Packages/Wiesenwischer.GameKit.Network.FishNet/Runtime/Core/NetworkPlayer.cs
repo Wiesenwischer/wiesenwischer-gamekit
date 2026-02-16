@@ -12,6 +12,12 @@ namespace Wiesenwischer.GameKit.Network
     [RequireComponent(typeof(PlayerController))]
     public class NetworkPlayer : NetworkBehaviour, INetworkRole
     {
+        /// <summary>Wird gefeuert wenn der lokale Spieler bereit ist. Parameter: Player Transform.</summary>
+        public static event System.Action<Transform> OnLocalPlayerReady;
+
+        /// <summary>Wird gefeuert wenn der lokale Spieler entfernt wird.</summary>
+        public static event System.Action OnLocalPlayerRemoved;
+
         private PlayerController _playerController;
 
         // INetworkRole Implementation — delegates to FishNet NetworkBehaviour
@@ -43,11 +49,14 @@ namespace Wiesenwischer.GameKit.Network
         public override void OnStopClient()
         {
             base.OnStopClient();
+            if (IsOwner)
+                OnLocalPlayerRemoved?.Invoke();
         }
 
         private void EnableLocalPlayer()
         {
             Debug.Log("[NetworkPlayer] Lokaler Spieler initialisiert.");
+            OnLocalPlayerReady?.Invoke(transform);
         }
 
         private void DisableRemotePlayerInput()
