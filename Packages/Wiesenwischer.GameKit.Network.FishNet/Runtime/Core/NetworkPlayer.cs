@@ -75,7 +75,7 @@ namespace Wiesenwischer.GameKit.Network
                     motor.enabled = false;
             }
 
-            Debug.Log($"[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor={!IsServerStarted ? "deaktiviert" : "aktiv (Server)"}");
+            Debug.Log($"[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor={(!IsServerStarted ? "deaktiviert" : "aktiv (Server)")}");
         }
     }
 }
