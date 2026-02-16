@@ -1,6 +1,6 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-15
+> **Letzte Aktualisierung:** 2026-02-17
 > **Status:** In Entwicklung
 
 ---
@@ -30,7 +30,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 |------|--------|--------|
 | [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | In Arbeit |
-| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7 | Abgeschlossen |
+| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7, 30 | In Arbeit |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Abgeschlossen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Abgeschlossen |
@@ -49,6 +49,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Abgeschlossen |
 | 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | Abgeschlossen |
 | 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Abgeschlossen |
+| 30 | Netzwerk | FishNet Native Prediction Migration | [Features](phase-30-fishnet-prediction/README.md) | ✅ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
 | 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Abgeschlossen |
@@ -88,7 +89,7 @@ Fähigkeiten & Action Combat
                           Phase 8 (Hand IK benötigt IK-Infrastruktur)
 
 MMO-Netzwerk
-  Phase 5 ──> Phase 6 ──> Phase 7
+  Phase 5 ──> Phase 6 ──> Phase 7 ──> Phase 30 (FishNet Native Prediction)
                              ↑
                           Phase 8 (IK Target Sync benötigt IK-Module)
 
@@ -328,6 +329,9 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [GameKit MMO Basics](../specs/GameKit_MMO_Basics.md)
 - [GameKit InputSystem Spezifikation](../specs/GameKit_InputSystem_Spezifikation.md)
 - [Master Architecture Overview](../specs/Wiesenwischer_Gamekit_Master_Architecture.md)
+- [Phase 30: FishNet Native Prediction Migration](../specs/networking/Wiesenwischer_Phase30_FishNet_Native_Prediction_Migration.md)
+- [Simulation Tick vs FixedUpdate](../specs/networking/Wiesenwischer_Simulation_Tick_vs_FixedUpdate.md)
+- [FishNet Integration FULL](../specs/networking/Wiesenwischer_FishNet_Integration_FULL.md)
 
 ---
 
@@ -359,6 +363,26 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [x] [7.5 IK Target Sync](phase-7-network-animation/7.5-ik-target-sync.md)
 - [x] [7.6 Lag Compensation & Smoothing](phase-7-network-animation/7.6-lag-compensation.md)
 - [x] [7.7 Unit Tests & Verifikation](phase-7-network-animation/7.7-unit-tests.md)
+
+---
+
+### Phase 30: FishNet Native Prediction Migration
+**Branch:** `integration/phase-30-fishnet-prediction`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-30-fishnet-prediction/README.md)
+
+**Relevante Spezifikationen:**
+- [Phase 30 Spezifikation](../specs/networking/Wiesenwischer_Phase30_FishNet_Native_Prediction_Migration.md)
+
+**Schritte:**
+- [ ] [30.1 ISimulationDriver + SimulateTick Extraktion](phase-30-fishnet-prediction/30.1-simulation-driver.md)
+- [ ] [30.2 Deterministisches Timing](phase-30-fishnet-prediction/30.2-deterministic-timing.md)
+- [ ] [30.3 FixedUpdate Offline-Modus](phase-30-fishnet-prediction/30.3-offline-fixedupdate.md)
+- [ ] [30.4 MoveReplicateData + CharacterReconcileData](phase-30-fishnet-prediction/30.4-replicate-reconcile-data.md)
+- [ ] [30.5 NetworkCharacterDriver](phase-30-fishnet-prediction/30.5-network-character-driver.md)
+- [ ] [30.6 PlayerController + NetworkPlayer Integration](phase-30-fishnet-prediction/30.6-network-integration.md)
+- [ ] [30.7 Alten Prediction-Code aufräumen](phase-30-fishnet-prediction/30.7-prediction-cleanup.md)
+- [ ] [30.8 NetworkAnimationSync Replay-Guard](phase-30-fishnet-prediction/30.8-animation-sync-replay.md)
+- [ ] [30.9 Tests + Verifikation](phase-30-fishnet-prediction/30.9-tests-verification.md)
 
 ---
 
