@@ -27,14 +27,25 @@ namespace Wiesenwischer.GameKit.CharacterController.IK
 
         private void Awake()
         {
-            _camera = Camera.main;
+            // Camera.main wird NICHT in Awake() gecached, weil PivotRig.EnsureHierarchy()
+            // die Camera erst in CameraBrain.Awake([DefaultExecutionOrder(100)]) migriert.
+            // Stattdessen: Lazy-Resolution in ResolveCamera().
             if (_playerController == null)
                 _playerController = GetComponentInParent<PlayerController>();
         }
 
+        private Camera ResolveCamera()
+        {
+            if (_camera != null && _camera.enabled)
+                return _camera;
+            _camera = Camera.main;
+            return _camera;
+        }
+
         public Vector3 GetLookTarget()
         {
-            if (_camera == null) return transform.position + transform.forward;
+            var cam = ResolveCamera();
+            if (cam == null) return transform.position + transform.forward;
 
             float speed = _playerController != null
                 ? new Vector3(_playerController.Velocity.x, 0f, _playerController.Velocity.z).magnitude
@@ -42,12 +53,12 @@ namespace Wiesenwischer.GameKit.CharacterController.IK
             float targetBlend = speed > _idleThreshold ? 1f : 0f;
             _movingBlend = Mathf.MoveTowards(_movingBlend, targetBlend, _blendSpeed * Time.deltaTime);
 
-            Vector3 idleTarget = _camera.transform.position;
-            Vector3 movingTarget = _camera.transform.position + _camera.transform.forward * _lookDistance;
+            Vector3 idleTarget = cam.transform.position;
+            Vector3 movingTarget = cam.transform.position + cam.transform.forward * _lookDistance;
 
             return Vector3.Lerp(idleTarget, movingTarget, _movingBlend);
         }
 
-        public bool HasLookTarget => _camera != null;
+        public bool HasLookTarget => ResolveCamera() != null;
     }
 }

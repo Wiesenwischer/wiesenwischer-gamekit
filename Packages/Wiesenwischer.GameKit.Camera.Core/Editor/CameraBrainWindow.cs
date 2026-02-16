@@ -6,7 +6,8 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 {
     /// <summary>
     /// Editor-Fenster für Camera Brain Setup und Konfiguration.
-    /// Erlaubt Preset-Wechsel, Behaviour-Steuerung und Live-Debugging im Play Mode.
+    /// Setup-Flow: Preset wählen → Setup ausführen → fertig.
+    /// Danach: Preset-Wechsel, Behaviour-Steuerung, Live-Debugging.
     /// </summary>
     public class CameraBrainWindow : EditorWindow
     {
@@ -33,6 +34,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
         private void OnEnable()
         {
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            RefreshPresetList();
         }
 
         private void OnDisable()
@@ -42,7 +44,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
         private void OnPlayModeChanged(PlayModeStateChange state)
         {
-            _brain = null; // Reset bei Play Mode Wechsel
+            _brain = null;
         }
 
         private void OnGUI()
@@ -54,16 +56,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
             if (_brain == null)
             {
-                EditorGUILayout.HelpBox(
-                    "Kein CameraBrain gefunden.\n\n" +
-                    "1. Platziere einen Player in der Szene\n" +
-                    "2. Nutze 'Setup Camera Brain' um das System aufzusetzen\n" +
-                    "3. Starte Play Mode",
-                    MessageType.Info);
-
-                if (GUILayout.Button("Setup Camera Brain", GUILayout.Height(30)))
-                    CameraSetupEditor.SetupCameraBrain();
-
+                DrawSetupSection();
                 EditorGUILayout.EndScrollView();
                 return;
             }
@@ -86,8 +79,75 @@ namespace Wiesenwischer.GameKit.Camera.Editor
             EditorGUILayout.EndScrollView();
 
             if (Application.isPlaying)
-                Repaint(); // Continuous update im Play Mode
+                Repaint();
         }
+
+        #region Setup (kein CameraBrain vorhanden)
+
+        private void DrawSetupSection()
+        {
+            EditorGUILayout.HelpBox(
+                "Kein CameraBrain gefunden.\n\n" +
+                "1. Platziere einen Player in der Szene\n" +
+                "2. Wähle ein Camera-Preset\n" +
+                "3. Klicke 'Setup Camera Brain'",
+                MessageType.Info);
+
+            EditorGUILayout.Space(4);
+
+            // Preset-Auswahl VOR dem Setup
+            EditorGUILayout.LabelField("Camera-Stil wählen:", EditorStyles.boldLabel);
+
+            if (_availablePresets == null || _availablePresets.Length == 0)
+                RefreshPresetList();
+
+            if (_availablePresets != null && _availablePresets.Length > 0)
+            {
+                int newIndex = EditorGUILayout.Popup("Preset", _selectedPresetIndex, _presetNames);
+                if (newIndex != _selectedPresetIndex && newIndex >= 0 && newIndex < _availablePresets.Length)
+                {
+                    _selectedPresetIndex = newIndex;
+                    _presetToApply = _availablePresets[newIndex];
+                }
+
+                // Preset-Info anzeigen
+                if (_presetToApply != null)
+                {
+                    EditorGUILayout.HelpBox(
+                        $"{_presetToApply.Description}\n\n" +
+                        $"Orbit: {_presetToApply.OrbitActivation} | " +
+                        $"FOV: {_presetToApply.DefaultFov} | " +
+                        $"Distance: {_presetToApply.DefaultDistance}",
+                        MessageType.None);
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    "Keine Camera-Presets gefunden.\n" +
+                    "Setup erstellt Standardkonfiguration (AlwaysOn/ActionCombat).",
+                    MessageType.Warning);
+            }
+
+            EditorGUILayout.Space(8);
+
+            // Setup Button — EIN Klick macht alles
+            string buttonLabel = _presetToApply != null
+                ? $"Setup Camera Brain ({_presetToApply.name.Replace("CameraPreset_", "")})"
+                : "Setup Camera Brain (Standard)";
+
+            if (GUILayout.Button(buttonLabel, GUILayout.Height(32)))
+            {
+                CameraSetupEditor.SetupCameraBrain(_presetToApply);
+
+                // Brain nach Setup finden
+                _brain = FindObjectOfType<CameraBrain>();
+            }
+        }
+
+        #endregion
+
+        #region Header & Brain Finder
 
         private void DrawHeader()
         {
@@ -112,6 +172,10 @@ namespace Wiesenwischer.GameKit.Camera.Editor
             EditorGUILayout.Space(4);
         }
 
+        #endregion
+
+        #region Presets (CameraBrain vorhanden)
+
         private void DrawPresetSection()
         {
             _showPresets = EditorGUILayout.Foldout(_showPresets, "Presets", true, EditorStyles.foldoutHeader);
@@ -119,7 +183,6 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
             EditorGUI.indentLevel++;
 
-            // Preset-Dropdown (auto-discover alle CameraPreset Assets)
             if (_availablePresets == null)
                 RefreshPresetList();
 
@@ -137,7 +200,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
             EditorGUILayout.EndHorizontal();
 
-            // Apply Button (Edit Mode: setzt _activePreset, Play Mode: ruft SetPreset auf)
+            // Apply Button
             GUI.enabled = _presetToApply != null;
             if (GUILayout.Button("Apply Preset"))
             {
@@ -147,34 +210,9 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 }
                 else
                 {
-                    // _activePreset Feld setzen
-                    var brainSo = new SerializedObject(_brain);
-                    brainSo.FindProperty("_activePreset").objectReferenceValue = _presetToApply;
-                    brainSo.ApplyModifiedProperties();
-
-                    // Preset auf alle Behaviours anwenden (enabled + Parameter)
-                    Undo.RecordObjects(_brain.GetComponents<Component>(), "Apply Camera Preset");
-                    foreach (var receiver in _brain.GetComponents<ICameraPresetReceiver>())
-                    {
-                        receiver.ApplyPreset(_presetToApply);
-                        if (receiver is MonoBehaviour mb)
-                            EditorUtility.SetDirty(mb);
-                    }
-
-                    // OrbitActivation auf InputPipeline setzen
                     var inputPipeline = _brain.GetComponent<CameraInputPipeline>();
-                    if (inputPipeline != null)
-                    {
-                        Undo.RecordObject(inputPipeline, "Apply Camera Preset");
-                        var pipelineSo = new SerializedObject(inputPipeline);
-                        pipelineSo.FindProperty("_orbitActivation").enumValueIndex = (int)_presetToApply.OrbitActivation;
-                        pipelineSo.ApplyModifiedProperties();
-                        EditorUtility.SetDirty(inputPipeline);
-                    }
-
-                    EditorUtility.SetDirty(_brain);
+                    CameraSetupEditor.ApplyPresetInEditor(_brain, inputPipeline, _presetToApply);
                 }
-                Debug.Log($"[CameraBrain] Preset '{_presetToApply.name}' angewendet.");
             }
             GUI.enabled = true;
 
@@ -184,6 +222,7 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 EditorGUILayout.HelpBox(
                     $"{_presetToApply.name}\n" +
                     $"{_presetToApply.Description}\n\n" +
+                    $"Orbit: {_presetToApply.OrbitActivation} | " +
                     $"FOV: {_presetToApply.DefaultFov} | Distance: {_presetToApply.DefaultDistance}\n" +
                     $"Inertia: {(_presetToApply.InertiaEnabled ? "An" : "Aus")} | " +
                     $"Recenter: {(_presetToApply.RecenterEnabled ? "An" : "Aus")} | " +
@@ -191,6 +230,49 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                     $"DynamicOrbit: {(_presetToApply.DynamicOrbitEnabled ? "An" : "Aus")} | " +
                     $"SoftTarget: {(_presetToApply.SoftTargetingEnabled ? "An" : "Aus")}",
                     MessageType.None);
+            }
+
+            // Preset Switcher (F1 zum Durchschalten im Play Mode)
+            EditorGUILayout.Space(4);
+            var switcher = _brain.GetComponent<CameraPresetSwitcher>();
+            if (switcher == null)
+            {
+                if (GUILayout.Button("Preset Switcher hinzufügen (F1)"))
+                {
+                    switcher = Undo.AddComponent<CameraPresetSwitcher>(_brain.gameObject);
+                    ConfigurePresetSwitcher(switcher);
+                }
+            }
+            else
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Preset Switcher", "Aktiv (F1)");
+                if (GUILayout.Button("Aktualisieren", GUILayout.Width(90)))
+                    ConfigurePresetSwitcher(switcher);
+                EditorGUILayout.EndHorizontal();
+            }
+
+            // Settings UI (F2 im Play Mode)
+            var settingsUI = _brain.GetComponent<CameraSettingsUI>();
+            if (settingsUI == null)
+            {
+                if (GUILayout.Button("Settings UI hinzufügen (F2)"))
+                {
+                    settingsUI = Undo.AddComponent<CameraSettingsUI>(_brain.gameObject);
+                    EditorUtility.SetDirty(settingsUI);
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Settings UI", "Aktiv (F2)");
+            }
+
+            // Re-Run Button für existierendes Setup
+            EditorGUILayout.Space(4);
+            if (GUILayout.Button("Re-Run Setup (Reparatur)"))
+            {
+                CameraSetupEditor.SetupCameraBrain(_presetToApply);
+                _brain = FindObjectOfType<CameraBrain>();
             }
 
             EditorGUI.indentLevel--;
@@ -212,7 +294,6 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                     : "(null)";
             }
 
-            // Aktuell ausgewähltes Preset im Index finden
             _selectedPresetIndex = -1;
             if (_presetToApply != null)
             {
@@ -226,6 +307,29 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 }
             }
         }
+
+        private void ConfigurePresetSwitcher(CameraPresetSwitcher switcher)
+        {
+            if (_availablePresets == null)
+                RefreshPresetList();
+
+            Undo.RecordObject(switcher, "Configure Preset Switcher");
+            var so = new SerializedObject(switcher);
+            so.FindProperty("_brain").objectReferenceValue = _brain;
+
+            var presetsArr = so.FindProperty("_presets");
+            presetsArr.arraySize = _availablePresets.Length;
+            for (int i = 0; i < _availablePresets.Length; i++)
+                presetsArr.GetArrayElementAtIndex(i).objectReferenceValue = _availablePresets[i];
+
+            so.ApplyModifiedProperties();
+            EditorUtility.SetDirty(switcher);
+            Debug.Log($"[CameraBrain] PresetSwitcher konfiguriert mit {_availablePresets.Length} Presets.");
+        }
+
+        #endregion
+
+        #region Behaviours
 
         private void DrawBehaviourSection()
         {
@@ -256,7 +360,6 @@ namespace Wiesenwischer.GameKit.Camera.Editor
                 EditorGUILayout.EndHorizontal();
             }
 
-            // CinemachineDriver (kein ICameraBehaviour, daher separater Toggle)
             DrawCinemachineToggle();
 
             EditorGUI.indentLevel--;
@@ -302,6 +405,10 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 #endif
         }
 
+        #endregion
+
+        #region Live State & Quick Actions
+
         private void DrawStateSection()
         {
             _showState = EditorGUILayout.Foldout(_showState, "Live Camera State", true, EditorStyles.foldoutHeader);
@@ -311,14 +418,15 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
             var state = _brain.State;
 
-            EditorGUILayout.LabelField("Yaw", $"{state.Yaw:F1}°");
-            EditorGUILayout.LabelField("Pitch", $"{state.Pitch:F1}°");
+            EditorGUILayout.LabelField("Yaw", $"{state.Yaw:F1}\u00b0");
+            EditorGUILayout.LabelField("Pitch", $"{state.Pitch:F1}\u00b0");
             EditorGUILayout.LabelField("Distance", $"{state.Distance:F2}m");
-            EditorGUILayout.LabelField("FOV", $"{state.Fov:F1}°");
+            EditorGUILayout.LabelField("FOV", $"{state.Fov:F1}\u00b0");
 
             if (state.ShoulderOffset != Vector3.zero)
                 EditorGUILayout.LabelField("Shoulder", $"({state.ShoulderOffset.x:F2}, {state.ShoulderOffset.y:F2})");
 
+            EditorGUILayout.LabelField("Orbit Mode", _brain.CurrentOrbitMode.ToString());
             EditorGUILayout.LabelField("Steer Mode", _brain.IsSteerMode ? "Active" : "Inactive");
 
             EditorGUI.indentLevel--;
@@ -341,11 +449,10 @@ namespace Wiesenwischer.GameKit.Camera.Editor
             if (GUILayout.Button("Refresh Behaviours"))
                 _brain.RefreshBehaviours();
 
-            // Shoulder-Switch
             var shoulder = _brain.GetComponent<ShoulderOffsetBehaviour>();
             if (shoulder != null && shoulder.enabled)
             {
-                if (GUILayout.Button($"Switch Shoulder ({(shoulder.IsRightShoulder ? "R → L" : "L → R")})"))
+                if (GUILayout.Button($"Switch Shoulder ({(shoulder.IsRightShoulder ? "R \u2192 L" : "L \u2192 R")})"))
                     shoulder.SwitchSide();
             }
 
@@ -353,5 +460,6 @@ namespace Wiesenwischer.GameKit.Camera.Editor
             EditorGUILayout.Space(4);
         }
 
+        #endregion
     }
 }

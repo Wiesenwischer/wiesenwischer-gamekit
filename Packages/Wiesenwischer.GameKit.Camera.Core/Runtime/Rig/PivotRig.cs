@@ -78,9 +78,12 @@ namespace Wiesenwischer.GameKit.Camera
                             rootListener.enabled = false;
                         }
 
-                        // Ensure Camera.main still works
+                        // Ensure Camera.main still works: Tag auf Child verschieben
                         if (gameObject.CompareTag("MainCamera"))
+                        {
                             camGO.gameObject.tag = "MainCamera";
+                            gameObject.tag = "Untagged";
+                        }
                     }
 
                     _cameraTransform = camGO;

@@ -3,8 +3,9 @@ using UnityEngine;
 namespace Wiesenwischer.GameKit.Camera
 {
     /// <summary>
-    /// Runtime-Helfer zum Testen von Camera-Presets per Tastendruck.
-    /// F1–F4 wechseln zwischen bis zu 4 Presets.
+    /// Runtime-Helfer zum Testen von Camera-Presets.
+    /// Eine Taste schaltet durch alle zugewiesenen Presets.
+    /// HUD zeigt permanent das aktive Preset an.
     /// </summary>
     public class CameraPresetSwitcher : MonoBehaviour
     {
@@ -12,18 +13,21 @@ namespace Wiesenwischer.GameKit.Camera
         [Tooltip("CameraBrain der konfiguriert wird. Wird automatisch gesucht wenn leer.")]
         [SerializeField] private CameraBrain _brain;
 
-        [Header("Presets (F1–F4)")]
-        [SerializeField] private CameraPreset _presetF1;
-        [SerializeField] private CameraPreset _presetF2;
-        [SerializeField] private CameraPreset _presetF3;
-        [SerializeField] private CameraPreset _presetF4;
+        [Header("Presets")]
+        [Tooltip("Liste aller verfügbaren Presets zum Durchschalten.")]
+        [SerializeField] private CameraPreset[] _presets;
 
-        [Header("Debug")]
-        [Tooltip("Zeigt aktives Preset als Screen-Overlay")]
-        [SerializeField] private bool _showOverlay = true;
+        [Header("Input")]
+        [Tooltip("Taste zum Durchschalten der Presets.")]
+        [SerializeField] private KeyCode _cycleKey = KeyCode.F1;
 
-        private string _activePresetName = "—";
-        private float _overlayTimer;
+        [Header("HUD")]
+        [Tooltip("Zeigt aktives Preset als HUD-Element an.")]
+        [SerializeField] private bool _showHud = true;
+
+        private int _activeIndex = -1;
+        private string _activePresetName = "";
+        private float _switchFlashTimer;
 
         private void Awake()
         {
@@ -34,81 +38,74 @@ namespace Wiesenwischer.GameKit.Camera
             {
                 Debug.LogWarning("[PresetSwitcher] Kein CameraBrain gefunden. Component deaktiviert.");
                 enabled = false;
+                return;
+            }
+
+            // Erstes Preset aktivieren
+            if (_presets != null && _presets.Length > 0)
+            {
+                _activeIndex = 0;
+                ApplyPreset(0);
             }
         }
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F1) && _presetF1 != null)
-                ApplyPreset(_presetF1);
-            else if (Input.GetKeyDown(KeyCode.F2) && _presetF2 != null)
-                ApplyPreset(_presetF2);
-            else if (Input.GetKeyDown(KeyCode.F3) && _presetF3 != null)
-                ApplyPreset(_presetF3);
-            else if (Input.GetKeyDown(KeyCode.F4) && _presetF4 != null)
-                ApplyPreset(_presetF4);
+            if (_presets == null || _presets.Length == 0) return;
 
-            if (_overlayTimer > 0f)
-                _overlayTimer -= Time.deltaTime;
+            if (Input.GetKeyDown(_cycleKey))
+            {
+                _activeIndex = (_activeIndex + 1) % _presets.Length;
+                ApplyPreset(_activeIndex);
+            }
+
+            if (_switchFlashTimer > 0f)
+                _switchFlashTimer -= Time.deltaTime;
         }
 
-        private void ApplyPreset(CameraPreset preset)
+        private void ApplyPreset(int index)
         {
+            if (index < 0 || index >= _presets.Length || _presets[index] == null) return;
+
+            var preset = _presets[index];
             _brain.SetPreset(preset);
-            _activePresetName = preset.name;
-            _overlayTimer = 3f;
-            Debug.Log($"[PresetSwitcher] Preset gewechselt: {preset.name}");
+            _activePresetName = preset.name.Replace("CameraPreset_", "");
+            _switchFlashTimer = 2f;
+            Debug.Log($"[PresetSwitcher] Preset gewechselt: {_activePresetName} [{_cycleKey}]");
         }
 
         private void OnGUI()
         {
-            if (!_showOverlay) return;
+            if (!_showHud || _presets == null || _presets.Length == 0) return;
 
-            // Immer die Legende anzeigen
-            var legendStyle = new GUIStyle(GUI.skin.label)
+            // Aktives Preset — permanent oben rechts
+            var hudStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 12,
-                normal = { textColor = new Color(1f, 1f, 1f, 0.6f) }
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.UpperRight,
+                normal = { textColor = new Color(1f, 1f, 1f, 0.7f) }
             };
 
-            float y = 10f;
-            if (_presetF1 != null)
-            {
-                GUI.Label(new Rect(10, y, 300, 20), $"[F1] {_presetF1.name}", legendStyle);
-                y += 18f;
-            }
-            if (_presetF2 != null)
-            {
-                GUI.Label(new Rect(10, y, 300, 20), $"[F2] {_presetF2.name}", legendStyle);
-                y += 18f;
-            }
-            if (_presetF3 != null)
-            {
-                GUI.Label(new Rect(10, y, 300, 20), $"[F3] {_presetF3.name}", legendStyle);
-                y += 18f;
-            }
-            if (_presetF4 != null)
-            {
-                GUI.Label(new Rect(10, y, 300, 20), $"[F4] {_presetF4.name}", legendStyle);
-                y += 18f;
-            }
+            float x = Screen.width - 220f;
+            GUI.Label(new Rect(x, 10, 210, 24), $"[{_cycleKey}] {_activePresetName}", hudStyle);
 
-            // Aktives Preset groß anzeigen (nach Wechsel)
-            if (_overlayTimer > 0f)
+            // Kurzes Flash nach Wechsel
+            if (_switchFlashTimer > 0f)
             {
-                float alpha = Mathf.Clamp01(_overlayTimer);
-                var activeStyle = new GUIStyle(GUI.skin.label)
+                float alpha = Mathf.Clamp01(_switchFlashTimer);
+                var flashStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 24,
+                    fontSize = 22,
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.UpperCenter,
                     normal = { textColor = new Color(0.2f, 1f, 0.4f, alpha) }
                 };
 
                 GUI.Label(
-                    new Rect(0, Screen.height * 0.15f, Screen.width, 40),
+                    new Rect(0, Screen.height * 0.15f, Screen.width, 36),
                     _activePresetName,
-                    activeStyle);
+                    flashStyle);
             }
         }
     }

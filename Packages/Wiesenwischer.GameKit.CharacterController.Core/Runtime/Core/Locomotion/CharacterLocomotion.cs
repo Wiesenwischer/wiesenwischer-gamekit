@@ -239,24 +239,48 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void UpdateRotation(ref Quaternion currentRotation, float deltaTime)
         {
-            // SteerMode: Character sofort zur Kamera ausrichten (auch ohne Bewegung)
-            if (_currentInput.IsSteerMode && _config.SteerAlignCharacter
-                && _currentInput.LookDirection.sqrMagnitude > 0.01f)
+            switch (_currentInput.FacingMode)
             {
-                _targetYaw = Mathf.Atan2(_currentInput.LookDirection.x, _currentInput.LookDirection.z) * Mathf.Rad2Deg;
-                _currentYaw = Mathf.MoveTowardsAngle(_currentYaw, _targetYaw, _config.RotationSpeed * deltaTime);
-                currentRotation = Quaternion.Euler(0, _currentYaw, 0);
-                return;
-            }
+                case FacingMode.MovementDirection:
+                    RotateTowardsMovement(ref currentRotation, deltaTime);
+                    break;
 
-            // Rotation zur Bewegungsrichtung
-            if (_config.RotateTowardsMovement && _lastComputedHorizontal.sqrMagnitude > 0.01f)
+                case FacingMode.CameraForward:
+                case FacingMode.TargetLockOn:
+                    RotateTowardsDirection(_currentInput.FacingDirection,
+                                           ref currentRotation, deltaTime);
+                    break;
+
+                case FacingMode.None:
+                    // Keine Rotation
+                    break;
+            }
+        }
+
+        private void RotateTowardsMovement(ref Quaternion currentRotation, float deltaTime)
+        {
+            if (_config.RotateTowardsMovement &&
+                _lastComputedHorizontal.sqrMagnitude > 0.01f)
             {
                 Vector3 dir = _lastComputedHorizontal.normalized;
                 _targetYaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;
-                _currentYaw = Mathf.MoveTowardsAngle(_currentYaw, _targetYaw, _config.RotationSpeed * deltaTime);
+                _currentYaw = Mathf.MoveTowardsAngle(
+                    _currentYaw, _targetYaw, _config.RotationSpeed * deltaTime);
                 currentRotation = Quaternion.Euler(0, _currentYaw, 0);
             }
+        }
+
+        private void RotateTowardsDirection(Vector3 direction,
+                                             ref Quaternion currentRotation,
+                                             float deltaTime)
+        {
+            if (direction.sqrMagnitude < 0.001f) return;
+
+            Vector3 flat = new Vector3(direction.x, 0, direction.z).normalized;
+            _targetYaw = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg;
+            _currentYaw = Mathf.MoveTowardsAngle(
+                _currentYaw, _targetYaw, _config.RotationSpeed * deltaTime);
+            currentRotation = Quaternion.Euler(0, _currentYaw, 0);
         }
 
         public void UpdateVelocity(ref Vector3 currentVelocity, float deltaTime)

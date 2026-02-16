@@ -70,7 +70,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 26 | Camera | Camera Core — Brain, State & Pivot Rig | [Features](phase-26-camera-core/README.md) | ✅ | Abgeschlossen |
 | 27 | Camera | Camera Behaviours | [Features](phase-27-camera-behaviours/README.md) | ✅ | Abgeschlossen |
 | 28 | Camera | Camera Intent System & Presets | [Features](phase-28-camera-intents/README.md) | ✅ | Abgeschlossen |
-| 29 | Camera | Shared Orientation & Facing Integration | — | ❌ | Offen |
+| 29 | Camera | Shared Orientation & Facing Integration | [Features](phase-29-orientation-facing/README.md) | ✅ | Abgeschlossen |
 
 ---
 
@@ -729,17 +729,25 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 
 ### Phase 29: Shared Orientation & Facing Integration
 **Branch:** `integration/phase-29-orientation-facing`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-29-orientation-facing/README.md)
 
-**Ziel:** Camera↔Character Entkopplung über Orientation/Facing Provider. Camera-Relative Animation Space für korrekte Locomotion-Blending.
+**Ziel:** Camera↔Character Entkopplung über Orientation/Facing Provider. ClassicMMO-Steuerung, Sensitivität, LookAt-Reparatur, Camera-Relative Animation Space Vorbereitung.
 
-**Schritte (vorläufig):**
-- [ ] 29.1 IOrientationProvider Interface + FrameSpace Implementierungen (Camera, Character, Target, Vehicle)
-- [ ] 29.2 IFacingProvider Interface + MovementFacingProvider
-- [ ] 29.3 CameraFacingProvider + TargetFacingProvider
-- [ ] 29.4 CharacterController Integration (Movement liest OrientationProvider)
-- [ ] 29.5 Camera-Relative Animation Space (WorldMoveDir→MoveX/MoveZ)
-- [ ] 29.6 Tests
+**Relevante Spezifikationen:**
+- [Camera System Spezifikation](../specs/Camera_System_Spezifikation.md) — Kapitel 17–20, 23
+- [Camera OrbitMode Spezifikation](../specs/Camera_OrbitMode_Spezifikation.md)
+- [AAA Camera Settings & Steuerung](../specs/Wiesenwischer_AAA_Camera_Settings_und_Steuerung.md)
+
+**Schritte:**
+- [x] [29.1 IOrientationProvider + IFacingProvider Interfaces](phase-29-orientation-facing/29.1-orientation-facing-interfaces.md)
+- [x] [29.2 ICameraInputStrategy + Pipeline Refactoring](phase-29-orientation-facing/29.2-input-strategy-refactoring.md)
+- [x] [29.3 CameraOrientationProvider Implementierung](phase-29-orientation-facing/29.3-camera-orientation-provider.md)
+- [x] [29.4 CharacterController Integration](phase-29-orientation-facing/29.4-character-controller-integration.md)
+- [x] [29.5 CameraInputSettings & Sensitivität](phase-29-orientation-facing/29.5-camera-input-settings.md)
+- [x] [29.6 LookAt-System Reparatur](phase-29-orientation-facing/29.6-lookat-reparatur.md)
+- [x] [29.7 Camera-Relative Animation Space (Vorbereitung)](phase-29-orientation-facing/29.7-animation-space.md)
+- [x] [29.8 Unit Tests](phase-29-orientation-facing/29.8-unit-tests.md)
+- [x] [29.9 Play Mode Verifikation](phase-29-orientation-facing/29.9-play-mode-verifikation.md)
 
 **Referenz:** Spec Kapitel 17–20, 23
 

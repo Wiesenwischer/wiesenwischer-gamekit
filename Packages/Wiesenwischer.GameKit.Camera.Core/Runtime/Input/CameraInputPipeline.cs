@@ -7,7 +7,7 @@ namespace Wiesenwischer.GameKit.Camera
     /// AAA Camera Input Pipeline.
     /// Transformiert rohen Look-/Zoom-Input durch Deadzone, Acceleration
     /// und Smoothing zu einem gefilterten CameraInputState.
-    /// Unterstützt AlwaysOn (Action Combat) und ButtonActivated (Classic MMO) Orbit-Modi.
+    /// Nutzt ICameraInputStrategy für mode-spezifische Input-Interpretation.
     /// </summary>
     public class CameraInputPipeline : MonoBehaviour
     {
@@ -47,6 +47,10 @@ namespace Wiesenwischer.GameKit.Camera
         [Header("Options")]
         [SerializeField] private bool _invertY;
 
+        [Header("Runtime Settings (optional)")]
+        [Tooltip("Runtime-konfigurierbare Input-Settings. Ohne Zuweisung: Standard-Werte.")]
+        [SerializeField] private CameraInputSettings _inputSettings;
+
         private InputAction _lookAction;
         private InputAction _zoomAction;
         private InputAction _freeLookAction;
@@ -54,9 +58,31 @@ namespace Wiesenwischer.GameKit.Camera
         private Vector2 _smoothedLook;
         private Vector2 _smoothVelocity;
         private bool _isGamepad;
+        private float _currentFov = 60f;
+        private ICameraInputStrategy _strategy = new AlwaysOnInputStrategy();
 
         /// <summary>Aktueller gefilterter Input-State.</summary>
         public CameraInputState CurrentInput { get; private set; }
+
+        /// <summary>
+        /// Wenn true, wird sämtlicher Input ignoriert (Look + Zoom).
+        /// Für UI-Overlays die Maus-Input benötigen.
+        /// </summary>
+        public bool InputSuppressed { get; set; }
+
+        /// <summary>Aktuellen FOV für Sensitivity-Scaling setzen.</summary>
+        public void SetCurrentFov(float fov) => _currentFov = fov;
+
+        /// <summary>Strategy austauschen (wird von CameraBrain bei SetPreset aufgerufen).</summary>
+        public ICameraInputStrategy Strategy
+        {
+            get => _strategy;
+            set
+            {
+                _strategy = value ?? new AlwaysOnInputStrategy();
+                ApplyCursorState(_strategy.InitialCursorState);
+            }
+        }
 
         /// <summary>Aktueller OrbitActivation-Modus. Kann von CameraBrain gesetzt werden.</summary>
         public OrbitActivation OrbitActivationMode
@@ -66,7 +92,12 @@ namespace Wiesenwischer.GameKit.Camera
             {
                 if (_orbitActivation == value) return;
                 _orbitActivation = value;
-                UpdateCursorState(CameraOrbitMode.None);
+                Strategy = value switch
+                {
+                    OrbitActivation.AlwaysOn => new AlwaysOnInputStrategy(),
+                    OrbitActivation.ButtonActivated => new ButtonActivatedInputStrategy(),
+                    _ => new AlwaysOnInputStrategy()
+                };
             }
         }
 
@@ -85,11 +116,16 @@ namespace Wiesenwischer.GameKit.Camera
             _freeLookAction?.Enable();
             _steerAction?.Enable();
 
-            // Initial Cursor State
-            if (_orbitActivation == OrbitActivation.AlwaysOn)
-                UpdateCursorState(CameraOrbitMode.FreeOrbit);
-            else
-                UpdateCursorState(CameraOrbitMode.None);
+            // Sync Strategy mit serialisiertem _orbitActivation
+            _strategy = _orbitActivation switch
+            {
+                OrbitActivation.AlwaysOn => new AlwaysOnInputStrategy(),
+                OrbitActivation.ButtonActivated => new ButtonActivatedInputStrategy(),
+                _ => new AlwaysOnInputStrategy()
+            };
+
+            // Initial Cursor State über Strategy
+            ApplyCursorState(_strategy.InitialCursorState);
         }
 
         private void OnDisable()
@@ -109,19 +145,57 @@ namespace Wiesenwischer.GameKit.Camera
         /// </summary>
         public CameraInputState ProcessInput(float deltaTime)
         {
-            // 0. Orbit Mode bestimmen
+            // 0. Orbit Mode über Strategy bestimmen
             CameraOrbitMode orbitMode = DetermineOrbitMode();
-            UpdateCursorState(orbitMode);
+
+            // Input unterdrückt (z.B. Settings-UI offen)
+            if (InputSuppressed)
+            {
+                CurrentInput = new CameraInputState { OrbitMode = orbitMode };
+                return CurrentInput;
+            }
+
+            ApplyCursorState(_strategy.GetCursorState(orbitMode));
 
             Vector2 rawLook = Vector2.zero;
-            float rawZoom = _zoomAction?.ReadValue<Vector2>().y ?? 0f;
+            // ScrollWheel liefert Pixel-Werte (~120 pro Notch) — normalisieren auf ±1
+            float rawZoom = (_zoomAction?.ReadValue<Vector2>().y ?? 0f) / 120f;
 
-            // Look-Input nur lesen wenn Orbit aktiv
-            if (orbitMode != CameraOrbitMode.None)
+            // Look-Input nur lesen wenn Strategy es erlaubt
+            if (_strategy.ShouldReadLookInput(orbitMode))
                 rawLook = _lookAction?.ReadValue<Vector2>() ?? Vector2.zero;
 
             // 1. Device Detection
             _isGamepad = IsGamepadInput();
+
+            // 1b. Runtime-Settings Sensitivity (Multiplikator auf Raw-Input)
+            if (_inputSettings != null)
+            {
+                if (_isGamepad)
+                {
+                    rawLook.x *= _inputSettings.GamepadSensitivityX;
+                    rawLook.y *= _inputSettings.GamepadSensitivityY;
+                }
+                else
+                {
+                    rawLook.x *= _inputSettings.MouseSensitivityX;
+                    rawLook.y *= _inputSettings.MouseSensitivityY;
+                }
+
+                if (_inputSettings.InvertY)
+                    rawLook.y *= -1f;
+
+                if (_inputSettings.EnableFovScaling && _currentFov > 0f)
+                {
+                    float fovScale = Mathf.Tan(_currentFov * 0.5f * Mathf.Deg2Rad)
+                                   / Mathf.Tan(_inputSettings.BaseFov * 0.5f * Mathf.Deg2Rad);
+                    rawLook *= fovScale;
+                }
+
+                rawZoom *= _inputSettings.ScrollSensitivity;
+            }
+
+            // 2. Base Sensitivity
             float sensitivity = _isGamepad ? _gamepadSensitivity : _mouseSensitivity;
 
             // Gamepad: Input ist pro Frame, muss mit DeltaTime skaliert werden
@@ -139,7 +213,7 @@ namespace Wiesenwischer.GameKit.Camera
             scaledLook = ApplyAcceleration(scaledLook);
 
             // 4. Adaptive Smoothing
-            if (orbitMode != CameraOrbitMode.None)
+            if (_strategy.ShouldReadLookInput(orbitMode))
             {
                 scaledLook = ApplySmoothing(scaledLook, deltaTime);
             }
@@ -166,41 +240,15 @@ namespace Wiesenwischer.GameKit.Camera
 
         private CameraOrbitMode DetermineOrbitMode()
         {
-            if (_orbitActivation == OrbitActivation.AlwaysOn)
-            {
-                // AlwaysOn: Immer FreeOrbit (Character wird nie von Kamera gesteuert)
-                return CameraOrbitMode.FreeOrbit;
-            }
-
-            // ButtonActivated (Classic MMO)
-            // Gamepad: Rechter Stick = immer FreeOrbit
-            if (_isGamepad)
-                return CameraOrbitMode.FreeOrbit;
-
-            bool steerHeld = _steerAction?.IsPressed() ?? false;
             bool freeLookHeld = _freeLookAction?.IsPressed() ?? false;
-
-            // Steer hat Priorität (wenn beide gedrückt → Steer)
-            if (steerHeld)
-                return CameraOrbitMode.SteerOrbit;
-            if (freeLookHeld)
-                return CameraOrbitMode.FreeOrbit;
-
-            return CameraOrbitMode.None;
+            bool steerHeld = _steerAction?.IsPressed() ?? false;
+            return _strategy.DetermineOrbitMode(freeLookHeld, steerHeld, _isGamepad);
         }
 
-        private void UpdateCursorState(CameraOrbitMode mode)
+        private void ApplyCursorState(CursorLockMode lockMode)
         {
-            if (mode != CameraOrbitMode.None)
-            {
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-            }
-            else
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
+            Cursor.lockState = lockMode;
+            Cursor.visible = lockMode == CursorLockMode.None;
         }
 
         private Vector2 ApplyDeadzone(Vector2 input)

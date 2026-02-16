@@ -3,6 +3,7 @@
   "rootNamespace": "Wiesenwischer.GameKit.Camera.Tests",
   "references": [
     "Wiesenwischer.GameKit.Camera.Core.Runtime",
+    "Wiesenwischer.GameKit.CharacterController.Core.Runtime",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],
