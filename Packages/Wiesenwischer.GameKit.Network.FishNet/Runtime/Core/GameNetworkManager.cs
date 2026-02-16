@@ -19,11 +19,12 @@ namespace Wiesenwischer.GameKit.Network
         [SerializeField] private string _address = "localhost";
 
         private NetworkManager _networkManager;
+        private bool _initialized;
 
         public bool IsServer => _networkManager != null && _networkManager.IsServerStarted;
-        public bool IsClient => _networkManager != null && _networkManager.ClientManager.Started;
+        public bool IsClient => _networkManager != null && _networkManager.ClientManager != null && _networkManager.ClientManager.Started;
 
-        private void Awake()
+        private void Start()
         {
             _networkManager = GetComponent<NetworkManager>();
             if (_networkManager == null)
@@ -32,14 +33,23 @@ namespace Wiesenwischer.GameKit.Network
                 return;
             }
 
+            if (_networkManager.ServerManager == null || _networkManager.ClientManager == null)
+            {
+                Debug.LogError("[GameNetworkManager] FishNet nicht initialisiert — ServerManager/ClientManager ist null.");
+                return;
+            }
+
             _networkManager.ServerManager.OnServerConnectionState += OnServerConnectionState;
             _networkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             _networkManager.SceneManager.OnClientLoadedStartScenes += OnClientLoadedScenes;
+            _initialized = true;
+
+            Debug.Log("[GameNetworkManager] Initialisiert.");
         }
 
         private void OnDestroy()
         {
-            if (_networkManager != null)
+            if (_networkManager != null && _initialized)
             {
                 _networkManager.ServerManager.OnServerConnectionState -= OnServerConnectionState;
                 _networkManager.ClientManager.OnClientConnectionState -= OnClientConnectionState;
@@ -50,6 +60,12 @@ namespace Wiesenwischer.GameKit.Network
         /// <summary>Startet als Host (Server + Client).</summary>
         public void StartHost()
         {
+            if (!_initialized)
+            {
+                Debug.LogError("[GameNetworkManager] Nicht initialisiert — kann Host nicht starten.");
+                return;
+            }
+            Debug.Log($"[GameNetworkManager] Starte Host auf Port {_port}...");
             _networkManager.ServerManager.StartConnection(_port);
             _networkManager.ClientManager.StartConnection(_address, _port);
         }
@@ -57,23 +73,36 @@ namespace Wiesenwischer.GameKit.Network
         /// <summary>Startet nur den Server.</summary>
         public void StartServer()
         {
+            if (!_initialized)
+            {
+                Debug.LogError("[GameNetworkManager] Nicht initialisiert — kann Server nicht starten.");
+                return;
+            }
+            Debug.Log($"[GameNetworkManager] Starte Server auf Port {_port}...");
             _networkManager.ServerManager.StartConnection(_port);
         }
 
         /// <summary>Verbindet als Client zu einem Server.</summary>
         public void StartClient(string address = null, ushort port = 0)
         {
-            _networkManager.ClientManager.StartConnection(
-                address ?? _address,
-                port > 0 ? port : _port);
+            if (!_initialized)
+            {
+                Debug.LogError("[GameNetworkManager] Nicht initialisiert — kann Client nicht starten.");
+                return;
+            }
+            var targetAddress = address ?? _address;
+            var targetPort = port > 0 ? port : _port;
+            Debug.Log($"[GameNetworkManager] Verbinde als Client zu {targetAddress}:{targetPort}...");
+            _networkManager.ClientManager.StartConnection(targetAddress, targetPort);
         }
 
         /// <summary>Stoppt Server und/oder Client.</summary>
         public void Stop()
         {
+            if (_networkManager == null) return;
             if (_networkManager.IsServerStarted)
                 _networkManager.ServerManager.StopConnection(true);
-            if (_networkManager.ClientManager.Started)
+            if (_networkManager.ClientManager != null && _networkManager.ClientManager.Started)
                 _networkManager.ClientManager.StopConnection();
         }
 

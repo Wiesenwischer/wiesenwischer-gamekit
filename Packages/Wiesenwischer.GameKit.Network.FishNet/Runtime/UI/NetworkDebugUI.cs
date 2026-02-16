@@ -10,16 +10,21 @@ namespace Wiesenwischer.GameKit.Network
     {
         private GameNetworkManager _manager;
 
-        private void Awake()
-        {
-            _manager = FindObjectOfType<GameNetworkManager>();
-        }
-
         private void OnGUI()
         {
-            if (_manager == null) return;
+            if (_manager == null)
+                _manager = GetComponent<GameNetworkManager>();
+            if (_manager == null)
+                _manager = FindObjectOfType<GameNetworkManager>();
 
             GUILayout.BeginArea(new Rect(10, 10, 200, 200));
+
+            if (_manager == null)
+            {
+                GUILayout.Label("GameNetworkManager nicht gefunden!");
+                GUILayout.EndArea();
+                return;
+            }
 
             if (!_manager.IsServer && !_manager.IsClient)
             {
