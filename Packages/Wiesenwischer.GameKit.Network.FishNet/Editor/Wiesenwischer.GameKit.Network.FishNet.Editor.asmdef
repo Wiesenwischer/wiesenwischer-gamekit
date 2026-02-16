@@ -1,0 +1,18 @@
+{
+    "name": "Wiesenwischer.GameKit.Network.FishNet.Editor",
+    "rootNamespace": "Wiesenwischer.GameKit.Network.Editor",
+    "references": [
+        "Wiesenwischer.GameKit.Network.FishNet.Runtime",
+        "Wiesenwischer.GameKit.CharacterController.Core.Runtime",
+        "FishNet.Runtime"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

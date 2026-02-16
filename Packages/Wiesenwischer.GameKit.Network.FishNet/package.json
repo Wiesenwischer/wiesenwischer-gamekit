@@ -1,0 +1,22 @@
+{
+  "name": "wiesenwischer.gamekit.network.fishnet",
+  "displayName": "GameKit Network - FishNet",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "FishNet-basierte Netzwerk-Integration für den GameKit Character Controller. Client-Side Prediction, Input Sync, State Reconciliation.",
+  "keywords": [
+    "network",
+    "multiplayer",
+    "fishnet",
+    "prediction",
+    "mmo",
+    "sync"
+  ],
+  "author": {
+    "name": "Wiesenwischer",
+    "url": "https://github.com/Wiesenwischer"
+  },
+  "dependencies": {
+    "wiesenwischer.gamekit.charactercontroller.core": "0.1.0"
+  }
+}
