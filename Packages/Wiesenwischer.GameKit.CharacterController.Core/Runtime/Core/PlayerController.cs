@@ -60,6 +60,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Das Ability System (optional).</summary>
         public IAbilitySystem AbilitySystem { get; private set; }
 
+        /// <summary>Netzwerk-Rolle (Owner/Server/Client). Default: Offline.</summary>
+        public INetworkRole NetworkRole { get; private set; }
+
         #endregion
 
         #region State Machine
@@ -255,6 +258,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             // Optional: Ability System (kann fehlen)
             AbilitySystem = GetComponent<IAbilitySystem>();
+
+            // Network Role (falls NetworkPlayer vorhanden, sonst Offline-Default)
+            NetworkRole = GetComponent<INetworkRole>() ?? OfflineNetworkRole.Instance;
         }
 
         private void InitializeStateMachine()
