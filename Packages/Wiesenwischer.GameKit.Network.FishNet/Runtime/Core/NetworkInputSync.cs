@@ -37,6 +37,10 @@ namespace Wiesenwischer.GameKit.Network
 
             RecordCurrentInput();
 
+            // Host (Owner + Server): kein Input-Versand nötig,
+            // lokaler PlayerController.Update() handhabt Bewegung direkt.
+            if (IsServerStarted) return;
+
             if (ShouldSendBatch())
                 SendInputBatch();
         }

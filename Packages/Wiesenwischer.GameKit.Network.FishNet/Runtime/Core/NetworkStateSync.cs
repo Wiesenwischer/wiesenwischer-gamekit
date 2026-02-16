@@ -60,6 +60,13 @@ namespace Wiesenwischer.GameKit.Network
 
                 if (_hasPendingCorrection)
                     ApplySmoothCorrection();
+
+                // Host-Owner: State direkt broadcasten (kein Umweg über NetworkInputSync)
+                if (IsServerStarted)
+                {
+                    var state = CreateStateSnapshot(_player.CurrentTick);
+                    BroadcastState(_player.CurrentTick, state);
+                }
             }
         }
 
@@ -87,6 +94,9 @@ namespace Wiesenwischer.GameKit.Network
         [ObserversRpc(BufferLast = true)]
         private void ObserverRpcReceiveState(PredictionState serverState)
         {
+            // Host-Owner: keine Reconciliation nötig (wir SIND der Server)
+            if (IsOwner && IsServerStarted) return;
+
             if (IsOwner)
                 HandleReconciliation(serverState);
             else
