@@ -67,6 +67,8 @@ namespace Wiesenwischer.GameKit.Network
         private void Update()
         {
             if (IsOwner) return;
+            // Auf dem Server: Position kommt aus der autoritativen Simulation, nicht Interpolation
+            if (IsServerStarted) return;
             if (_stateBuffer.Count < 2) return;
 
             float renderTime = Time.time - _interpolationDelay;

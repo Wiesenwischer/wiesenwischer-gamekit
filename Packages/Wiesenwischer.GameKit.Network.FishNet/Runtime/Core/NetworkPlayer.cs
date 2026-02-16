@@ -61,18 +61,21 @@ namespace Wiesenwischer.GameKit.Network
 
         private void DisableRemotePlayerInput()
         {
+            // Input immer deaktivieren für Remote-Player
             var inputProvider = GetComponent<IMovementInputProvider>();
             if (inputProvider is MonoBehaviour inputMono)
-            {
                 inputMono.enabled = false;
+
+            // Motor nur auf reinen Clients deaktivieren (Interpolator übernimmt Position).
+            // Auf dem Server muss der Motor aktiv bleiben für serverseitige Simulation.
+            if (!IsServerStarted)
+            {
+                var motor = GetComponent<CharacterController.Core.Motor.CharacterMotor>();
+                if (motor != null)
+                    motor.enabled = false;
             }
 
-            // CharacterMotor deaktivieren (Interpolator übernimmt Position für Remote)
-            var motor = GetComponent<CharacterController.Core.Motor.CharacterMotor>();
-            if (motor != null)
-                motor.enabled = false;
-
-            Debug.Log("[NetworkPlayer] Remote Spieler — Input + Motor deaktiviert.");
+            Debug.Log($"[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor={!IsServerStarted ? "deaktiviert" : "aktiv (Server)"}");
         }
     }
 }
