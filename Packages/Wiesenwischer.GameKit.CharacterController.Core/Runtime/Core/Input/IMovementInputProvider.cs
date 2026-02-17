@@ -67,6 +67,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         /// Setzt den Input zurück (z.B. bei Fokusverlust).
         /// </summary>
         void ResetInput();
+
+        /// <summary>
+        /// Aktiviert den Input Provider (z.B. ActionMap Enable).
+        /// Wird vom Coordinator aufgerufen (PlayerController offline, NetworkPlayer online).
+        /// </summary>
+        void Activate();
+
+        /// <summary>
+        /// Deaktiviert den Input Provider (z.B. ActionMap Disable, Reset).
+        /// </summary>
+        void Deactivate();
     }
 
     /// <summary>

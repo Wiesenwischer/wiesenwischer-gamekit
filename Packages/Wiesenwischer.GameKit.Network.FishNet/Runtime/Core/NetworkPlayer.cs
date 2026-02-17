@@ -27,7 +27,7 @@ namespace Wiesenwischer.GameKit.Network
         bool INetworkRole.IsOwner => base.IsOwner;
         public bool IsServer => base.IsServerStarted;
         public bool IsClient => base.IsClientStarted;
-        public bool IsNetworkActive => true;
+        public bool IsNetworkActive => IsSpawned;
 
         /// <summary>Der NetworkCharacterDriver (falls vorhanden).</summary>
         public NetworkCharacterDriver CharacterDriver => _characterDriver;
@@ -44,13 +44,9 @@ namespace Wiesenwischer.GameKit.Network
             base.OnStartClient();
 
             if (IsOwner)
-            {
                 EnableLocalPlayer();
-            }
             else
-            {
-                DisableRemotePlayerInput();
-            }
+                ConfigureRemotePlayer();
         }
 
         public override void OnStopClient()
@@ -62,20 +58,17 @@ namespace Wiesenwischer.GameKit.Network
 
         private void EnableLocalPlayer()
         {
-            Debug.Log("[NetworkPlayer] Lokaler Spieler initialisiert.");
+            // Input ist bereits aktiv — PlayerInputProvider.OnEnable() klont das
+            // InputActionAsset und aktiviert die ActionMap automatisch.
             OnLocalPlayerReady?.Invoke(transform);
         }
 
-        private void DisableRemotePlayerInput()
+        private void ConfigureRemotePlayer()
         {
-            // Input immer deaktivieren für Remote-Player
+            // Input deaktivieren — Remote-Player braucht keinen lokalen Input.
+            // Sicher, da jede Instanz ihren eigenen InputActionAsset-Klon hat.
             var inputProvider = GetComponent<IMovementInputProvider>();
-            if (inputProvider is MonoBehaviour inputMono)
-                inputMono.enabled = false;
-
-            // Motor bleibt aktiv — FishNet Spectator-Prediction nutzt [Replicate]
-            // auch fuer Non-Owner-Player (state.IsFuture() → letzter Input wird wiederholt).
-            // CharacterMotorSystem.Simulate() steuert den Motor explizit pro Tick.
+            inputProvider?.Deactivate();
 
             // Animation Bridge in Remote-Modus setzen
             var animBridge = GetComponentInChildren<AnimatorParameterBridge>();
@@ -87,8 +80,6 @@ namespace Wiesenwischer.GameKit.Network
             var networkProvider = GetComponent<NetworkLookAtTargetProvider>();
             if (lookAtIK != null && networkProvider != null)
                 lookAtIK.SetTargetProvider(networkProvider);
-
-            Debug.Log("[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor aktiv (Spectator-Prediction)");
         }
     }
 }
