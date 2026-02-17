@@ -244,9 +244,12 @@ namespace Wiesenwischer.GameKit.Network
             }
 
             // Replay-Guard: Waehrend Reconcile-Replay keine Animations-RPCs senden
+            // UND lokale Animator-Aufrufe unterdruecken (PlayState via CrossFade).
             bool isReplay = state.IsReplayed();
             if (_animSync != null)
                 _animSync.SetReplayMode(isReplay);
+            if (isReplay)
+                _player.SuppressAnimationController();
 
             // Input auf Player setzen
             ApplyInputToPlayer(input);
@@ -280,6 +283,8 @@ namespace Wiesenwischer.GameKit.Network
             }
 
             // Replay-Guard zuruecksetzen
+            if (isReplay)
+                _player.RestoreAnimationController();
             if (_animSync != null)
                 _animSync.SetReplayMode(false);
         }
@@ -352,8 +357,12 @@ namespace Wiesenwischer.GameKit.Network
             reusable.IsCrouching = data.IsCrouching;
             reusable.ShouldWalk = data.ShouldWalk;
 
-            // StateMachine State wiederherstellen
+            // StateMachine State wiederherstellen.
+            // AnimationController unterdruecken: RestoreState ruft Enter() auf,
+            // was PlayState() triggert → Animator-CrossFade waehrend Reconcile ist unerwuenscht.
+            _player.SuppressAnimationController();
             _player.RestoreMovementState(data.MovementStateIndex);
+            _player.RestoreAnimationController();
         }
 
         #endregion

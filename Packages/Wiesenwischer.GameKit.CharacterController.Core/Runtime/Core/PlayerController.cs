@@ -57,6 +57,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Der Animation Controller (optional, auf Child-Object).</summary>
         public IAnimationController AnimationController { get; private set; }
 
+        // Gespeicherter AnimationController waehrend Replay-Suppression
+        private IAnimationController _suppressedAnimController;
+
         /// <summary>Das Ability System (optional).</summary>
         public IAbilitySystem AbilitySystem { get; private set; }
 
@@ -514,6 +517,27 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         {
             ReusableData?.ResetMovementData();
             Locomotion?.StopMovement();
+        }
+
+        /// <summary>
+        /// Unterdrueckt den AnimationController (null-safe PlayState Aufrufe via ?. werden zu no-ops).
+        /// Fuer Reconcile-Replays: verhindert dass PlayState() den Animator durch CrossFade-Zyklen jagt.
+        /// </summary>
+        public void SuppressAnimationController()
+        {
+            if (AnimationController == null) return;
+            _suppressedAnimController = AnimationController;
+            AnimationController = null;
+        }
+
+        /// <summary>
+        /// Stellt den AnimationController nach SuppressAnimationController wieder her.
+        /// </summary>
+        public void RestoreAnimationController()
+        {
+            if (_suppressedAnimController == null) return;
+            AnimationController = _suppressedAnimController;
+            _suppressedAnimController = null;
         }
 
         #endregion
