@@ -260,6 +260,12 @@ namespace Wiesenwischer.GameKit.Network
             // Motor simulieren (KCC UpdateVelocity/UpdateRotation Callbacks)
             if (_motor != null)
             {
+                // KRITISCH: CharacterMotor.UpdatePhase1() liest _transientPosition = transform.position.
+                // ReconcileSmoother schreibt die visuelle Position (interpoliert + Offset) auf transform.
+                // Ohne diesen Sync startet der Motor von der visuellen statt der Simulations-Position
+                // → falsche Collision/Ground-Queries → Server korrigiert → ewiger Jitter.
+                _motor.Transform.SetPositionAndRotation(_motor.TransientPosition, _motor.TransientRotation);
+
                 CharacterMotorSystem.Simulate((float)TimeManager.TickDelta, _motorList);
             }
 
