@@ -7,18 +7,25 @@ namespace Wiesenwischer.GameKit.Network
     /// Handhabt BEIDES: Tick-Interpolation UND Reconcile-Correction.
     ///
     /// Ersetzt die KCC-eigene CustomInterpolationUpdate (CharacterMotorSystem.Settings.Interpolate = false).
-    /// Damit gibt es nur EIN System das Transform.position schreibt — kein Kaempfen.
+    /// Damit gibt es nur EIN System das Transform.position in LateUpdate schreibt — kein Kaempfen.
     ///
     /// Flow:
     /// 1. OnPreTick(): Speichert Interpolations-Startpunkt (TransientPosition VOR Simulation)
     /// 2. [Replicate]: Simulation laeuft, TransientPosition aendert sich
     ///    → CharacterMotorSystem.Simulate() schreibt TransientPosition auf transform.position (fuer Collider-Queries)
+    ///    → NetworkCharacterDriver stellt transform = TransientPosition VOR Simulate() sicher (pre-Simulate sync)
     /// 3. OnReconcileComplete(): Bei Reconcile — Error berechnen, Startpunkt korrigieren
-    /// 4. OnPostTick(): Speichert Interpolations-Endpunkt + STELLT VISUELLE POSITION WIEDER HER
-    ///    → Verhindert dass Kamera/Animator/etc. die rohe Simulation-Position sehen
-    /// 5. LateUpdate: Interpoliert zwischen Start/End + decaying Correction-Offset
+    /// 4. OnPostTick(): Speichert Interpolations-Endpunkt und Timing
+    /// 5. LateUpdate (Order 50): Interpoliert zwischen Start/End + decaying Correction-Offset
+    ///    → Laeuft VOR CameraBrain (100) und GroundingSmoother (100)
+    ///    → Kamera/Grounding lesen immer die korrekte visuelle Position
+    ///
+    /// Zwischen OnPostTick und LateUpdate hat transform.position die Simulations-Position
+    /// (geschrieben von CharacterMotorSystem.Simulate). Das ist korrekt — kein visuelles System
+    /// liest den Root-Transform in dieser Phase. Der pre-Simulate sync in NetworkCharacterDriver
+    /// stellt sicher dass der Motor immer TransientPosition liest, nicht die visuelle Position.
     /// </summary>
-    [DefaultExecutionOrder(100)]
+    [DefaultExecutionOrder(50)]
     public class ReconcileSmoother : MonoBehaviour
     {
         [Header("Position")]
@@ -55,9 +62,6 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _positionOffset;
         private float _rotationOffset;
 
-        // --- Letzte visuelle Position (fuer Restore nach Tick-Processing) ---
-        private Vector3 _lastSetPosition;
-        private Quaternion _lastSetRotation = Quaternion.identity;
         private int _diagFrameCount;
 
         /// <summary>Snap-Threshold fuer externe Abfrage.</summary>
@@ -82,14 +86,6 @@ namespace Wiesenwischer.GameKit.Network
         {
             _tickStartPos = motorPos;
             _tickStartRot = motorRot;
-
-            if (!_initialized)
-            {
-                // Erste visuelle Position initialisieren (vor erstem LateUpdate)
-                _lastSetPosition = transform.position;
-                _lastSetRotation = transform.rotation;
-            }
-
             _initialized = true;
         }
 
@@ -104,13 +100,11 @@ namespace Wiesenwischer.GameKit.Network
             _interpStartTime = Time.time;
             _interpDeltaTime = tickDelta;
 
-            // KRITISCH: CharacterMotorSystem.Simulate() hat transform.position auf
-            // TransientPosition gesetzt (noetig fuer Collider-Queries waehrend der Simulation).
-            // Ohne Restore sehen Kamera, Animator und andere Systeme zwischen OnPostTick
-            // und LateUpdate die rohe Simulation-Position statt der geglatteten → Jitter.
-            // Equivalent zu KCC's PostSimulationInterpolationUpdate.
-            if (_initialized)
-                transform.SetPositionAndRotation(_lastSetPosition, _lastSetRotation);
+            // Kein Visual-Restore noetig:
+            // - transform.position hat nach Simulate() die Simulations-Position
+            // - LateUpdate (Order 50) setzt die visuelle Position VOR CameraBrain (100)
+            // - pre-Simulate sync in NetworkCharacterDriver stellt sicher dass der Motor
+            //   immer TransientPosition liest, nicht die LateUpdate-Visual-Position
         }
 
         #endregion
@@ -194,18 +188,8 @@ namespace Wiesenwischer.GameKit.Network
             // (KCC handhabt Interpolation selbst via CustomInterpolationUpdate)
             if (!_initialized) return;
 
-            // --- DIAGNOSE: Erkennung ob etwas anderes Transform.position aendert ---
             if (_debugLog)
-            {
                 _diagFrameCount++;
-                Vector3 currentPos = transform.position;
-                float drift = (currentPos - _lastSetPosition).magnitude;
-                if (drift > 0.0001f)
-                {
-                    Debug.LogWarning($"[Smoother DIAG] Frame {_diagFrameCount}: Transform.position EXTERN geaendert! " +
-                        $"Erwartet={_lastSetPosition:F4} Ist={currentPos:F4} Drift={drift:F4}m");
-                }
-            }
 
             // 1. Tick-Interpolation (ersetzt CharacterMotorSystem.CustomInterpolationUpdate)
             float factor = (_interpDeltaTime > 0f)
@@ -241,13 +225,11 @@ namespace Wiesenwischer.GameKit.Network
             Quaternion finalRot = interpRot * Quaternion.Euler(0f, _rotationOffset, 0f);
 
             transform.SetPositionAndRotation(finalPos, finalRot);
-            _lastSetPosition = finalPos;
-            _lastSetRotation = finalRot;
 
-            // --- DIAGNOSE: Detailliertes Logging alle N Frames ---
+            // --- DIAGNOSE ---
             if (_debugLog && _diagFrameCount % 30 == 0)
             {
-                Debug.Log($"[Smoother DIAG] Frame {_diagFrameCount}: " +
+                Debug.Log($"[Smoother] Frame {_diagFrameCount}: " +
                     $"tickStart={_tickStartPos:F3} tickEnd={_tickEndPos:F3} " +
                     $"factor={factor:F3} interp={interpPos:F3} " +
                     $"offset={_positionOffset:F4} final={finalPos:F3}");
