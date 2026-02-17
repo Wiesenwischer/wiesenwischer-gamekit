@@ -84,6 +84,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         private IOrientationProvider _orientationProvider;
         private IFacingProvider _facingProvider;
 
+        /// <summary>
+        /// Override fuer LookDirection im Netzwerk-Modus.
+        /// NetworkCharacterDriver setzt dies aus dem CameraYaw des Inputs.
+        /// </summary>
+        private Vector3? _lookDirectionOverride;
+
         #endregion
 
         #region Simulation Driver
@@ -127,6 +133,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         /// <summary>Ground-Informationen vom Motor.</summary>
         public GroundInfo GroundInfo => Locomotion?.GroundInfo ?? GroundInfo.Empty;
+
+        /// <summary>
+        /// Aktueller CameraYaw in Grad (fuer MoveReplicateData).
+        /// Liest den Yaw der Hauptkamera oder Fallback auf Character-Rotation.
+        /// </summary>
+        public float CameraYaw
+        {
+            get
+            {
+                var mainCamera = Camera.main;
+                return mainCamera != null ? mainCamera.transform.eulerAngles.y : transform.eulerAngles.y;
+            }
+        }
+
+        /// <summary>
+        /// Index des aktuellen Movement-States fuer Reconcile-Serialisierung.
+        /// </summary>
+        public byte CurrentMovementStateIndex => _movementStateMachine?.CurrentStateIndex ?? 0;
 
         #endregion
 
@@ -333,9 +357,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             if (Locomotion == null || ReusableData == null) return;
 
             // Frame-Space: Worin wird WASD interpretiert?
-            Vector3 lookDir = _orientationProvider != null
-                ? _orientationProvider.GetMovementForward()
-                : GetCameraForward(); // Fallback auf Legacy
+            // Im Netzwerk-Modus kann die LookDirection per Override gesetzt werden (CameraYaw).
+            Vector3 lookDir;
+            if (_lookDirectionOverride.HasValue)
+            {
+                lookDir = _lookDirectionOverride.Value;
+            }
+            else
+            {
+                lookDir = _orientationProvider != null
+                    ? _orientationProvider.GetMovementForward()
+                    : GetCameraForward(); // Fallback auf Legacy
+            }
 
             // Facing: Wie soll Character rotieren?
             FacingMode facingMode = _facingProvider?.GetFacingMode()
@@ -444,6 +477,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         public void SetPosition(Vector3 position)
         {
             Locomotion?.Motor?.SetPosition(position);
+        }
+
+        /// <summary>
+        /// Stellt einen Movement-State aus dem Reconcile-Snapshot wieder her.
+        /// </summary>
+        public void RestoreMovementState(byte stateIndex)
+        {
+            _movementStateMachine?.RestoreState(stateIndex);
+        }
+
+        /// <summary>
+        /// Setzt eine LookDirection-Override fuer den Netzwerk-Modus.
+        /// Wenn gesetzt, wird diese statt der Kamera-Richtung in ApplyMovement verwendet.
+        /// Null zum Zuruecksetzen.
+        /// </summary>
+        public void SetLookDirectionOverride(Vector3? direction)
+        {
+            _lookDirectionOverride = direction;
         }
 
         /// <summary>

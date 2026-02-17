@@ -84,12 +84,29 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         #region Current State
 
         private IPlayerMovementState _currentState;
+        private IPlayerMovementState[] _allStates;
 
         /// <summary>Der aktuell aktive State.</summary>
         public IPlayerMovementState CurrentState => _currentState;
 
         /// <summary>Name des aktuellen States.</summary>
         public string CurrentStateName => _currentState?.StateName ?? "None";
+
+        /// <summary>
+        /// Index des aktuellen States fuer Reconcile-Serialisierung.
+        /// </summary>
+        public byte CurrentStateIndex
+        {
+            get
+            {
+                if (_allStates == null) return 0;
+                for (byte i = 0; i < _allStates.Length; i++)
+                {
+                    if (_allStates[i] == _currentState) return i;
+                }
+                return 0;
+            }
+        }
 
         #endregion
 
@@ -123,6 +140,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
             // Erstelle Airborne States
             JumpingState = new PlayerJumpingState(this);
             FallingState = new PlayerFallingState(this);
+
+            // State-Index-Array fuer Reconcile-Serialisierung
+            _allStates = new IPlayerMovementState[]
+            {
+                IdlingState, WalkingState, RunningState, SprintingState,
+                SoftLandingState, HardLandingState, LightStoppingState,
+                MediumStoppingState, HardStoppingState, RollingState,
+                CrouchingState, SlidingState, JumpingState, FallingState
+            };
         }
 
         #endregion
@@ -178,6 +204,21 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
             _currentState = newState;
             _currentState.Enter();
             Debug.Log($"[StateMachine] {oldStateName} → {newState.StateName}");
+        }
+
+        /// <summary>
+        /// Stellt den State anhand eines Index wieder her (nach Reconcile).
+        /// </summary>
+        public void RestoreState(byte stateIndex)
+        {
+            if (_allStates == null || stateIndex >= _allStates.Length) return;
+            var targetState = _allStates[stateIndex];
+            if (targetState != null && targetState != _currentState)
+            {
+                _currentState?.Exit();
+                _currentState = targetState;
+                _currentState.Enter();
+            }
         }
 
         #endregion

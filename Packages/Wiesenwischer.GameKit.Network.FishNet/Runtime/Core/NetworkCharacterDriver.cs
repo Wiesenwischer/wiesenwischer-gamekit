@@ -1,0 +1,275 @@
+using FishNet.Object.Prediction;
+using FishNet.Transporting;
+using FishNet.Utility.Template;
+using System.Collections.Generic;
+using UnityEngine;
+using Wiesenwischer.GameKit.CharacterController.Core;
+using Wiesenwischer.GameKit.CharacterController.Core.Motor;
+using Wiesenwischer.GameKit.CharacterController.Core.Prediction;
+
+namespace Wiesenwischer.GameKit.Network
+{
+    /// <summary>
+    /// Treibt die Character-Simulation ueber FishNet's TimeManager.OnTick.
+    /// Ersetzt NetworkInputSync + NetworkStateSync durch native [Replicate]/[Reconcile].
+    ///
+    /// Tick-Flow (KRITISCH — korrekte Reihenfolge):
+    /// OnTick:     PreSimInterp → BuildInput → [Replicate](SimulateTick + Motor.Simulate)
+    /// OnPostTick: CreateReconcile → PostSimInterp
+    ///
+    /// Pre/Post-Interpolation DARF NICHT in [Replicate] stehen, da [Replicate]
+    /// auch waehrend Reconcile-Replay aufgerufen wird (mehrere Ticks hintereinander).
+    /// </summary>
+    [RequireComponent(typeof(PlayerController))]
+    public class NetworkCharacterDriver : TickNetworkBehaviour, ISimulationDriver
+    {
+        // --- Referenzen ---
+        private PlayerController _player;
+        private CharacterMotor _motor;
+        private readonly List<CharacterMotor> _motorList = new(1);
+
+        // --- ISimulationDriver ---
+        public bool IsActive => IsSpawned;
+        public float TickDelta => (float)TimeManager.TickDelta;
+        public uint CurrentTick => TimeManager.Tick;
+
+        // --- One-Shot Input Akkumulation ---
+        private bool _jumpRequested;
+        private bool _jumpCutRequested;
+        private bool _resetVerticalRequested;
+        private bool _lastJumpHeld;
+
+        // --- Spectator Prediction ---
+        private MoveReplicateData _lastTickedReplicateData;
+
+        #region Lifecycle
+
+        public override void OnStartNetwork()
+        {
+            base.OnStartNetwork();
+
+            _player = GetComponent<PlayerController>();
+            _motor = GetComponent<CharacterMotor>();
+
+            // Cache motor list (vermeidet GC-Alloc pro Tick)
+            _motorList.Clear();
+            _motorList.Add(_motor);
+
+            // Motor-Simulation manuell steuern (kein FixedUpdate)
+            // ACHTUNG: AutoSimulation ist global — betrifft ALLE Motoren.
+            // Korrekt fuer MMO (alle Spieler netzwerk-getrieben).
+            CharacterMotorSystem.Settings.AutoSimulation = false;
+        }
+
+        public override void OnStopNetwork()
+        {
+            base.OnStopNetwork();
+
+            // Zurueck zum Offline-Modus
+            CharacterMotorSystem.Settings.AutoSimulation = true;
+        }
+
+        #endregion
+
+        #region Input Accumulation
+
+        private void Update()
+        {
+            if (!IsOwner) return;
+
+            var input = _player.InputProvider;
+            if (input == null) return;
+
+            // One-Shot Inputs akkumulieren (gehen nicht verloren zwischen Ticks)
+            if (input.JumpPressed) _jumpRequested = true;
+
+            // JumpCut: Jump wurde gehalten und jetzt losgelassen
+            if (_lastJumpHeld && !input.JumpHeld) _jumpCutRequested = true;
+            _lastJumpHeld = input.JumpHeld;
+        }
+
+        #endregion
+
+        #region Tick Flow
+
+        protected override void TimeManager_OnTick()
+        {
+            // 1. Interpolation vorbereiten (NUR beim echten Tick, NICHT in Replay!)
+            if (_motor != null)
+                CharacterMotorSystem.PreSimulationInterpolationUpdate((float)TimeManager.TickDelta);
+
+            // 2. Input sammeln + Replicate aufrufen
+            BuildAndReplicate();
+        }
+
+        protected override void TimeManager_OnPostTick()
+        {
+            // 3. Reconcile (nach Simulation, vor Interpolation-Abschluss)
+            CreateReconcile();
+
+            // 4. Interpolation abschliessen (NUR beim echten Tick, NICHT in Replay!)
+            if (_motor != null)
+                CharacterMotorSystem.PostSimulationInterpolationUpdate((float)TimeManager.TickDelta);
+        }
+
+        #endregion
+
+        #region Replicate
+
+        private void BuildAndReplicate()
+        {
+            MoveReplicateData input = default;
+
+            if (IsOwner)
+            {
+                input = BuildReplicateData();
+                // One-Shot Flags zuruecksetzen nach Einlesen
+                _jumpRequested = false;
+                _jumpCutRequested = false;
+                _resetVerticalRequested = false;
+            }
+
+            PerformReplicate(input);
+        }
+
+        private MoveReplicateData BuildReplicateData()
+        {
+            var reusable = _player.ReusableData;
+
+            return new MoveReplicateData
+            {
+                MoveDirection = _player.InputProvider.MoveInput,
+                CameraYaw = _player.CameraYaw,
+                CharacterRotation = _player.transform.eulerAngles.y,
+                Buttons = BuildControllerButtons(),
+                SpeedModifier = reusable.MovementSpeedModifier,
+                JumpRequested = _jumpRequested,
+                JumpCutRequested = _jumpCutRequested,
+                ResetVerticalRequested = _resetVerticalRequested,
+            };
+        }
+
+        private ControllerButtons BuildControllerButtons()
+        {
+            var buttons = ControllerButtons.None;
+            var input = _player.InputProvider;
+
+            if (input.SprintHeld) buttons |= ControllerButtons.Sprint;
+            if (input.CrouchTogglePressed) buttons |= ControllerButtons.Crouch;
+            if (_player.ReusableData.ShouldWalk) buttons |= ControllerButtons.Walk;
+
+            return buttons;
+        }
+
+        [Replicate]
+        private void PerformReplicate(MoveReplicateData input, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
+        {
+            // Spectator Prediction: letzten bekannten Input fuer Non-Owner verwenden
+            if (!IsServerStarted && !IsOwner)
+            {
+                if (state.ContainsTicked())
+                {
+                    _lastTickedReplicateData.Dispose();
+                    _lastTickedReplicateData = input;
+                }
+                else if (state.IsFuture())
+                {
+                    // Maximal 2 Ticks in die Zukunft predicten
+                    if (input.GetTick() - _lastTickedReplicateData.GetTick() > 2)
+                        return;
+
+                    input.Dispose();
+                    input = _lastTickedReplicateData;
+                    // One-Shot Events nicht predicten
+                    input.JumpRequested = false;
+                    input.JumpCutRequested = false;
+                    input.ResetVerticalRequested = false;
+                }
+            }
+
+            // Input auf Player setzen
+            ApplyInputToPlayer(input);
+
+            // Simulation ausfuehren (StateMachine + Locomotion)
+            _player.SimulateTick((float)TimeManager.TickDelta);
+
+            // LookDirection Override zuruecksetzen nach Simulation
+            _player.SetLookDirectionOverride(null);
+
+            // Motor simulieren (KCC UpdateVelocity/UpdateRotation Callbacks)
+            if (_motor != null)
+            {
+                CharacterMotorSystem.Simulate((float)TimeManager.TickDelta, _motorList);
+            }
+        }
+
+        private void ApplyInputToPlayer(MoveReplicateData input)
+        {
+            var reusable = _player.ReusableData;
+
+            reusable.MoveInput = input.MoveDirection;
+            reusable.MovementSpeedModifier = input.SpeedModifier;
+
+            // CameraYaw → LookDirection Override
+            // Server und Replay kennen die Client-Kamera nicht.
+            Vector3 lookDir = Quaternion.Euler(0f, input.CameraYaw, 0f) * Vector3.forward;
+            _player.SetLookDirectionOverride(lookDir);
+
+            // One-Shot Events
+            if (input.JumpRequested) reusable.JumpPressed = true;
+            if (input.JumpCutRequested) reusable.JumpCutRequested = true;
+            if (input.ResetVerticalRequested) reusable.ResetVerticalRequested = true;
+
+            // Button-States
+            reusable.SprintHeld = input.Buttons.HasFlag(ControllerButtons.Sprint);
+            reusable.ShouldWalk = input.Buttons.HasFlag(ControllerButtons.Walk);
+            reusable.CrouchTogglePressed = input.Buttons.HasFlag(ControllerButtons.Crouch);
+        }
+
+        #endregion
+
+        #region Reconcile
+
+        public override void CreateReconcile()
+        {
+            var reusable = _player.ReusableData;
+
+            var data = new CharacterReconcileData
+            {
+                Position = _motor.TransientPosition,
+                Rotation = _motor.TransientRotation.eulerAngles.y,
+                Velocity = reusable.HorizontalVelocity,
+                VerticalVelocity = reusable.VerticalVelocity,
+                IsGrounded = _player.IsGrounded,
+                IsCrouching = reusable.IsCrouching,
+                ShouldWalk = reusable.ShouldWalk,
+                MovementStateIndex = _player.CurrentMovementStateIndex,
+            };
+
+            PerformReconcile(data);
+        }
+
+        [Reconcile]
+        private void PerformReconcile(CharacterReconcileData data, Channel channel = Channel.Unreliable)
+        {
+            // Position/Rotation auf Motor setzen (Physik-State)
+            _motor.SetPositionAndRotation(
+                data.Position,
+                Quaternion.Euler(0f, data.Rotation, 0f)
+            );
+
+            // Character-State wiederherstellen
+            var reusable = _player.ReusableData;
+            reusable.HorizontalVelocity = data.Velocity;
+            reusable.VerticalVelocity = data.VerticalVelocity;
+            // IsGrounded wird vom Motor bei der naechsten Simulation recalculated
+            reusable.IsCrouching = data.IsCrouching;
+            reusable.ShouldWalk = data.ShouldWalk;
+
+            // StateMachine State wiederherstellen
+            _player.RestoreMovementState(data.MovementStateIndex);
+        }
+
+        #endregion
+    }
+}

@@ -165,6 +165,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
         Ability2 = 1 << 7,
         Ability3 = 1 << 8,
         Ability4 = 1 << 9,
-        // Reserve bits 10-15 for future use
+        Walk = 1 << 10,
+        // Reserve bits 11-15 for future use
     }
 }
