@@ -4,7 +4,6 @@ using Wiesenwischer.GameKit.CharacterController.Core.Data;
 using Wiesenwischer.GameKit.CharacterController.Core.Input;
 using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 using Wiesenwischer.GameKit.CharacterController.Core.Motor;
-using Wiesenwischer.GameKit.CharacterController.Core.Prediction;
 using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core
@@ -504,48 +503,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         {
             ReusableData?.ResetMovementData();
             Locomotion?.StopMovement();
-        }
-
-        /// <summary>
-        /// Wendet einen ControllerInput an und simuliert einen Tick.
-        /// Wird vom Server (über NetworkInputSync) und bei Client-Resimulation
-        /// (Reconciliation Rollback) aufgerufen.
-        /// Nutzt CameraYaw aus dem Input statt der lokalen Kamera,
-        /// da die lokale Kamera einem anderen Spieler gehören kann.
-        /// </summary>
-        [System.Obsolete("Ersetzt durch NetworkCharacterDriver.[Replicate]. Wird in Phase 30.7 entfernt.")]
-        public void ApplyNetworkInput(ControllerInput input, float tickDelta)
-        {
-            if (ReusableData == null || Locomotion == null) return;
-
-            ReusableData.MoveInput = input.MoveDirection;
-            ReusableData.JumpPressed = input.Jump;
-            ReusableData.SprintHeld = input.Sprint;
-            ReusableData.CrouchTogglePressed = input.Crouch;
-
-            _movementStateMachine?.Update(tickDelta);
-            ConsumeMovementEvents();
-
-            // Bewegungsrichtung aus Client-CameraYaw ableiten statt lokaler Kamera.
-            // Auf dem Server gehört Camera.main dem Host, nicht dem Remote-Client.
-            Vector3 lookDir = Quaternion.Euler(0f, input.CameraYaw, 0f) * Vector3.forward;
-
-            var locomotionInput = new LocomotionInput
-            {
-                MoveDirection = ReusableData.MoveInput,
-                LookDirection = lookDir,
-                SpeedModifier = ReusableData.MovementSpeedModifier,
-                StepDetectionEnabled = ReusableData.StepDetectionEnabled,
-                DecelerationOverride = ReusableData.DecelerationOverride,
-                IsSteerMode = false,
-                FacingMode = FacingMode.MovementDirection,
-                FacingDirection = Vector3.zero,
-            };
-
-            Locomotion.Simulate(locomotionInput, tickDelta);
-
-            ReusableData.HorizontalVelocity = Locomotion.HorizontalVelocity;
-            ReusableData.VerticalVelocity = Locomotion.VerticalVelocity;
         }
 
         #endregion

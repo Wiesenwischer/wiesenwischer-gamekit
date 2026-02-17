@@ -7,6 +7,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
     /// Serialisierbare Struktur für Controller-Input.
     /// Wird für Netzwerk-Synchronisation und Prediction verwendet.
     /// </summary>
+    [System.Obsolete("Ersetzt durch MoveReplicateData (Phase 30). Wird in einer zukuenftigen Phase entfernt.")]
     [Serializable]
     public struct ControllerInput : IEquatable<ControllerInput>
     {
@@ -151,6 +152,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
     /// <summary>
     /// Bit-Flags für Controller Buttons.
     /// </summary>
+    [System.Obsolete("Ersetzt durch MoveReplicateData (Phase 30). Wird in einer zukuenftigen Phase entfernt.")]
     [Flags]
     public enum ControllerButtons : ushort
     {

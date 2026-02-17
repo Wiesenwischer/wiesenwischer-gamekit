@@ -72,16 +72,12 @@ namespace Wiesenwischer.GameKit.Network.Editor
             bool hasPlayerController = _playerPrefab.GetComponent<PlayerController>() != null;
             bool hasNetworkObject = _playerPrefab.GetComponent<NetworkObject>() != null;
             bool hasNetworkPlayer = _playerPrefab.GetComponent<NetworkPlayer>() != null;
-            bool hasNetworkInputSync = _playerPrefab.GetComponent<NetworkInputSync>() != null;
-            bool hasNetworkStateSync = _playerPrefab.GetComponent<NetworkStateSync>() != null;
-            bool hasRemoteInterpolator = _playerPrefab.GetComponent<RemotePlayerInterpolator>() != null;
+            bool hasNetworkCharacterDriver = _playerPrefab.GetComponent<NetworkCharacterDriver>() != null;
 
             DrawStatusLine("PlayerController", hasPlayerController, true);
             DrawStatusLine("NetworkObject", hasNetworkObject);
             DrawStatusLine("NetworkPlayer", hasNetworkPlayer);
-            DrawStatusLine("NetworkInputSync", hasNetworkInputSync);
-            DrawStatusLine("NetworkStateSync", hasNetworkStateSync);
-            DrawStatusLine("RemotePlayerInterpolator", hasRemoteInterpolator);
+            DrawStatusLine("NetworkCharacterDriver", hasNetworkCharacterDriver);
 
             if (!hasPlayerController)
             {
@@ -93,8 +89,7 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 return;
             }
 
-            bool allPresent = hasNetworkObject && hasNetworkPlayer &&
-                              hasNetworkInputSync && hasNetworkStateSync && hasRemoteInterpolator;
+            bool allPresent = hasNetworkObject && hasNetworkPlayer && hasNetworkCharacterDriver;
 
             if (allPresent)
             {
@@ -129,17 +124,9 @@ namespace Wiesenwischer.GameKit.Network.Editor
             if (prefabRoot.GetComponent<NetworkPlayer>() == null)
                 prefabRoot.AddComponent<NetworkPlayer>();
 
-            // 3. NetworkInputSync
-            if (prefabRoot.GetComponent<NetworkInputSync>() == null)
-                prefabRoot.AddComponent<NetworkInputSync>();
-
-            // 4. NetworkStateSync
-            if (prefabRoot.GetComponent<NetworkStateSync>() == null)
-                prefabRoot.AddComponent<NetworkStateSync>();
-
-            // 5. RemotePlayerInterpolator
-            if (prefabRoot.GetComponent<RemotePlayerInterpolator>() == null)
-                prefabRoot.AddComponent<RemotePlayerInterpolator>();
+            // 3. NetworkCharacterDriver (ersetzt NetworkInputSync + NetworkStateSync + RemotePlayerInterpolator)
+            if (prefabRoot.GetComponent<NetworkCharacterDriver>() == null)
+                prefabRoot.AddComponent<NetworkCharacterDriver>();
 
             PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
             PrefabUtility.UnloadPrefabContents(prefabRoot);

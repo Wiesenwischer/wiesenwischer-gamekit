@@ -8,6 +8,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
     /// Buffer für Prediction-States.
     /// Speichert Character-Zustände nach Tick für Rollback.
     /// </summary>
+    [System.Obsolete("Ersetzt durch FishNet Native Prediction (Phase 30). FishNet verwaltet Reconcile-States intern. Wird in einer zukuenftigen Phase entfernt.")]
     public class PredictionBuffer
     {
         private readonly PredictionState[] _buffer;
@@ -279,6 +280,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
     /// <summary>
     /// Speichert den Zustand eines Characters für einen bestimmten Tick.
     /// </summary>
+    [System.Obsolete("Ersetzt durch CharacterReconcileData (Phase 30). Wird in einer zukuenftigen Phase entfernt.")]
     [Serializable]
     public struct PredictionState : IEquatable<PredictionState>
     {

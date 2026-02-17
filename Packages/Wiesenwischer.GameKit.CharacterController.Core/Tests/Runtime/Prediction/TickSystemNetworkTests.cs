@@ -1,5 +1,7 @@
 using NUnit.Framework;
 
+#pragma warning disable CS0612 // Obsolete types — Tests fuer Legacy-Prediction-Code
+
 namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
 {
     [TestFixture]

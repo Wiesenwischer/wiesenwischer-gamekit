@@ -7,6 +7,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
     /// Verwaltet ein Fixed Tick System für deterministische Updates.
     /// Unabhängig von Unity's FixedUpdate für bessere Kontrolle.
     /// </summary>
+    [System.Obsolete("Ersetzt durch FishNet Native Prediction (Phase 30). Offline: FixedUpdate, Online: TimeManager.OnTick. Wird in einer zukuenftigen Phase entfernt.")]
     public class TickSystem
     {
         /// <summary>
@@ -174,6 +175,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
     /// <summary>
     /// Konfiguration für das Tick-System.
     /// </summary>
+    [System.Obsolete("Ersetzt durch FishNet Native Prediction (Phase 30). Wird in einer zukuenftigen Phase entfernt.")]
     [Serializable]
     public struct TickConfig
     {
