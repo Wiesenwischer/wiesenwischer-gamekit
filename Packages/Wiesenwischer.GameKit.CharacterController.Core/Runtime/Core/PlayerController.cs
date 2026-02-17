@@ -95,6 +95,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         #endregion
 
+        #region Simulation Driver
+
+        private ISimulationDriver _simulationDriver;
+
+        /// <summary>
+        /// Externer SimulationDriver (z.B. NetworkCharacterDriver).
+        /// Null im Offline-Modus.
+        /// </summary>
+        public ISimulationDriver SimulationDriver => _simulationDriver;
+
+        #endregion
+
         #region Public Properties (Convenience)
 
         /// <summary>Der aktuelle State-Name.</summary>
@@ -160,8 +172,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             // RequestXxx() setzt intern ein Flag das bis zum nächsten Motor FixedUpdate bleibt.
             ConsumeMovementEvents();
 
-            // 4. Tick System aktualisieren (nur kontinuierlicher Input)
-            _tickSystem?.Update(Time.deltaTime);
+            // 4. Tick System aktualisieren (nur ohne externen Driver)
+            if (_simulationDriver == null || !_simulationDriver.IsActive)
+            {
+                _tickSystem?.Update(Time.deltaTime);
+            }
         }
 
         private void OnDestroy()
@@ -266,6 +281,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             // Network Role (falls NetworkPlayer vorhanden, sonst Offline-Default)
             NetworkRole = GetComponent<INetworkRole>() ?? OfflineNetworkRole.Instance;
+
+            // SimulationDriver suchen (optional, nur im Netzwerk-Modus vorhanden)
+            _simulationDriver = GetComponent<ISimulationDriver>();
         }
 
         private void InitializeStateMachine()
@@ -441,6 +459,31 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         #endregion
 
         #region Public Methods
+
+        /// <summary>
+        /// Fuehrt einen vollstaendigen Simulations-Tick aus.
+        /// Wird von ISimulationDriver (online) oder FixedUpdate (offline, ab 30.3) aufgerufen.
+        /// Kombiniert State-Machine-Logik, Events, Physics und Bewegung in einem Tick.
+        /// </summary>
+        public void SimulateTick(float deltaTime)
+        {
+            if (ReusableData == null) return;
+
+            // 1. StateMachine Update (HandleInput + Update)
+            _movementStateMachine?.Update();
+
+            // 2. Movement Events konsumieren (Jump, etc.)
+            ConsumeMovementEvents();
+
+            // 3. StateMachine Physics Update
+            _movementStateMachine?.PhysicsUpdate(deltaTime);
+
+            // 4. Bewegung anwenden
+            ApplyMovement(deltaTime);
+
+            // 5. AbilitySystem Tick
+            AbilitySystem?.Tick(Time.deltaTime); // HINWEIS: wird in 30.2 auf deltaTime umgestellt
+        }
 
         /// <summary>
         /// Setzt den Character auf eine Position.
