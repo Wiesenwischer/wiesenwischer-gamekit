@@ -42,7 +42,10 @@ namespace Wiesenwischer.GameKit.Network
         private bool _lastJumpHeld;
 
         // --- Spectator Prediction ---
+        [SerializeField] private int _spectatorMaxPredictTicks = 4;
         private MoveReplicateData _lastTickedReplicateData;
+        private Vector3 _spectatorPreCorrectionPos;
+        private bool _spectatorNeedsCorrection;
 
         // --- Reconcile Smoothing ---
         private bool _didReconcile;
@@ -197,13 +200,16 @@ namespace Wiesenwischer.GameKit.Network
             {
                 if (state.ContainsTicked())
                 {
+                    // Neuer autoritativer Input — Position VOR Anwendung speichern
+                    _spectatorPreCorrectionPos = _motor.TransientPosition;
+                    _spectatorNeedsCorrection = true;
+
                     _lastTickedReplicateData.Dispose();
                     _lastTickedReplicateData = input;
                 }
                 else if (state.IsFuture())
                 {
-                    // Maximal 2 Ticks in die Zukunft predicten
-                    if (input.GetTick() - _lastTickedReplicateData.GetTick() > 2)
+                    if (input.GetTick() - _lastTickedReplicateData.GetTick() > _spectatorMaxPredictTicks)
                         return;
 
                     input.Dispose();
@@ -233,6 +239,20 @@ namespace Wiesenwischer.GameKit.Network
             if (_motor != null)
             {
                 CharacterMotorSystem.Simulate((float)TimeManager.TickDelta, _motorList);
+            }
+
+            // Spectator Correction: Error berechnen nachdem Simulation mit neuem Input gelaufen ist
+            if (_spectatorNeedsCorrection && state.ContainsTicked() && _smoother != null)
+            {
+                Vector3 postPos = _motor.TransientPosition;
+                Vector3 error = _spectatorPreCorrectionPos - postPos;
+
+                if (error.sqrMagnitude > _smoother.SnapThreshold * _smoother.SnapThreshold)
+                    _smoother.ClearOffset();
+                else
+                    _smoother.SetCorrectionOffset(error, 0f);
+
+                _spectatorNeedsCorrection = false;
             }
 
             // Replay-Guard zuruecksetzen
