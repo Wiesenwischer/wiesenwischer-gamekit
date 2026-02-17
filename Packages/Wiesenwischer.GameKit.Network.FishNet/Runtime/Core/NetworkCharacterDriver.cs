@@ -199,10 +199,12 @@ namespace Wiesenwischer.GameKit.Network
         [Replicate]
         private void PerformReplicate(MoveReplicateData input, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
         {
-            // Owner Reconcile Smoothing: Error nach Replay berechnen.
+            // --- Reconcile Correction (Owner + Non-Owner) ---
+            // FishNet reconciled ALLE predicted Objects via ReconcileToStates.
             // state.ContainsTicked() = erster nicht-replayed Tick → alle Replays sind durch.
             // TransientPosition enthaelt jetzt die korrigierte Prediction (Reconcile + Replays).
             // NICHT auf dem Server/Host: Server ist autoritaet, Reconcile-Error ist nur FP-Noise.
+            bool handledReconcile = false;
             if (_didReconcile && !IsServerStarted && state.ContainsTicked() && _smoother != null)
             {
                 if (_debugLog)
@@ -215,19 +217,30 @@ namespace Wiesenwischer.GameKit.Network
                     _preReconcilePosition, _preReconcileRotation,
                     _motor.TransientPosition, _motor.TransientRotation.eulerAngles.y);
                 _didReconcile = false;
+                handledReconcile = true;
             }
 
-            // Spectator Prediction: letzten bekannten Input fuer Non-Owner verwenden
+            // --- Spectator Prediction (Non-Owner) ---
+            // FishNet reconciled Non-Owner-Objekte ebenfalls via ReconcileToStates.
+            // Wenn Reconcile gerade gelaufen ist, KEINE zusaetzliche Spectator-Correction:
+            //   OnReconcileComplete: offset += (preReconcile - postReplay) [korrekt]
+            //   OnSpectatorCorrection: offset += (postReplay - postSim) = -movement [FALSCH!]
+            //   → Jeder Tick addiert -movement zum Offset → persistenter visueller Lag bei Bewegung.
+            // lastTickedReplicateData IMMER aktualisieren (fuer Future-Tick Prediction).
             if (!IsServerStarted && !IsOwner)
             {
                 if (state.ContainsTicked())
                 {
-                    // Neuer autoritativer Input — Position VOR Anwendung speichern
-                    _spectatorPreCorrectionPos = _motor.TransientPosition;
-                    _spectatorNeedsCorrection = true;
-
+                    // Input fuer Future-Tick Prediction speichern (immer, auch nach Reconcile)
                     _lastTickedReplicateData.Dispose();
                     _lastTickedReplicateData = input;
+
+                    // Spectator-Correction NUR wenn kein Reconcile diesen Tick gehandhabt hat
+                    if (!handledReconcile)
+                    {
+                        _spectatorPreCorrectionPos = _motor.TransientPosition;
+                        _spectatorNeedsCorrection = true;
+                    }
                 }
                 else if (state.IsFuture())
                 {
