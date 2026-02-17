@@ -380,7 +380,7 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [x] [30.2 Deterministisches Timing](phase-30-fishnet-prediction/30.2-deterministic-timing.md)
 - [x] [30.3 FixedUpdate Offline-Modus](phase-30-fishnet-prediction/30.3-offline-fixedupdate.md)
 - [x] [30.4 MoveReplicateData + CharacterReconcileData](phase-30-fishnet-prediction/30.4-replicate-reconcile-data.md)
-- [ ] [30.5 NetworkCharacterDriver](phase-30-fishnet-prediction/30.5-network-character-driver.md)
+- [x] [30.5 NetworkCharacterDriver](phase-30-fishnet-prediction/30.5-network-character-driver.md)
 - [ ] [30.6 PlayerController + NetworkPlayer Integration](phase-30-fishnet-prediction/30.6-network-integration.md)
 - [ ] [30.7 Alten Prediction-Code aufräumen](phase-30-fishnet-prediction/30.7-prediction-cleanup.md)
 - [ ] [30.8 NetworkAnimationSync Replay-Guard](phase-30-fishnet-prediction/30.8-animation-sync-replay.md)
