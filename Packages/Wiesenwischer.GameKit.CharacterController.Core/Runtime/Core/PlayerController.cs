@@ -86,15 +86,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         #endregion
 
-        #region Tick System
-
-        private TickSystem _tickSystem;
-
-        /// <summary>Das Tick-System.</summary>
-        public TickSystem TickSystem => _tickSystem;
-
-        #endregion
-
         #region Simulation Driver
 
         private ISimulationDriver _simulationDriver;
@@ -127,8 +118,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Die aktuelle Geschwindigkeit.</summary>
         public Vector3 Velocity => ReusableData?.Velocity ?? Vector3.zero;
 
-        /// <summary>Aktueller Tick.</summary>
-        public int CurrentTick => _tickSystem?.CurrentTick ?? 0;
+        /// <summary>Aktueller Tick (einfacher Counter, im Netzwerk-Modus vom Driver gesetzt).</summary>
+        private int _currentTick;
+        public int CurrentTick => _currentTick;
+
+        /// <summary>Tick-Delta fuer die Simulation (FixedUpdate-Intervall).</summary>
+        public float TickDelta => Time.fixedDeltaTime;
 
         /// <summary>Ground-Informationen vom Motor.</summary>
         public GroundInfo GroundInfo => Locomotion?.GroundInfo ?? GroundInfo.Empty;
@@ -140,7 +135,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         private void Awake()
         {
             InitializeComponents();
-            InitializeTickSystem();
             InitializeSystems();
             InitializeStateMachine();
         }
@@ -153,38 +147,26 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void Update()
         {
-            // Nur der Owner simuliert Input + Prediction.
+            // Nur der Owner simuliert Input.
             // Im Offline-Modus: OfflineNetworkRole.IsOwner == true → alles läuft wie bisher.
             if (!NetworkRole.IsOwner) return;
 
-            // 1. Input lesen und in ReusableData schreiben
+            // Input wird immer in Update() gesammelt (Frame-Rate).
+            // Simulation laeuft in FixedUpdate() oder ueber externen Driver.
             UpdateInput();
-
-            // 2. State Machine Update (HandleInput + Update)
-            _movementStateMachine?.Update(Time.deltaTime);
-
-            // 2b. Ability System Tick (nach State Machine, reagiert auf aktuellen State)
-            AbilitySystem?.Tick(Time.deltaTime);
-
-            // 3. Events direkt an Locomotion weiterleiten (vor TickSystem).
-            // Events sind One-Shot und dürfen nicht durch den TickSystem-Bottleneck,
-            // weil Simulate() per Overwrite arbeitet (latest-value-wins für kontinuierliche Daten).
-            // RequestXxx() setzt intern ein Flag das bis zum nächsten Motor FixedUpdate bleibt.
-            ConsumeMovementEvents();
-
-            // 4. Tick System aktualisieren (nur ohne externen Driver)
-            if (_simulationDriver == null || !_simulationDriver.IsActive)
-            {
-                _tickSystem?.Update(Time.deltaTime);
-            }
         }
 
-        private void OnDestroy()
+        private void FixedUpdate()
         {
-            if (_tickSystem != null)
-            {
-                _tickSystem.OnTick -= OnFixedTick;
-            }
+            // Nur simulieren wenn KEIN externer Driver aktiv ist.
+            // Im Netzwerk-Modus treibt NetworkCharacterDriver die Simulation.
+            if (_simulationDriver != null && _simulationDriver.IsActive)
+                return;
+
+            // Nur der Owner simuliert.
+            if (!NetworkRole.IsOwner) return;
+
+            SimulateTick(Time.fixedDeltaTime);
         }
 
         private void OnDrawGizmos()
@@ -261,12 +243,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 Debug.LogWarning("[PlayerController] WARNUNG: GroundLayers ist leer.");
         }
 
-        private void InitializeTickSystem()
-        {
-            _tickSystem = new TickSystem(TickSystem.DefaultTickRate);
-            _tickSystem.OnTick += OnFixedTick;
-        }
-
         private void InitializeSystems()
         {
             if (_config == null || CharacterMotor == null) return;
@@ -324,34 +300,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         }
 
         /// <summary>
-        /// Fixed Tick - Physics Update.
-        /// </summary>
-        private void OnFixedTick(int tick, float deltaTime)
-        {
-            if (ReusableData == null) return;
-
-            // Update Tick in ReusableData
-            ReusableData.CurrentTick = tick;
-
-            // Ground-State wird NICHT in ReusableData synchronisiert.
-            // States befragen Locomotion direkt (Player.Locomotion.IsGrounded etc.)
-
-            // State Machine Physics Update
-            _movementStateMachine?.PhysicsUpdate(deltaTime);
-
-            // === PHASE 2: Movement ===
-            ApplyMovement(deltaTime);
-
-            // === PHASE 3: Sync Motor State zurück ===
-            // Nach ApplyMovement() hat der Motor den aktuellen Ground-State
-            // Diesen für den NÄCHSTEN Frame verfügbar machen
-            // (Wird am Anfang des nächsten Ticks gelesen)
-        }
-
-        /// <summary>
         /// Leitet One-Shot Events von ReusableData an Locomotion weiter.
-        /// Wird in Update() aufgerufen (vor TickSystem), damit Events nicht
-        /// durch den TickSystem/Simulate()-Bottleneck verloren gehen.
+        /// Wird innerhalb von SimulateTick() aufgerufen.
         /// </summary>
         private void ConsumeMovementEvents()
         {
@@ -483,6 +433,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             // 5. AbilitySystem Tick
             AbilitySystem?.Tick(deltaTime);
+
+            // 6. Tick-Counter inkrementieren
+            _currentTick++;
         }
 
         /// <summary>

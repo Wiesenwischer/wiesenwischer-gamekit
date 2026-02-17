@@ -136,7 +136,7 @@ namespace Wiesenwischer.GameKit.Network
 
             int currentTick = _player.CurrentTick;
             var pendingInputs = _inputBuffer.GetRange(serverState.Tick + 1, currentTick);
-            float tickDelta = _player.TickSystem.TickDelta;
+            float tickDelta = _player.TickDelta;
 
             foreach (var input in pendingInputs)
             {

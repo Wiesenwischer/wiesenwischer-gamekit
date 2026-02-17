@@ -125,9 +125,9 @@ namespace Wiesenwischer.GameKit.Network
 
         private void SimulateOnServer(ControllerInput input)
         {
-            if (_player?.TickSystem == null) return;
+            if (_player == null) return;
 
-            float tickDelta = _player.TickSystem.TickDelta;
+            float tickDelta = _player.TickDelta;
             _player.ApplyNetworkInput(input, tickDelta);
 
             // State an alle Clients broadcasten

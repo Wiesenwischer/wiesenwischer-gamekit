@@ -118,16 +118,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
                 DrawVector3Field("Total Velocity", reusableData.Velocity);
             }
 
-            // Tick System
+            // Simulation
             EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("Tick System", _headerStyle);
+            EditorGUILayout.LabelField("Simulation", _headerStyle);
             EditorGUILayout.LabelField("Current Tick:", _controller.CurrentTick.ToString());
-
-            if (_controller.TickSystem != null)
-            {
-                EditorGUILayout.LabelField("Tick Rate:", $"{_controller.TickSystem.TickRate} Hz");
-                EditorGUILayout.LabelField("Tick Delta:", $"{_controller.TickSystem.TickDelta * 1000:F2} ms");
-            }
+            EditorGUILayout.LabelField("Tick Delta:", $"{_controller.TickDelta * 1000:F2} ms");
 
             // Ground Info (direkt vom Motor)
             var gi = _controller.GroundInfo;
