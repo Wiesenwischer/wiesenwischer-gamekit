@@ -3,17 +3,18 @@ using UnityEngine;
 namespace Wiesenwischer.GameKit.Network
 {
     /// <summary>
-    /// Visuelles Smoothing fuer Netzwerk-Reconciliation.
-    /// Speichert einen Correction-Offset und baut ihn exponentiell ab.
+    /// Einheitliches Visual-Smoothing fuer Netzwerk-Characters.
+    /// Handhabt BEIDES: Tick-Interpolation UND Reconcile-Correction.
     ///
-    /// Laeuft in LateUpdate NACH CharacterMotorSystem (ExecOrder -100).
-    /// Motor setzt Transform.position via CustomInterpolationUpdate().
-    /// ReconcileSmoother addiert den abklingenden Offset darauf.
+    /// Ersetzt die KCC-eigene CustomInterpolationUpdate (CharacterMotorSystem.Settings.Interpolate = false).
+    /// Damit gibt es nur EIN System das Transform.position in LateUpdate schreibt — kein Kaempfen.
     ///
     /// Flow:
-    /// 1. NetworkCharacterDriver berechnet Error nach Reconcile+Replay
-    /// 2. SetCorrectionOffset(error) → Offset wird gespeichert
-    /// 3. Jedes Frame: Offset decayed exponentiell → visuell sanfte Korrektur
+    /// 1. OnPreTick(): Speichert Interpolations-Startpunkt (TransientPosition VOR Simulation)
+    /// 2. [Replicate]: Simulation laeuft, TransientPosition aendert sich
+    /// 3. OnReconcileComplete(): Bei Reconcile — Error berechnen, Startpunkt korrigieren
+    /// 4. OnPostTick(): Speichert Interpolations-Endpunkt (TransientPosition NACH Simulation)
+    /// 5. LateUpdate: Interpoliert zwischen Start/End + decaying Correction-Offset
     /// </summary>
     [DefaultExecutionOrder(100)]
     public class ReconcileSmoother : MonoBehaviour
@@ -39,10 +40,20 @@ namespace Wiesenwischer.GameKit.Network
         [Tooltip("Loggt Corrections die groesser als MinCorrectionThreshold sind.")]
         [SerializeField] private bool _debugLog;
 
+        // --- Tick Interpolation ---
+        private Vector3 _tickStartPos;
+        private Quaternion _tickStartRot;
+        private Vector3 _tickEndPos;
+        private Quaternion _tickEndRot;
+        private float _interpStartTime;
+        private float _interpDeltaTime;
+        private bool _initialized;
+
+        // --- Correction Offset ---
         private Vector3 _positionOffset;
         private float _rotationOffset;
 
-        /// <summary>Snap-Threshold fuer externe Abfrage (NetworkCharacterDriver).</summary>
+        /// <summary>Snap-Threshold fuer externe Abfrage.</summary>
         public float SnapThreshold => _snapThreshold;
 
         /// <summary>Aktueller visueller Offset (fuer Debug).</summary>
@@ -51,19 +62,85 @@ namespace Wiesenwischer.GameKit.Network
         /// <summary>Aktueller Rotations-Offset in Grad (fuer Debug).</summary>
         public float CurrentRotationOffset => _rotationOffset;
 
-        /// <summary>
-        /// Akkumuliert einen neuen Correction-Offset auf den bestehenden.
-        /// WICHTIG: Muss akkumulieren statt ersetzen, da zwischen Reconcile-Ticks
-        /// noch ein Rest-Offset vom Decay existiert. Ersetzen wuerde diesen Rest
-        /// verwerfen und einen sichtbaren visuellen Sprung verursachen (Jitter).
-        /// </summary>
-        public void SetCorrectionOffset(Vector3 positionError, float rotationError)
-        {
-            _positionOffset += positionError;
-            _rotationOffset += rotationError;
+        /// <summary>Ob der Smoother aktiv interpoliert (nach erstem OnPreTick).</summary>
+        public bool IsActive => _initialized;
 
-            if (_debugLog && positionError.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold)
-                Debug.Log($"[ReconcileSmoother] Correction: pos={positionError.magnitude:F4}m rot={rotationError:F2}°");
+        #region Tick Lifecycle
+
+        /// <summary>
+        /// Wird von NetworkCharacterDriver VOR dem Tick aufgerufen.
+        /// Speichert den Interpolations-Startpunkt (= aktuelle Motor-Position).
+        /// </summary>
+        public void OnPreTick(Vector3 motorPos, Quaternion motorRot)
+        {
+            _tickStartPos = motorPos;
+            _tickStartRot = motorRot;
+            _initialized = true;
+        }
+
+        /// <summary>
+        /// Wird von NetworkCharacterDriver NACH dem Tick aufgerufen.
+        /// Speichert den Interpolations-Endpunkt und startet das Timing.
+        /// </summary>
+        public void OnPostTick(Vector3 motorPos, Quaternion motorRot, float tickDelta)
+        {
+            _tickEndPos = motorPos;
+            _tickEndRot = motorRot;
+            _interpStartTime = Time.time;
+            _interpDeltaTime = tickDelta;
+        }
+
+        #endregion
+
+        #region Reconcile Correction
+
+        /// <summary>
+        /// Wird nach Owner-Reconcile+Replay aufgerufen (in PerformReplicate, ContainsTicked).
+        /// Berechnet Error, akkumuliert Offset, und korrigiert den Interpolations-Startpunkt.
+        /// </summary>
+        public void OnReconcileComplete(Vector3 preReconcilePos, float preReconcileRotY,
+                                         Vector3 correctedPos, float correctedRotY)
+        {
+            Vector3 posError = preReconcilePos - correctedPos;
+            float rotError = Mathf.DeltaAngle(correctedRotY, preReconcileRotY);
+
+            if (posError.sqrMagnitude > _snapThreshold * _snapThreshold)
+            {
+                ClearOffset();
+            }
+            else
+            {
+                _positionOffset += posError;
+                _rotationOffset += rotError;
+            }
+
+            // Interpolations-Startpunkt auf korrigierte Position setzen.
+            // Verhindert dass die Interpolation die Korrektur-Distanz durchlaeuft.
+            _tickStartPos = correctedPos;
+            _tickStartRot = Quaternion.Euler(0f, correctedRotY, 0f);
+
+            if (_debugLog && posError.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold)
+                Debug.Log($"[ReconcileSmoother] Reconcile: pos={posError.magnitude:F4}m rot={rotError:F2}°");
+        }
+
+        /// <summary>
+        /// Wird nach Spectator-Correction aufgerufen (nach Simulation mit neuem autoritativem Input).
+        /// </summary>
+        public void OnSpectatorCorrection(Vector3 prePos, Vector3 postPos, Quaternion postRot)
+        {
+            Vector3 error = prePos - postPos;
+
+            if (error.sqrMagnitude > _snapThreshold * _snapThreshold)
+                ClearOffset();
+            else
+                _positionOffset += error;
+
+            // Endpunkt aktualisieren (Simulation hat mit neuem Input eine andere Position erzeugt)
+            _tickEndPos = postPos;
+            _tickEndRot = postRot;
+
+            if (_debugLog && error.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold)
+                Debug.Log($"[ReconcileSmoother] Spectator: pos={error.magnitude:F4}m");
         }
 
         /// <summary>
@@ -75,52 +152,74 @@ namespace Wiesenwischer.GameKit.Network
             _rotationOffset = 0f;
         }
 
+        /// <summary>
+        /// Setzt den Smoother komplett zurueck (z.B. bei Disconnect).
+        /// </summary>
+        public void Reset()
+        {
+            ClearOffset();
+            _initialized = false;
+        }
+
+        #endregion
+
+        #region Visual Update
+
         private void LateUpdate()
         {
+            // Offline-Guard: Ohne OnPreTick-Call kein Smoothing
+            // (KCC handhabt Interpolation selbst via CustomInterpolationUpdate)
+            if (!_initialized) return;
+
+            // 1. Tick-Interpolation (ersetzt CharacterMotorSystem.CustomInterpolationUpdate)
+            float factor = (_interpDeltaTime > 0f)
+                ? Mathf.Clamp01((Time.time - _interpStartTime) / _interpDeltaTime)
+                : 1f;
+
+            Vector3 interpPos = Vector3.Lerp(_tickStartPos, _tickEndPos, factor);
+            Quaternion interpRot = Quaternion.Slerp(_tickStartRot, _tickEndRot, factor);
+
+            // 2. Offset-Decay
             bool hasPosition = _positionOffset.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold;
             bool hasRotation = Mathf.Abs(_rotationOffset) > _minCorrectionThreshold;
 
-            if (!hasPosition && !hasRotation)
+            if (hasPosition || hasRotation)
             {
-                _positionOffset = Vector3.zero;
-                _rotationOffset = 0f;
-                return;
+                // Frame-rate-unabhaengiger exponentieller Decay.
+                float dt = Time.deltaTime * 60f;
+                float posFactor = Mathf.Pow(1f - _correctionRate, dt);
+                float rotFactor = Mathf.Pow(1f - _rotationCorrectionRate, dt);
+
+                _positionOffset *= posFactor;
+                _rotationOffset *= rotFactor;
+
+                // Micro-Jitter vermeiden
+                if (_positionOffset.sqrMagnitude < _minCorrectionThreshold * _minCorrectionThreshold)
+                    _positionOffset = Vector3.zero;
+                if (Mathf.Abs(_rotationOffset) < _minCorrectionThreshold)
+                    _rotationOffset = 0f;
             }
 
-            // Frame-rate-unabhaengiger exponentieller Decay.
-            // Bei 60fps und rate=0.25: factor = (1-0.25)^1 = 0.75 → 25% Reduktion pro Frame.
-            // Bei 30fps: factor = (1-0.25)^2 = 0.5625 → ~44% Reduktion pro Frame (= gleiche Rate ueber Zeit).
-            float dt = Time.deltaTime * 60f; // Normalisiert auf 60fps
-            float posFactor = Mathf.Pow(1f - _correctionRate, dt);
-            float rotFactor = Mathf.Pow(1f - _rotationCorrectionRate, dt);
-
-            _positionOffset *= posFactor;
-            _rotationOffset *= rotFactor;
-
-            // Micro-Jitter vermeiden
-            if (_positionOffset.sqrMagnitude < _minCorrectionThreshold * _minCorrectionThreshold)
-                _positionOffset = Vector3.zero;
-            if (Mathf.Abs(_rotationOffset) < _minCorrectionThreshold)
-                _rotationOffset = 0f;
-
-            // Offset auf Transform anwenden (NACH Motor's CustomInterpolationUpdate)
-            if (_positionOffset != Vector3.zero)
-                transform.position += _positionOffset;
-
-            if (_rotationOffset != 0f)
-                transform.rotation *= Quaternion.Euler(0f, _rotationOffset, 0f);
+            // 3. Final Visual = Interpolation + Correction Offset
+            transform.position = interpPos + _positionOffset;
+            transform.rotation = interpRot * Quaternion.Euler(0f, _rotationOffset, 0f);
         }
+
+        #endregion
+
+        #region Debug
 
         private void OnDrawGizmos()
         {
             if (_positionOffset.sqrMagnitude < _minCorrectionThreshold * _minCorrectionThreshold)
                 return;
 
-            // Gelbe Linie: von aktueller Position zu wo die Position ohne Offset waere
             Gizmos.color = Color.yellow;
             Vector3 correctedTarget = transform.position - _positionOffset;
             Gizmos.DrawLine(transform.position, correctedTarget);
             Gizmos.DrawWireSphere(correctedTarget, 0.05f);
         }
+
+        #endregion
     }
 }

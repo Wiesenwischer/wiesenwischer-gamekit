@@ -13,12 +13,12 @@ namespace Wiesenwischer.GameKit.Network
     /// Treibt die Character-Simulation ueber FishNet's TimeManager.OnTick.
     /// Ersetzt NetworkInputSync + NetworkStateSync durch native [Replicate]/[Reconcile].
     ///
-    /// Tick-Flow (KRITISCH — korrekte Reihenfolge):
-    /// OnTick:     PreSimInterp → BuildInput → [Replicate](SimulateTick + Motor.Simulate)
-    /// OnPostTick: CreateReconcile → PostSimInterp
+    /// Tick-Flow:
+    /// OnTick:     Smoother.OnPreTick → BuildInput → [Replicate](SimulateTick + Motor.Simulate)
+    /// OnPostTick: CreateReconcile → Smoother.OnPostTick
     ///
-    /// Pre/Post-Interpolation DARF NICHT in [Replicate] stehen, da [Replicate]
-    /// auch waehrend Reconcile-Replay aufgerufen wird (mehrere Ticks hintereinander).
+    /// KCC-Interpolation ist deaktiviert (Settings.Interpolate = false).
+    /// ReconcileSmoother handhabt Tick-Interpolation UND Reconcile-Smoothing in einem System.
     /// </summary>
     [RequireComponent(typeof(PlayerController))]
     public class NetworkCharacterDriver : TickNetworkBehaviour, ISimulationDriver
@@ -52,12 +52,6 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _preReconcilePosition;
         private float _preReconcileRotation;
 
-        // --- Interpolation Tick Guard ---
-        // PreSimInterp/PostSimInterp sind GLOBALE Calls (betreffen alle Motoren).
-        // Muessen genau 1x pro Tick aufgerufen werden, nicht pro Spieler.
-        private static uint _lastPreInterpTick;
-        private static uint _lastPostInterpTick;
-
         #region Lifecycle
 
         public override void OnStartNetwork()
@@ -73,18 +67,27 @@ namespace Wiesenwischer.GameKit.Network
             _motorList.Clear();
             _motorList.Add(_motor);
 
-            // Motor-Simulation manuell steuern (kein FixedUpdate)
-            // ACHTUNG: AutoSimulation ist global — betrifft ALLE Motoren.
+            // Motor-Simulation manuell steuern (kein FixedUpdate).
+            // ACHTUNG: Beide Settings sind global — betrifft ALLE Motoren.
             // Korrekt fuer MMO (alle Spieler netzwerk-getrieben).
             CharacterMotorSystem.Settings.AutoSimulation = false;
+
+            // KCC-Interpolation deaktivieren — ReconcileSmoother uebernimmt.
+            // CustomInterpolationUpdate kaempft sonst gegen den Smoother (Doppel-Korrektur).
+            CharacterMotorSystem.Settings.Interpolate = false;
         }
 
         public override void OnStopNetwork()
         {
             base.OnStopNetwork();
 
-            // Zurueck zum Offline-Modus
+            // Smoother zuruecksetzen
+            if (_smoother != null)
+                _smoother.Reset();
+
+            // Zurueck zum Offline-Modus (KCC handhabt alles selbst)
             CharacterMotorSystem.Settings.AutoSimulation = true;
+            CharacterMotorSystem.Settings.Interpolate = true;
         }
 
         #endregion
@@ -112,15 +115,9 @@ namespace Wiesenwischer.GameKit.Network
 
         protected override void TimeManager_OnTick()
         {
-            // 1. Interpolation vorbereiten (NUR beim echten Tick, NICHT in Replay!)
-            // WICHTIG: PreSimInterp ist ein GLOBALER Call — darf nur 1x pro Tick laufen,
-            // nicht pro Spieler (sonst doppelter Interpolation-Update → Jitter).
-            uint tick = TimeManager.Tick;
-            if (_motor != null && _lastPreInterpTick != tick)
-            {
-                _lastPreInterpTick = tick;
-                CharacterMotorSystem.PreSimulationInterpolationUpdate((float)TimeManager.TickDelta);
-            }
+            // 1. Interpolations-Startpunkt speichern (aktuelle Motor-Position VOR Simulation)
+            if (_smoother != null && _motor != null)
+                _smoother.OnPreTick(_motor.TransientPosition, _motor.TransientRotation);
 
             // 2. Input sammeln + Replicate aufrufen
             BuildAndReplicate();
@@ -128,17 +125,13 @@ namespace Wiesenwischer.GameKit.Network
 
         protected override void TimeManager_OnPostTick()
         {
-            // 3. Reconcile (nach Simulation, vor Interpolation-Abschluss)
+            // 3. Reconcile-Daten erstellen und senden
             CreateReconcile();
 
-            // 4. Interpolation abschliessen (NUR beim echten Tick, NICHT in Replay!)
-            // Gleicher Guard wie oben — globaler Call, nur 1x pro Tick.
-            uint tick = TimeManager.Tick;
-            if (_motor != null && _lastPostInterpTick != tick)
-            {
-                _lastPostInterpTick = tick;
-                CharacterMotorSystem.PostSimulationInterpolationUpdate((float)TimeManager.TickDelta);
-            }
+            // 4. Interpolations-Endpunkt speichern (Motor-Position NACH Simulation)
+            if (_smoother != null && _motor != null)
+                _smoother.OnPostTick(_motor.TransientPosition, _motor.TransientRotation,
+                                     (float)TimeManager.TickDelta);
         }
 
         #endregion
@@ -199,25 +192,9 @@ namespace Wiesenwischer.GameKit.Network
             // NICHT auf dem Server/Host: Server ist autoritaet, Reconcile-Error ist nur FP-Noise.
             if (_didReconcile && !IsServerStarted && state.ContainsTicked() && _smoother != null)
             {
-                Vector3 correctedPos = _motor.TransientPosition;
-                float correctedRot = _motor.TransientRotation.eulerAngles.y;
-
-                Vector3 posError = _preReconcilePosition - correctedPos;
-                float rotError = Mathf.DeltaAngle(correctedRot, _preReconcileRotation);
-
-                if (posError.sqrMagnitude > _smoother.SnapThreshold * _smoother.SnapThreshold)
-                    _smoother.ClearOffset();
-                else
-                    _smoother.SetCorrectionOffset(posError, rotError);
-
-                // KRITISCH: InitialTickPosition korrigieren.
-                // PreSimInterp hat InitialTickPosition VOR dem Reconcile gespeichert.
-                // CustomInterpolationUpdate lerpt von InitialTickPosition → TransientPosition.
-                // Ohne dieses Update lerpt die Interpolation ueber die volle Korrektur-Distanz
-                // UND der Smoother addiert den Error nochmal → Doppel-Korrektur = Jitter.
-                _motor.InitialTickPosition = correctedPos;
-                _motor.InitialTickRotation = Quaternion.Euler(0f, correctedRot, 0f);
-
+                _smoother.OnReconcileComplete(
+                    _preReconcilePosition, _preReconcileRotation,
+                    _motor.TransientPosition, _motor.TransientRotation.eulerAngles.y);
                 _didReconcile = false;
             }
 
@@ -270,19 +247,10 @@ namespace Wiesenwischer.GameKit.Network
             // Spectator Correction: Error berechnen nachdem Simulation mit neuem Input gelaufen ist
             if (_spectatorNeedsCorrection && state.ContainsTicked() && _smoother != null)
             {
-                Vector3 postPos = _motor.TransientPosition;
-                Vector3 error = _spectatorPreCorrectionPos - postPos;
-
-                if (error.sqrMagnitude > _smoother.SnapThreshold * _smoother.SnapThreshold)
-                    _smoother.ClearOffset();
-                else
-                    _smoother.SetCorrectionOffset(error, 0f);
-
-                // Gleicher Fix wie bei Owner Reconcile: InitialTickPosition korrigieren,
-                // damit Interpolation nicht gegen den Smoother kaempft.
-                _motor.InitialTickPosition = postPos;
-                _motor.InitialTickRotation = _motor.TransientRotation;
-
+                _smoother.OnSpectatorCorrection(
+                    _spectatorPreCorrectionPos,
+                    _motor.TransientPosition,
+                    _motor.TransientRotation);
                 _spectatorNeedsCorrection = false;
             }
 
