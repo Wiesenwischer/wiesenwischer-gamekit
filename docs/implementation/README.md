@@ -383,7 +383,7 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [x] [30.5 NetworkCharacterDriver](phase-30-fishnet-prediction/30.5-network-character-driver.md)
 - [x] [30.6 PlayerController + NetworkPlayer Integration](phase-30-fishnet-prediction/30.6-network-integration.md)
 - [x] [30.7 Alten Prediction-Code aufräumen](phase-30-fishnet-prediction/30.7-prediction-cleanup.md)
-- [ ] [30.8 NetworkAnimationSync Replay-Guard](phase-30-fishnet-prediction/30.8-animation-sync-replay.md)
+- [x] [30.8 NetworkAnimationSync Replay-Guard](phase-30-fishnet-prediction/30.8-animation-sync-replay.md)
 - [ ] [30.9 Tests + Verifikation](phase-30-fishnet-prediction/30.9-tests-verification.md)
 
 ---
