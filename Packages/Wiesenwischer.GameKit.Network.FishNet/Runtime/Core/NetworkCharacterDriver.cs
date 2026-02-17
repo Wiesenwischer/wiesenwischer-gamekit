@@ -26,6 +26,7 @@ namespace Wiesenwischer.GameKit.Network
         // --- Referenzen ---
         private PlayerController _player;
         private CharacterMotor _motor;
+        private NetworkAnimationSync _animSync;
         private readonly List<CharacterMotor> _motorList = new(1);
 
         // --- ISimulationDriver ---
@@ -50,6 +51,7 @@ namespace Wiesenwischer.GameKit.Network
 
             _player = GetComponent<PlayerController>();
             _motor = GetComponent<CharacterMotor>();
+            _animSync = GetComponent<NetworkAnimationSync>();
 
             // Cache motor list (vermeidet GC-Alloc pro Tick)
             _motorList.Clear();
@@ -187,6 +189,11 @@ namespace Wiesenwischer.GameKit.Network
                 }
             }
 
+            // Replay-Guard: Waehrend Reconcile-Replay keine Animations-RPCs senden
+            bool isReplay = state.IsReplayed();
+            if (_animSync != null)
+                _animSync.SetReplayMode(isReplay);
+
             // Input auf Player setzen
             ApplyInputToPlayer(input);
 
@@ -201,6 +208,10 @@ namespace Wiesenwischer.GameKit.Network
             {
                 CharacterMotorSystem.Simulate((float)TimeManager.TickDelta, _motorList);
             }
+
+            // Replay-Guard zuruecksetzen
+            if (_animSync != null)
+                _animSync.SetReplayMode(false);
         }
 
         private void ApplyInputToPlayer(MoveReplicateData input)

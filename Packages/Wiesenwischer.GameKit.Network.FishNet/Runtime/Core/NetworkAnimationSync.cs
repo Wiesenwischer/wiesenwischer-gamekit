@@ -31,6 +31,12 @@ namespace Wiesenwischer.GameKit.Network
         private AnimationSnapshot _lastSnapshot;
         private int _framesSinceLastParamSync;
 
+        /// <summary>
+        /// Flag das anzeigt ob aktuell ein Reconcile-Replay laeuft.
+        /// Waehrend Replay duerfen keine Netzwerk-Events gesendet werden.
+        /// </summary>
+        private bool _isReplaying;
+
         // Lag Compensation
         private ushort _stateSequence;
         private ushort _lastReceivedSequence;
@@ -38,8 +44,12 @@ namespace Wiesenwischer.GameKit.Network
         /// <summary>
         /// SyncVar für Initial State Sync: Neue Clients erhalten den aktuellen State sofort.
         /// </summary>
-        [SyncVar(OnChange = nameof(OnSyncAnimStateChanged))]
-        private byte _syncAnimState;
+        private readonly SyncVar<byte> _syncAnimState = new();
+
+        private void Awake()
+        {
+            _syncAnimState.OnChange += OnSyncAnimStateChanged;
+        }
 
         public override void OnStartNetwork()
         {
@@ -61,12 +71,22 @@ namespace Wiesenwischer.GameKit.Network
         }
 
         /// <summary>
+        /// Wird von NetworkCharacterDriver gesetzt waehrend Reconcile-Replay.
+        /// Waehrend Replay duerfen keine Netzwerk-RPCs gesendet werden.
+        /// </summary>
+        public void SetReplayMode(bool isReplaying)
+        {
+            _isReplaying = isReplaying;
+        }
+
+        /// <summary>
         /// Wird vom AnimatorParameterBridge aufgerufen wenn PlayState() getriggert wird.
         /// Nur der Owner sendet State-Änderungen.
         /// </summary>
         public void OnLocalStateChanged(CharacterAnimationState state)
         {
             if (!IsOwner) return;
+            if (_isReplaying) return;
             if (state == _lastSyncedState && _initialized) return;
 
             _lastSyncedState = state;
@@ -77,7 +97,7 @@ namespace Wiesenwischer.GameKit.Network
 
             if (IsServerStarted)
             {
-                _syncAnimState = (byte)state;
+                _syncAnimState.Value = (byte)state;
                 ObserversRpcAnimationState((byte)state, timestamp, _stateSequence);
             }
             else
@@ -121,7 +141,7 @@ namespace Wiesenwischer.GameKit.Network
         [ServerRpc]
         private void ServerRpcAnimationState(byte stateValue, float timestamp, ushort sequence)
         {
-            _syncAnimState = stateValue;
+            _syncAnimState.Value = stateValue;
             ObserversRpcAnimationState(stateValue, timestamp, sequence);
         }
 
@@ -146,14 +166,14 @@ namespace Wiesenwischer.GameKit.Network
 
         #region Parameter RPCs
 
-        [ServerRpc(Channel = Channel.Unreliable)]
-        private void ServerRpcAnimationParams(AnimationSnapshot snapshot)
+        [ServerRpc]
+        private void ServerRpcAnimationParams(AnimationSnapshot snapshot, Channel channel = Channel.Unreliable)
         {
-            ObserversRpcAnimationParams(snapshot);
+            ObserversRpcAnimationParams(snapshot, channel);
         }
 
-        [ObserversRpc(ExcludeOwner = true, Channel = Channel.Unreliable)]
-        private void ObserversRpcAnimationParams(AnimationSnapshot snapshot)
+        [ObserversRpc(ExcludeOwner = true)]
+        private void ObserversRpcAnimationParams(AnimationSnapshot snapshot, Channel channel = Channel.Unreliable)
         {
             _animController?.SetSpeed(snapshot.Speed);
             _animController?.SetVerticalVelocity(snapshot.VerticalVelocity);
