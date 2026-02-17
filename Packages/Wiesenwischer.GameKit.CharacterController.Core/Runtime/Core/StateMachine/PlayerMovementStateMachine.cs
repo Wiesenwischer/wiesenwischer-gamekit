@@ -142,10 +142,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         /// <summary>
         /// Update der State Machine - ruft HandleInput, Update auf.
         /// </summary>
-        public void Update()
+        public void Update(float deltaTime)
         {
             _currentState?.HandleInput();
-            _currentState?.Update();
+            _currentState?.Update(deltaTime);
         }
 
         /// <summary>
@@ -201,8 +201,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine
         /// <summary>Verarbeitet Input (jeden Frame in Update).</summary>
         void HandleInput();
 
-        /// <summary>Update (jeden Frame).</summary>
-        void Update();
+        /// <summary>Update (jeden Frame/Tick).</summary>
+        void Update(float deltaTime);
 
         /// <summary>Physics Update (feste Tick-Rate).</summary>
         void PhysicsUpdate(float deltaTime);

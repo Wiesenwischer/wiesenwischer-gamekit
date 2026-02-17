@@ -161,7 +161,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             UpdateInput();
 
             // 2. State Machine Update (HandleInput + Update)
-            _movementStateMachine?.Update();
+            _movementStateMachine?.Update(Time.deltaTime);
 
             // 2b. Ability System Tick (nach State Machine, reagiert auf aktuellen State)
             AbilitySystem?.Tick(Time.deltaTime);
@@ -470,7 +470,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             if (ReusableData == null) return;
 
             // 1. StateMachine Update (HandleInput + Update)
-            _movementStateMachine?.Update();
+            _movementStateMachine?.Update(deltaTime);
 
             // 2. Movement Events konsumieren (Jump, etc.)
             ConsumeMovementEvents();
@@ -482,7 +482,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             ApplyMovement(deltaTime);
 
             // 5. AbilitySystem Tick
-            AbilitySystem?.Tick(Time.deltaTime); // HINWEIS: wird in 30.2 auf deltaTime umgestellt
+            AbilitySystem?.Tick(deltaTime);
         }
 
         /// <summary>
@@ -518,7 +518,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             ReusableData.SprintHeld = input.Sprint;
             ReusableData.CrouchTogglePressed = input.Crouch;
 
-            _movementStateMachine?.Update();
+            _movementStateMachine?.Update(tickDelta);
             ConsumeMovementEvents();
 
             // Bewegungsrichtung aus Client-CameraYaw ableiten statt lokaler Kamera.

@@ -20,9 +20,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             ReusableData.MovementSpeedModifier = 1f;
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
-            base.OnUpdate();
+            base.OnUpdate(deltaTime);
 
             // Transition zu Running wenn nicht mehr Walk-Modus
             if (!ReusableData.ShouldWalk)

@@ -49,9 +49,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 #endif
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
-            base.OnUpdate();
+            base.OnUpdate(deltaTime);
 
             // === Landing-Guard: Mindestens 1 Frame in der Luft gewesen? ===
             if (!_wasUngrounded)

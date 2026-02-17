@@ -52,6 +52,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         private float _lastStepTime;
         private int _recentStepCount;
         private const float StairDetectionWindow = 0.6f;
+
+        // Akkumulierte Simulationszeit (ersetzt Time.time fuer Determinismus bei Replay)
+        private float _simulationTime;
         private const int StairStepThreshold = 2;
 
         // Cached GroundInfo
@@ -228,6 +231,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
 
         public void BeforeCharacterUpdate(float deltaTime)
         {
+            // Simulationszeit akkumulieren (ersetzt Time.time fuer Determinismus)
+            _simulationTime += deltaTime;
+
             // Step Detection: Disabled during sliding (steep slope) or by state machine
             _motor.StepHandling = (_currentInput.StepDetectionEnabled && !_isSliding)
                 ? StepHandlingMethod.Extra
@@ -488,7 +494,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
             // Stair Detection: Steps in OnMovementHit tracken
             if (hitStabilityReport.ValidStepDetected)
             {
-                float now = Time.time;
+                float now = _simulationTime;
                 if (now - _lastStepTime < StairDetectionWindow)
                 {
                     _recentStepCount++;
@@ -546,7 +552,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Locomotion
         /// </summary>
         public bool IsOnStairs => _config.StairSpeedReductionEnabled
             && _recentStepCount >= StairStepThreshold
-            && (Time.time - _lastStepTime) < StairDetectionWindow;
+            && (_simulationTime - _lastStepTime) < StairDetectionWindow;
 
         /// <summary>
         /// Kombinierter Terrain-Speed-Multiplikator (Slope + Stair). 1.0 = flacher Boden.

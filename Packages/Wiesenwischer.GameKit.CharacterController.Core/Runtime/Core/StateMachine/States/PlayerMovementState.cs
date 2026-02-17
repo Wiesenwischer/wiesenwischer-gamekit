@@ -61,10 +61,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             OnHandleInput();
         }
 
-        public virtual void Update()
+        public virtual void Update(float deltaTime)
         {
-            stateTime += Time.deltaTime;
-            OnUpdate();
+            stateTime += deltaTime;
+            OnUpdate(deltaTime);
         }
 
         public virtual void PhysicsUpdate(float deltaTime)
@@ -79,7 +79,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         protected virtual void OnEnter() { }
         protected virtual void OnExit() { }
         protected virtual void OnHandleInput() { }
-        protected virtual void OnUpdate() { }
+        protected virtual void OnUpdate(float deltaTime) { }
         protected virtual void OnPhysicsUpdate(float deltaTime) { }
 
         #endregion

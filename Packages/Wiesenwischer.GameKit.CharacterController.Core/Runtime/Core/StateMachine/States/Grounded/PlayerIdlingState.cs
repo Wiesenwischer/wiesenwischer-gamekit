@@ -21,9 +21,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             ReusableData.MovementSpeedModifier = 0f;
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
-            base.OnUpdate();
+            base.OnUpdate(deltaTime);
 
             // Transition zu Moving wenn Input vorhanden
             if (HasMovementInput())

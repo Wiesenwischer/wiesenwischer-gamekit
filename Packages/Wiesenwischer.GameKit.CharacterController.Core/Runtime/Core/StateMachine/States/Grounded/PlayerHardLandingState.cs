@@ -62,7 +62,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             }
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
             // NICHT base.OnUpdate() - Coyote Time Check überspringen
 
@@ -78,7 +78,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             else
             {
                 // Fallback: Timer
-                _fallbackTimer -= Time.deltaTime;
+                _fallbackTimer -= deltaTime;
                 recoveryComplete = _fallbackTimer <= 0f;
             }
 

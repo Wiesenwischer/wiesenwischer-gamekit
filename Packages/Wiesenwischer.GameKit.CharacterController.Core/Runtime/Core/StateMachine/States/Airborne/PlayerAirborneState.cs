@@ -46,7 +46,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             }
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
             // Modifier wird NICHT überschrieben - Momentum aus dem Grounded State bleibt erhalten.
             // Luftphysik (Lenkbarkeit + Abbremsung) wird durch AirControl/AirDrag

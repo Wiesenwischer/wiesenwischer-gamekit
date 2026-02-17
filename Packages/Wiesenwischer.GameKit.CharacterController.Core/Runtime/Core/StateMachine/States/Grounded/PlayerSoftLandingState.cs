@@ -26,9 +26,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             // Die SoftLand-Animation blendet via CrossFade sanft in Locomotion über.
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
-            base.OnUpdate();
+            base.OnUpdate(deltaTime);
 
             // Sofort zum passenden Movement State wechseln
             if (HasMovementInput())
