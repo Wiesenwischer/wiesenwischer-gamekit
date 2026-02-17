@@ -50,7 +50,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | Abgeschlossen |
 | 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Abgeschlossen |
 | 30 | Netzwerk | FishNet Native Prediction Migration | [Features](phase-30-fishnet-prediction/README.md) | ✅ | Abgeschlossen |
-| 31 | Netzwerk | Adaptive Reconciliation & Smooth Correction | — | ❌ | Offen |
+| 31 | Netzwerk | Adaptive Reconciliation & Smooth Correction | [Features](phase-31-adaptive-reconciliation/README.md) | ✅ | In Arbeit |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
 | 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Abgeschlossen |
@@ -390,20 +390,19 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 
 ### Phase 31: Adaptive Reconciliation & Smooth Correction
 **Branch:** `integration/phase-31-adaptive-reconciliation`
-**Ausgearbeitet:** ❌ Nein
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-31-adaptive-reconciliation/README.md)
 
-**Ziel:** Hard-Snap bei Server-Korrekturen durch Smooth Blending ersetzen. Error-Threshold basierte Strategie: kleine Abweichungen werden über mehrere Frames visuell geglättet, große Abweichungen sofort korrigiert. Ohne diesen Schritt ist jede Reconciliation als Teleport sichtbar — für ein MMO inakzeptabel.
+**Ziel:** Hard-Snap bei Server-Korrekturen durch Smooth Blending ersetzen. Error-Threshold basierte Strategie: kleine Abweichungen werden über mehrere Frames visuell geglättet, große Abweichungen sofort korrigiert. Correction-Offset-Pattern auf bestehender Motor-Interpolation.
 
 **Relevante Spezifikationen:**
 - [Phase 30 Spec — Anmerkung "Adaptive Reconciliation"](../specs/networking/Wiesenwischer_Phase30_FishNet_Native_Prediction_Migration.md)
-- FishNet `PredictionManager` Dokumentation
 
-**Schritte (vorläufig):**
-- [ ] 31.1 Error-Threshold Konfiguration (ScriptableObject)
-- [ ] 31.2 Smooth Reconciliation Strategie (Blend over N Frames)
-- [ ] 31.3 FishNet PredictionManager / Smoother Integration
-- [ ] 31.4 Visual Correction Smoothing (Transform-Ebene)
-- [ ] 31.5 Tests & Tuning (verschiedene Latenz-Szenarien)
+**Schritte:**
+- [ ] [31.1 ReconcileSmoother Komponente](phase-31-adaptive-reconciliation/31.1-reconcile-smoother.md)
+- [ ] [31.2 Owner Reconcile Smoothing](phase-31-adaptive-reconciliation/31.2-owner-reconcile-smoothing.md)
+- [ ] [31.3 Spectator Prediction Verbesserung](phase-31-adaptive-reconciliation/31.3-spectator-prediction.md)
+- [ ] [31.4 Debug Visualization](phase-31-adaptive-reconciliation/31.4-debug-visualization.md)
+- [ ] [31.5 Tests + Dokumentation](phase-31-adaptive-reconciliation/31.5-tests-documentation.md)
 
 ---
 
