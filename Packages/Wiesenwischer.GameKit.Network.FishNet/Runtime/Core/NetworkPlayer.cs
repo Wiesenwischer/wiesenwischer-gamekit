@@ -21,6 +21,7 @@ namespace Wiesenwischer.GameKit.Network
         public static event System.Action OnLocalPlayerRemoved;
 
         private PlayerController _playerController;
+        private NetworkCharacterDriver _characterDriver;
 
         // INetworkRole Implementation — delegates to FishNet NetworkBehaviour
         bool INetworkRole.IsOwner => base.IsOwner;
@@ -28,10 +29,14 @@ namespace Wiesenwischer.GameKit.Network
         public bool IsClient => base.IsClientStarted;
         public bool IsNetworkActive => true;
 
+        /// <summary>Der NetworkCharacterDriver (falls vorhanden).</summary>
+        public NetworkCharacterDriver CharacterDriver => _characterDriver;
+
         public override void OnStartNetwork()
         {
             base.OnStartNetwork();
             _playerController = GetComponent<PlayerController>();
+            _characterDriver = GetComponent<NetworkCharacterDriver>();
         }
 
         public override void OnStartClient()
@@ -68,14 +73,9 @@ namespace Wiesenwischer.GameKit.Network
             if (inputProvider is MonoBehaviour inputMono)
                 inputMono.enabled = false;
 
-            // Motor nur auf reinen Clients deaktivieren (Interpolator übernimmt Position).
-            // Auf dem Server muss der Motor aktiv bleiben für serverseitige Simulation.
-            if (!IsServerStarted)
-            {
-                var motor = GetComponent<CharacterController.Core.Motor.CharacterMotor>();
-                if (motor != null)
-                    motor.enabled = false;
-            }
+            // Motor bleibt aktiv — FishNet Spectator-Prediction nutzt [Replicate]
+            // auch fuer Non-Owner-Player (state.IsFuture() → letzter Input wird wiederholt).
+            // CharacterMotorSystem.Simulate() steuert den Motor explizit pro Tick.
 
             // Animation Bridge in Remote-Modus setzen
             var animBridge = GetComponentInChildren<AnimatorParameterBridge>();
@@ -88,7 +88,7 @@ namespace Wiesenwischer.GameKit.Network
             if (lookAtIK != null && networkProvider != null)
                 lookAtIK.SetTargetProvider(networkProvider);
 
-            Debug.Log($"[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor={(!IsServerStarted ? "deaktiviert" : "aktiv (Server)")}");
+            Debug.Log("[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor aktiv (Spectator-Prediction)");
         }
     }
 }

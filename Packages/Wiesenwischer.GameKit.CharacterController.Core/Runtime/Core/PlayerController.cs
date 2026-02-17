@@ -513,6 +513,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// Nutzt CameraYaw aus dem Input statt der lokalen Kamera,
         /// da die lokale Kamera einem anderen Spieler gehören kann.
         /// </summary>
+        [System.Obsolete("Ersetzt durch NetworkCharacterDriver.[Replicate]. Wird in Phase 30.7 entfernt.")]
         public void ApplyNetworkInput(ControllerInput input, float tickDelta)
         {
             if (ReusableData == null || Locomotion == null) return;
