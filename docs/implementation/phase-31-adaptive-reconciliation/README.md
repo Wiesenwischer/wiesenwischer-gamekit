@@ -1,6 +1,6 @@
 # Phase 31: Adaptive Reconciliation & Smooth Correction
 
-> **Status:** In Arbeit
+> **Status:** Abgeschlossen
 > **Branch:** `integration/phase-31-adaptive-reconciliation`
 > **Abhaengigkeit:** Phase 30 (FishNet Native Prediction Migration)
 
@@ -38,11 +38,11 @@ LateUpdate (ReconcileSmoother, ExecOrder 100):
 
 ## Schritte
 
-- [ ] [31.1 ReconcileSmoother Komponente](31.1-reconcile-smoother.md)
-- [ ] [31.2 Owner Reconcile Smoothing](31.2-owner-reconcile-smoothing.md)
-- [ ] [31.3 Spectator Prediction Verbesserung](31.3-spectator-prediction.md)
-- [ ] [31.4 Debug Visualization](31.4-debug-visualization.md)
-- [ ] [31.5 Tests + Dokumentation](31.5-tests-documentation.md)
+- [x] [31.1 ReconcileSmoother Komponente](31.1-reconcile-smoother.md)
+- [x] [31.2 Owner Reconcile Smoothing](31.2-owner-reconcile-smoothing.md)
+- [x] [31.3 Spectator Prediction Verbesserung](31.3-spectator-prediction.md)
+- [x] [31.4 Debug Visualization](31.4-debug-visualization.md)
+- [x] [31.5 Tests + Dokumentation](31.5-tests-documentation.md)
 
 ## Kritische Dateien
 

@@ -50,7 +50,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | Abgeschlossen |
 | 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Abgeschlossen |
 | 30 | Netzwerk | FishNet Native Prediction Migration | [Features](phase-30-fishnet-prediction/README.md) | ✅ | Abgeschlossen |
-| 31 | Netzwerk | Adaptive Reconciliation & Smooth Correction | [Features](phase-31-adaptive-reconciliation/README.md) | ✅ | In Arbeit |
+| 31 | Netzwerk | Adaptive Reconciliation & Smooth Correction | [Features](phase-31-adaptive-reconciliation/README.md) | ✅ | Abgeschlossen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
 | 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Abgeschlossen |
@@ -398,11 +398,11 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [Phase 30 Spec — Anmerkung "Adaptive Reconciliation"](../specs/networking/Wiesenwischer_Phase30_FishNet_Native_Prediction_Migration.md)
 
 **Schritte:**
-- [ ] [31.1 ReconcileSmoother Komponente](phase-31-adaptive-reconciliation/31.1-reconcile-smoother.md)
-- [ ] [31.2 Owner Reconcile Smoothing](phase-31-adaptive-reconciliation/31.2-owner-reconcile-smoothing.md)
-- [ ] [31.3 Spectator Prediction Verbesserung](phase-31-adaptive-reconciliation/31.3-spectator-prediction.md)
-- [ ] [31.4 Debug Visualization](phase-31-adaptive-reconciliation/31.4-debug-visualization.md)
-- [ ] [31.5 Tests + Dokumentation](phase-31-adaptive-reconciliation/31.5-tests-documentation.md)
+- [x] [31.1 ReconcileSmoother Komponente](phase-31-adaptive-reconciliation/31.1-reconcile-smoother.md)
+- [x] [31.2 Owner Reconcile Smoothing](phase-31-adaptive-reconciliation/31.2-owner-reconcile-smoothing.md)
+- [x] [31.3 Spectator Prediction Verbesserung](phase-31-adaptive-reconciliation/31.3-spectator-prediction.md)
+- [x] [31.4 Debug Visualization](phase-31-adaptive-reconciliation/31.4-debug-visualization.md)
+- [x] [31.5 Tests + Dokumentation](phase-31-adaptive-reconciliation/31.5-tests-documentation.md)
 
 ---
 
