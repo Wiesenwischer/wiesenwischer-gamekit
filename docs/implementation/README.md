@@ -376,7 +376,7 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [Phase 30 Spezifikation](../specs/networking/Wiesenwischer_Phase30_FishNet_Native_Prediction_Migration.md)
 
 **Schritte:**
-- [ ] [30.1 ISimulationDriver + SimulateTick Extraktion](phase-30-fishnet-prediction/30.1-simulation-driver.md)
+- [x] [30.1 ISimulationDriver + SimulateTick Extraktion](phase-30-fishnet-prediction/30.1-simulation-driver.md)
 - [ ] [30.2 Deterministisches Timing](phase-30-fishnet-prediction/30.2-deterministic-timing.md)
 - [ ] [30.3 FixedUpdate Offline-Modus](phase-30-fishnet-prediction/30.3-offline-fixedupdate.md)
 - [ ] [30.4 MoveReplicateData + CharacterReconcileData](phase-30-fishnet-prediction/30.4-replicate-reconcile-data.md)
