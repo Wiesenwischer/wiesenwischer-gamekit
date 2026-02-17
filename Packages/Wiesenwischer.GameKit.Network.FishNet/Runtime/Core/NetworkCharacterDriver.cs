@@ -210,6 +210,14 @@ namespace Wiesenwischer.GameKit.Network
                 else
                     _smoother.SetCorrectionOffset(posError, rotError);
 
+                // KRITISCH: InitialTickPosition korrigieren.
+                // PreSimInterp hat InitialTickPosition VOR dem Reconcile gespeichert.
+                // CustomInterpolationUpdate lerpt von InitialTickPosition → TransientPosition.
+                // Ohne dieses Update lerpt die Interpolation ueber die volle Korrektur-Distanz
+                // UND der Smoother addiert den Error nochmal → Doppel-Korrektur = Jitter.
+                _motor.InitialTickPosition = correctedPos;
+                _motor.InitialTickRotation = Quaternion.Euler(0f, correctedRot, 0f);
+
                 _didReconcile = false;
             }
 
@@ -269,6 +277,11 @@ namespace Wiesenwischer.GameKit.Network
                     _smoother.ClearOffset();
                 else
                     _smoother.SetCorrectionOffset(error, 0f);
+
+                // Gleicher Fix wie bei Owner Reconcile: InitialTickPosition korrigieren,
+                // damit Interpolation nicht gegen den Smoother kaempft.
+                _motor.InitialTickPosition = postPos;
+                _motor.InitialTickRotation = _motor.TransientRotation;
 
                 _spectatorNeedsCorrection = false;
             }
