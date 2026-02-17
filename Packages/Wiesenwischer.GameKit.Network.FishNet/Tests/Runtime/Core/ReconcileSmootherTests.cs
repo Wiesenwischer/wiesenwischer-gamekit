@@ -191,5 +191,46 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         #endregion
+
+        #region Visual Position Restore
+
+        [Test]
+        public void OnPostTick_RestoresVisualPositionAfterSimulate()
+        {
+            // Simuliert: Smoother setzt transform.position in LateUpdate
+            Vector3 visualPos = new Vector3(5f, 1f, 3f);
+            Quaternion visualRot = Quaternion.Euler(0f, 45f, 0f);
+            _go.transform.SetPositionAndRotation(visualPos, visualRot);
+
+            // OnPreTick initialisiert _lastSetPosition (erster Aufruf)
+            _smoother.OnPreTick(visualPos, visualRot);
+
+            // Simulate() wuerde jetzt transform.position auf TransientPosition setzen
+            Vector3 simPos = new Vector3(5.2f, 1f, 3.1f);
+            _go.transform.position = simPos;
+
+            // OnPostTick muss visuelle Position wiederherstellen
+            _smoother.OnPostTick(simPos, visualRot, 0.033f);
+
+            // Transform muss zurueck auf die visuelle Position sein
+            Assert.AreEqual(visualPos.x, _go.transform.position.x, 0.001f);
+            Assert.AreEqual(visualPos.y, _go.transform.position.y, 0.001f);
+            Assert.AreEqual(visualPos.z, _go.transform.position.z, 0.001f);
+        }
+
+        [Test]
+        public void OnPostTick_DoesNotRestoreWhenNotInitialized()
+        {
+            Vector3 somePos = new Vector3(3f, 1f, 2f);
+            _go.transform.position = somePos;
+
+            // OnPostTick OHNE vorheriges OnPreTick → _initialized = false
+            _smoother.OnPostTick(somePos, Quaternion.identity, 0.033f);
+
+            // Transform bleibt unveraendert (kein Restore)
+            Assert.AreEqual(somePos.x, _go.transform.position.x, 0.001f);
+        }
+
+        #endregion
     }
 }

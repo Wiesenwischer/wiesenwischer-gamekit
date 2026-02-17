@@ -7,13 +7,15 @@ namespace Wiesenwischer.GameKit.Network
     /// Handhabt BEIDES: Tick-Interpolation UND Reconcile-Correction.
     ///
     /// Ersetzt die KCC-eigene CustomInterpolationUpdate (CharacterMotorSystem.Settings.Interpolate = false).
-    /// Damit gibt es nur EIN System das Transform.position in LateUpdate schreibt — kein Kaempfen.
+    /// Damit gibt es nur EIN System das Transform.position schreibt — kein Kaempfen.
     ///
     /// Flow:
     /// 1. OnPreTick(): Speichert Interpolations-Startpunkt (TransientPosition VOR Simulation)
     /// 2. [Replicate]: Simulation laeuft, TransientPosition aendert sich
+    ///    → CharacterMotorSystem.Simulate() schreibt TransientPosition auf transform.position (fuer Collider-Queries)
     /// 3. OnReconcileComplete(): Bei Reconcile — Error berechnen, Startpunkt korrigieren
-    /// 4. OnPostTick(): Speichert Interpolations-Endpunkt (TransientPosition NACH Simulation)
+    /// 4. OnPostTick(): Speichert Interpolations-Endpunkt + STELLT VISUELLE POSITION WIEDER HER
+    ///    → Verhindert dass Kamera/Animator/etc. die rohe Simulation-Position sehen
     /// 5. LateUpdate: Interpoliert zwischen Start/End + decaying Correction-Offset
     /// </summary>
     [DefaultExecutionOrder(100)]
@@ -53,8 +55,9 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _positionOffset;
         private float _rotationOffset;
 
-        // --- Diagnose: Erkennung externer Transform-Writes ---
+        // --- Letzte visuelle Position (fuer Restore nach Tick-Processing) ---
         private Vector3 _lastSetPosition;
+        private Quaternion _lastSetRotation = Quaternion.identity;
         private int _diagFrameCount;
 
         /// <summary>Snap-Threshold fuer externe Abfrage.</summary>
@@ -79,6 +82,14 @@ namespace Wiesenwischer.GameKit.Network
         {
             _tickStartPos = motorPos;
             _tickStartRot = motorRot;
+
+            if (!_initialized)
+            {
+                // Erste visuelle Position initialisieren (vor erstem LateUpdate)
+                _lastSetPosition = transform.position;
+                _lastSetRotation = transform.rotation;
+            }
+
             _initialized = true;
         }
 
@@ -92,6 +103,14 @@ namespace Wiesenwischer.GameKit.Network
             _tickEndRot = motorRot;
             _interpStartTime = Time.time;
             _interpDeltaTime = tickDelta;
+
+            // KRITISCH: CharacterMotorSystem.Simulate() hat transform.position auf
+            // TransientPosition gesetzt (noetig fuer Collider-Queries waehrend der Simulation).
+            // Ohne Restore sehen Kamera, Animator und andere Systeme zwischen OnPostTick
+            // und LateUpdate die rohe Simulation-Position statt der geglatteten → Jitter.
+            // Equivalent zu KCC's PostSimulationInterpolationUpdate.
+            if (_initialized)
+                transform.SetPositionAndRotation(_lastSetPosition, _lastSetRotation);
         }
 
         #endregion
@@ -221,9 +240,9 @@ namespace Wiesenwischer.GameKit.Network
             Vector3 finalPos = interpPos + _positionOffset;
             Quaternion finalRot = interpRot * Quaternion.Euler(0f, _rotationOffset, 0f);
 
-            transform.position = finalPos;
-            transform.rotation = finalRot;
+            transform.SetPositionAndRotation(finalPos, finalRot);
             _lastSetPosition = finalPos;
+            _lastSetRotation = finalRot;
 
             // --- DIAGNOSE: Detailliertes Logging alle N Frames ---
             if (_debugLog && _diagFrameCount % 30 == 0)
