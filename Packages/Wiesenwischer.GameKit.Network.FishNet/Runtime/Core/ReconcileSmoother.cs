@@ -35,6 +35,10 @@ namespace Wiesenwischer.GameKit.Network
         [Tooltip("Unter diesem Wert wird der Offset auf Zero gesetzt (verhindert Micro-Jitter).")]
         [SerializeField] private float _minCorrectionThreshold = 0.001f;
 
+        [Header("Debug")]
+        [Tooltip("Loggt Corrections die groesser als MinCorrectionThreshold sind.")]
+        [SerializeField] private bool _debugLog;
+
         private Vector3 _positionOffset;
         private float _rotationOffset;
 
@@ -55,6 +59,9 @@ namespace Wiesenwischer.GameKit.Network
         {
             _positionOffset = positionError;
             _rotationOffset = rotationError;
+
+            if (_debugLog && positionError.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold)
+                Debug.Log($"[ReconcileSmoother] Correction: pos={positionError.magnitude:F4}m rot={rotationError:F2}°");
         }
 
         /// <summary>
@@ -100,6 +107,18 @@ namespace Wiesenwischer.GameKit.Network
 
             if (_rotationOffset != 0f)
                 transform.rotation *= Quaternion.Euler(0f, _rotationOffset, 0f);
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (_positionOffset.sqrMagnitude < _minCorrectionThreshold * _minCorrectionThreshold)
+                return;
+
+            // Gelbe Linie: von aktueller Position zu wo die Position ohne Offset waere
+            Gizmos.color = Color.yellow;
+            Vector3 correctedTarget = transform.position - _positionOffset;
+            Gizmos.DrawLine(transform.position, correctedTarget);
+            Gizmos.DrawWireSphere(correctedTarget, 0.05f);
         }
     }
 }
