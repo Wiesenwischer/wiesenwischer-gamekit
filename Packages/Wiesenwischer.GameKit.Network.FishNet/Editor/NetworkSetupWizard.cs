@@ -73,11 +73,13 @@ namespace Wiesenwischer.GameKit.Network.Editor
             bool hasNetworkObject = _playerPrefab.GetComponent<NetworkObject>() != null;
             bool hasNetworkPlayer = _playerPrefab.GetComponent<NetworkPlayer>() != null;
             bool hasNetworkCharacterDriver = _playerPrefab.GetComponent<NetworkCharacterDriver>() != null;
+            bool hasReconcileSmoother = _playerPrefab.GetComponent<ReconcileSmoother>() != null;
 
             DrawStatusLine("PlayerController", hasPlayerController, true);
             DrawStatusLine("NetworkObject", hasNetworkObject);
             DrawStatusLine("NetworkPlayer", hasNetworkPlayer);
             DrawStatusLine("NetworkCharacterDriver", hasNetworkCharacterDriver);
+            DrawStatusLine("ReconcileSmoother", hasReconcileSmoother);
 
             if (!hasPlayerController)
             {
@@ -89,7 +91,7 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 return;
             }
 
-            bool allPresent = hasNetworkObject && hasNetworkPlayer && hasNetworkCharacterDriver;
+            bool allPresent = hasNetworkObject && hasNetworkPlayer && hasNetworkCharacterDriver && hasReconcileSmoother;
 
             if (allPresent)
             {
@@ -127,6 +129,10 @@ namespace Wiesenwischer.GameKit.Network.Editor
             // 3. NetworkCharacterDriver (ersetzt NetworkInputSync + NetworkStateSync + RemotePlayerInterpolator)
             if (prefabRoot.GetComponent<NetworkCharacterDriver>() == null)
                 prefabRoot.AddComponent<NetworkCharacterDriver>();
+
+            // 4. ReconcileSmoother (visuelles Smoothing fuer Reconciliation)
+            if (prefabRoot.GetComponent<ReconcileSmoother>() == null)
+                prefabRoot.AddComponent<ReconcileSmoother>();
 
             PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
             PrefabUtility.UnloadPrefabContents(prefabRoot);
