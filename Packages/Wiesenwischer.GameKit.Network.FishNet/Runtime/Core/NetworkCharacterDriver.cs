@@ -52,6 +52,12 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _preReconcilePosition;
         private float _preReconcileRotation;
 
+        // --- Interpolation Tick Guard ---
+        // PreSimInterp/PostSimInterp sind GLOBALE Calls (betreffen alle Motoren).
+        // Muessen genau 1x pro Tick aufgerufen werden, nicht pro Spieler.
+        private static uint _lastPreInterpTick;
+        private static uint _lastPostInterpTick;
+
         #region Lifecycle
 
         public override void OnStartNetwork()
@@ -107,8 +113,14 @@ namespace Wiesenwischer.GameKit.Network
         protected override void TimeManager_OnTick()
         {
             // 1. Interpolation vorbereiten (NUR beim echten Tick, NICHT in Replay!)
-            if (_motor != null)
+            // WICHTIG: PreSimInterp ist ein GLOBALER Call — darf nur 1x pro Tick laufen,
+            // nicht pro Spieler (sonst doppelter Interpolation-Update → Jitter).
+            uint tick = TimeManager.Tick;
+            if (_motor != null && _lastPreInterpTick != tick)
+            {
+                _lastPreInterpTick = tick;
                 CharacterMotorSystem.PreSimulationInterpolationUpdate((float)TimeManager.TickDelta);
+            }
 
             // 2. Input sammeln + Replicate aufrufen
             BuildAndReplicate();
@@ -120,8 +132,13 @@ namespace Wiesenwischer.GameKit.Network
             CreateReconcile();
 
             // 4. Interpolation abschliessen (NUR beim echten Tick, NICHT in Replay!)
-            if (_motor != null)
+            // Gleicher Guard wie oben — globaler Call, nur 1x pro Tick.
+            uint tick = TimeManager.Tick;
+            if (_motor != null && _lastPostInterpTick != tick)
+            {
+                _lastPostInterpTick = tick;
                 CharacterMotorSystem.PostSimulationInterpolationUpdate((float)TimeManager.TickDelta);
+            }
         }
 
         #endregion

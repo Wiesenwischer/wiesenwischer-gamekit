@@ -124,6 +124,18 @@ namespace Wiesenwischer.GameKit.Network.Editor
             if (prefabRoot.GetComponent<NetworkObject>() == null)
                 prefabRoot.AddComponent<NetworkObject>();
 
+            // 1b. Prediction aktivieren (Voraussetzung fuer [Replicate]/[Reconcile])
+            var nob = prefabRoot.GetComponent<NetworkObject>();
+            if (nob != null)
+            {
+                var nobSo = new SerializedObject(nob);
+                var predProp = nobSo.FindProperty("_enablePrediction");
+                if (predProp != null) predProp.boolValue = true;
+                var fwdProp = nobSo.FindProperty("_enableStateForwarding");
+                if (fwdProp != null) fwdProp.boolValue = true;
+                nobSo.ApplyModifiedProperties();
+            }
+
             // 2. NetworkPlayer
             if (prefabRoot.GetComponent<NetworkPlayer>() == null)
                 prefabRoot.AddComponent<NetworkPlayer>();

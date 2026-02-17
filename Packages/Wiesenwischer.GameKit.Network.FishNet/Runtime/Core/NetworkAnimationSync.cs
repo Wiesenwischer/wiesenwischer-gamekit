@@ -24,6 +24,9 @@ namespace Wiesenwischer.GameKit.Network
         [Tooltip("Default Transition-Dauer wenn keine Config vorhanden")]
         [SerializeField] private float _defaultTransitionDuration = 0.15f;
 
+        [Header("Debug")]
+        [SerializeField] private bool _debugLog;
+
         private IAnimationController _animController;
         private CharacterAnimationState _lastSyncedState;
         private bool _initialized;
@@ -55,6 +58,9 @@ namespace Wiesenwischer.GameKit.Network
         {
             base.OnStartNetwork();
             _animController = GetComponentInChildren<IAnimationController>();
+
+            if (_debugLog)
+                Debug.Log($"[AnimSync] OnStartNetwork: server={IsServerStarted} animController={(_animController != null ? "OK" : "NULL")} obj={gameObject.name}");
         }
 
         private void Update()
@@ -95,6 +101,9 @@ namespace Wiesenwischer.GameKit.Network
 
             float timestamp = (float)TimeManager.TicksToTime(TimeManager.Tick);
 
+            if (_debugLog)
+                Debug.Log($"[AnimSync] SEND state={state} seq={_stateSequence} isServer={IsServerStarted} obj={gameObject.name}");
+
             if (IsServerStarted)
             {
                 _syncAnimState.Value = (byte)state;
@@ -108,6 +117,9 @@ namespace Wiesenwischer.GameKit.Network
 
         private void OnSyncAnimStateChanged(byte prev, byte next, bool asServer)
         {
+            if (_debugLog)
+                Debug.Log($"[AnimSync] SyncVar changed: {(CharacterAnimationState)prev}→{(CharacterAnimationState)next} asServer={asServer} isOwner={IsOwner} obj={gameObject.name}");
+
             // SyncVar Callback für Late-Joiner — einfach PlayState ohne Lag Compensation
             if (IsOwner) return;
             if (_animController == null) return;
@@ -149,7 +161,11 @@ namespace Wiesenwischer.GameKit.Network
         private void ObserversRpcAnimationState(byte stateValue, float timestamp, ushort sequence)
         {
             // Out-of-order Check
-            if (IsSequenceOlder(sequence, _lastReceivedSequence)) return;
+            if (IsSequenceOlder(sequence, _lastReceivedSequence))
+            {
+                if (_debugLog) Debug.Log($"[AnimSync] RECV state DROPPED (old seq={sequence} last={_lastReceivedSequence}) obj={gameObject.name}");
+                return;
+            }
             _lastReceivedSequence = sequence;
 
             var state = (CharacterAnimationState)stateValue;
@@ -158,6 +174,9 @@ namespace Wiesenwischer.GameKit.Network
             float currentTime = (float)TimeManager.TicksToTime(TimeManager.Tick);
             float networkDelay = Mathf.Clamp(currentTime - timestamp, 0f, 0.5f);
             float adjustedTransition = Mathf.Max(0f, _defaultTransitionDuration - networkDelay);
+
+            if (_debugLog)
+                Debug.Log($"[AnimSync] RECV state={state} seq={sequence} delay={networkDelay:F3}s controller={(_animController != null ? "OK" : "NULL")} obj={gameObject.name}");
 
             _animController?.PlayState(state, adjustedTransition);
         }
@@ -175,6 +194,9 @@ namespace Wiesenwischer.GameKit.Network
         [ObserversRpc(ExcludeOwner = true)]
         private void ObserversRpcAnimationParams(AnimationSnapshot snapshot, Channel channel = Channel.Unreliable)
         {
+            if (_debugLog)
+                Debug.Log($"[AnimSync] RECV params speed={snapshot.Speed:F2} vVel={snapshot.VerticalVelocity:F2} controller={(_animController != null ? "OK" : "NULL")} obj={gameObject.name}");
+
             _animController?.SetSpeed(snapshot.Speed);
             _animController?.SetVerticalVelocity(snapshot.VerticalVelocity);
         }
