@@ -27,6 +27,7 @@ namespace Wiesenwischer.GameKit.Network
         private PlayerController _player;
         private CharacterMotor _motor;
         private NetworkAnimationSync _animSync;
+        private ReconcileSmoother _smoother;
         private readonly List<CharacterMotor> _motorList = new(1);
 
         // --- ISimulationDriver ---
@@ -43,6 +44,11 @@ namespace Wiesenwischer.GameKit.Network
         // --- Spectator Prediction ---
         private MoveReplicateData _lastTickedReplicateData;
 
+        // --- Reconcile Smoothing ---
+        private bool _didReconcile;
+        private Vector3 _preReconcilePosition;
+        private float _preReconcileRotation;
+
         #region Lifecycle
 
         public override void OnStartNetwork()
@@ -52,6 +58,7 @@ namespace Wiesenwischer.GameKit.Network
             _player = GetComponent<PlayerController>();
             _motor = GetComponent<CharacterMotor>();
             _animSync = GetComponent<NetworkAnimationSync>();
+            _smoother = GetComponent<ReconcileSmoother>();
 
             // Cache motor list (vermeidet GC-Alloc pro Tick)
             _motorList.Clear();
@@ -166,6 +173,25 @@ namespace Wiesenwischer.GameKit.Network
         [Replicate]
         private void PerformReplicate(MoveReplicateData input, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
         {
+            // Owner Reconcile Smoothing: Error nach Replay berechnen.
+            // state.ContainsTicked() = erster nicht-replayed Tick → alle Replays sind durch.
+            // TransientPosition enthaelt jetzt die korrigierte Prediction (Reconcile + Replays).
+            if (_didReconcile && state.ContainsTicked() && _smoother != null)
+            {
+                Vector3 correctedPos = _motor.TransientPosition;
+                float correctedRot = _motor.TransientRotation.eulerAngles.y;
+
+                Vector3 posError = _preReconcilePosition - correctedPos;
+                float rotError = Mathf.DeltaAngle(correctedRot, _preReconcileRotation);
+
+                if (posError.sqrMagnitude > _smoother.SnapThreshold * _smoother.SnapThreshold)
+                    _smoother.ClearOffset();
+                else
+                    _smoother.SetCorrectionOffset(posError, rotError);
+
+                _didReconcile = false;
+            }
+
             // Spectator Prediction: letzten bekannten Input fuer Non-Owner verwenden
             if (!IsServerStarted && !IsOwner)
             {
@@ -263,6 +289,11 @@ namespace Wiesenwischer.GameKit.Network
         [Reconcile]
         private void PerformReconcile(CharacterReconcileData data, Channel channel = Channel.Unreliable)
         {
+            // Pre-Reconcile Position speichern (fuer Correction-Offset Berechnung)
+            _preReconcilePosition = _motor.TransientPosition;
+            _preReconcileRotation = _motor.TransientRotation.eulerAngles.y;
+            _didReconcile = true;
+
             // Position/Rotation auf Motor setzen (Physik-State)
             _motor.SetPositionAndRotation(
                 data.Position,
