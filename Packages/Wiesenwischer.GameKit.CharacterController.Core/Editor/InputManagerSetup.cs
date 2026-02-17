@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Wiesenwischer.GameKit.CharacterController.Core.Input;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
@@ -7,6 +8,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
     /// <summary>
     /// Editor-Tool: Erstellt ein InputManager-GameObject mit PlayerInputProvider in der Scene.
     /// Re-run-sicher — findet vorhandenen InputManager und selektiert ihn.
+    /// Weist automatisch das InputActionAsset zu (sucht nach *.inputactions in Assets/).
     /// </summary>
     public static class InputManagerSetup
     {
@@ -26,12 +28,36 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Editor
             }
 
             var go = new GameObject(GameObjectName);
-            go.AddComponent<PlayerInputProvider>();
+            var provider = go.AddComponent<PlayerInputProvider>();
+
+            // InputActionAsset automatisch zuweisen
+            var asset = FindInputActionAsset();
+            if (asset != null)
+            {
+                var so = new SerializedObject(provider);
+                so.FindProperty("_inputActions").objectReferenceValue = asset;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            else
+            {
+                Debug.LogWarning("[InputManagerSetup] Kein InputActionAsset in Assets/ gefunden. Bitte manuell zuweisen.");
+            }
 
             Undo.RegisterCreatedObjectUndo(go, "Create InputManager");
             Selection.activeGameObject = go;
 
-            Debug.Log("[InputManagerSetup] InputManager erstellt. InputActionAsset im Inspector zuweisen.");
+            Debug.Log($"[InputManagerSetup] InputManager erstellt. Asset: {(asset != null ? asset.name : "KEINS")}");
+        }
+
+        private static InputActionAsset FindInputActionAsset()
+        {
+            // Suche nach *.inputactions in Assets/ (nicht in Library/Packages)
+            var guids = AssetDatabase.FindAssets("t:InputActionAsset", new[] { "Assets" });
+            if (guids.Length == 0) return null;
+
+            // Erstes gefundenes Asset verwenden
+            var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+            return AssetDatabase.LoadAssetAtPath<InputActionAsset>(path);
         }
 
         [MenuItem("Wiesenwischer/GameKit/Core/Create InputManager", true)]
