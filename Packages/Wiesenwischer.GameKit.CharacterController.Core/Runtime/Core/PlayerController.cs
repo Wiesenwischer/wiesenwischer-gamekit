@@ -164,13 +164,15 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void Start()
         {
-            // Camera-Provider nach Awake auflösen (CameraBrain muss zuerst initialisiert sein)
-            ResolveProviders();
-
-            // Offline-Modus: Input Provider aus der Scene suchen, falls keiner lokal vorhanden.
-            // Online: NetworkPlayer.EnableLocalPlayer() setzt den Provider explizit.
-            if (InputProvider == null && !NetworkRole.IsNetworkActive)
-                InputProvider = FindObjectOfType<PlayerInputProvider>();
+            // Offline-Modus: Providers und Input sofort auflösen.
+            // Online: NetworkPlayer.EnableLocalPlayer() ruft ResolveProviders() auf
+            // NACHDEM die Kamera eingerichtet ist (OnLocalPlayerReady → NetworkCameraSetup).
+            if (!NetworkRole.IsNetworkActive)
+            {
+                ResolveProviders();
+                if (InputProvider == null)
+                    InputProvider = FindObjectOfType<PlayerInputProvider>();
+            }
         }
 
         private void Update()
@@ -417,8 +419,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// Löst Orientation-, Facing- und OrbitProvider auf.
         /// IOrientationProvider/IFacingProvider sind die bevorzugten Interfaces (Phase 29).
         /// ICameraOrbitProvider bleibt als Fallback für IsSteerMode.
+        ///
+        /// Im Netzwerk-Modus wird dies von NetworkPlayer.EnableLocalPlayer() aufgerufen,
+        /// NACHDEM die Kamera eingerichtet ist (OnLocalPlayerReady → NetworkCameraSetup).
         /// </summary>
-        private void ResolveProviders()
+        public void ResolveProviders()
         {
             var mainCamera = Camera.main;
             if (mainCamera == null) return;

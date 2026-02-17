@@ -64,7 +64,13 @@ namespace Wiesenwischer.GameKit.Network
             if (sceneInput != null)
                 _playerController.SetInputProvider(sceneInput);
 
+            // Event feuern → NetworkCameraSetup richtet Kamera ein (synchron).
             OnLocalPlayerReady?.Invoke(transform);
+
+            // NACH Kamera-Setup: Orientation/Facing-Provider auflösen.
+            // In Start() wird dies im Netzwerk-Modus übersprungen, weil die Kamera
+            // erst hier (via OnLocalPlayerReady → CameraBrain.SetTarget) eingerichtet wird.
+            _playerController.ResolveProviders();
         }
 
         private void ConfigureRemotePlayer()
