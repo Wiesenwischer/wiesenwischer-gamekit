@@ -52,13 +52,15 @@ namespace Wiesenwischer.GameKit.Network
         public float CurrentRotationOffset => _rotationOffset;
 
         /// <summary>
-        /// Setzt einen neuen Correction-Offset.
-        /// Der Offset wird ueber mehrere Frames exponentiell abgebaut.
+        /// Akkumuliert einen neuen Correction-Offset auf den bestehenden.
+        /// WICHTIG: Muss akkumulieren statt ersetzen, da zwischen Reconcile-Ticks
+        /// noch ein Rest-Offset vom Decay existiert. Ersetzen wuerde diesen Rest
+        /// verwerfen und einen sichtbaren visuellen Sprung verursachen (Jitter).
         /// </summary>
         public void SetCorrectionOffset(Vector3 positionError, float rotationError)
         {
-            _positionOffset = positionError;
-            _rotationOffset = rotationError;
+            _positionOffset += positionError;
+            _rotationOffset += rotationError;
 
             if (_debugLog && positionError.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold)
                 Debug.Log($"[ReconcileSmoother] Correction: pos={positionError.magnitude:F4}m rot={rotationError:F2}°");

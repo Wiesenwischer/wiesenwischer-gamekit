@@ -23,7 +23,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         [Test]
-        public void SetCorrectionOffset_SetsOffset()
+        public void SetCorrectionOffset_AccumulatesOffset()
         {
             Vector3 error = new Vector3(0.5f, 0.1f, -0.3f);
             _smoother.SetCorrectionOffset(error, 5f);
@@ -57,12 +57,12 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         [Test]
-        public void SetCorrectionOffset_OverwritesPrevious()
+        public void SetCorrectionOffset_AccumulatesMultipleCalls()
         {
-            _smoother.SetCorrectionOffset(new Vector3(1f, 0f, 0f), 0f);
-            _smoother.SetCorrectionOffset(new Vector3(0f, 0f, 2f), 15f);
+            _smoother.SetCorrectionOffset(new Vector3(1f, 0f, 0f), 5f);
+            _smoother.SetCorrectionOffset(new Vector3(0f, 0f, 2f), 10f);
 
-            Assert.AreEqual(new Vector3(0f, 0f, 2f), _smoother.CurrentOffset);
+            Assert.AreEqual(new Vector3(1f, 0f, 2f), _smoother.CurrentOffset);
             Assert.AreEqual(15f, _smoother.CurrentRotationOffset, 0.001f);
         }
     }
