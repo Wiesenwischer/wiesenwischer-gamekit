@@ -175,6 +175,26 @@ namespace Wiesenwischer.GameKit.Network.Tests
             Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
         }
 
+        [Test]
+        public void OnSpectatorCorrection_UpdatesTickStartToPostPos()
+        {
+            // Regression: Ohne tickStart-Update entsteht Doppel-Korrektur in OnPostTick.
+            // visual = prePos + (prePos - postPos) = 2*prePos - postPos (falsch!)
+            // Mit Fix: visual = postPos + (prePos - postPos) = prePos (korrekt!)
+            Vector3 prePos = new Vector3(10f, 0f, 0f);
+            _smoother.OnPreTick(prePos, Quaternion.identity);
+
+            Vector3 postPos = new Vector3(10.05f, 0f, 0f);
+            _smoother.OnSpectatorCorrection(prePos, postPos, Quaternion.identity);
+
+            // OnPostTick setzt visual = tickStart + offset
+            _go.transform.position = postPos; // Simulations-Position
+            _smoother.OnPostTick(postPos, Quaternion.identity, 0.033f);
+
+            // visual muss bei prePos liegen (= postPos + offset = 10.05 + (-0.05) = 10.0)
+            Assert.AreEqual(prePos.x, _go.transform.position.x, 0.001f);
+        }
+
         #endregion
 
         #region ClearOffset

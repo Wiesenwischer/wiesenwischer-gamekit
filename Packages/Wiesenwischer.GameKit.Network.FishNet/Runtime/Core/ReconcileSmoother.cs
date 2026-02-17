@@ -20,10 +20,10 @@ namespace Wiesenwischer.GameKit.Network
     ///    → Laeuft VOR CameraBrain (100) und GroundingSmoother (100)
     ///    → Kamera/Grounding lesen immer die korrekte visuelle Position
     ///
-    /// Zwischen OnPostTick und LateUpdate hat transform.position die Simulations-Position
-    /// (geschrieben von CharacterMotorSystem.Simulate). Das ist korrekt — kein visuelles System
-    /// liest den Root-Transform in dieser Phase. Der pre-Simulate sync in NetworkCharacterDriver
-    /// stellt sicher dass der Motor immer TransientPosition liest, nicht die visuelle Position.
+    /// OnPostTick setzt sofort die korrekte visuelle Position (tickStart + offset bei factor=0).
+    /// Zwischen OnPostTick und LateUpdate hat transform.position diese visuelle Position.
+    /// Der pre-Simulate sync in NetworkCharacterDriver stellt sicher dass der Motor
+    /// immer TransientPosition liest, nicht die visuelle Position.
     /// </summary>
     [DefaultExecutionOrder(50)]
     public class ReconcileSmoother : MonoBehaviour
@@ -148,6 +148,9 @@ namespace Wiesenwischer.GameKit.Network
 
         /// <summary>
         /// Wird nach Spectator-Correction aufgerufen (nach Simulation mit neuem autoritativem Input).
+        /// Setzt tickStart = postPos (analog zu OnReconcileComplete), damit die Interpolation
+        /// die Korrektur nicht doppelt anwendet (offset + Lerp-Range wuerden sonst beide die
+        /// volle Distanz prePos→postPos enthalten).
         /// </summary>
         public void OnSpectatorCorrection(Vector3 prePos, Vector3 postPos, Quaternion postRot)
         {
@@ -158,7 +161,11 @@ namespace Wiesenwischer.GameKit.Network
             else
                 _positionOffset += error;
 
-            // Endpunkt aktualisieren (Simulation hat mit neuem Input eine andere Position erzeugt)
+            // Start- UND Endpunkt auf korrigierte Position setzen.
+            // Ohne tickStart-Update wuerde OnPostTick visual = prePos + (prePos - postPos) setzen
+            // → Doppel-Korrektur (visual springt hinter die pre-Correction Position).
+            _tickStartPos = postPos;
+            _tickStartRot = postRot;
             _tickEndPos = postPos;
             _tickEndRot = postRot;
 
