@@ -49,7 +49,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 5 | Combat | Ability System | [Features](phase-5-ability-system/README.md) | ✅ | Abgeschlossen |
 | 6 | Netzwerk | Netzwerk-Grundstruktur | [Features](phase-6-network-foundation/README.md) | ✅ | Abgeschlossen |
 | 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Abgeschlossen |
-| 30 | Netzwerk | FishNet Native Prediction Migration | [Features](phase-30-fishnet-prediction/README.md) | ✅ | Offen |
+| 30 | Netzwerk | FishNet Native Prediction Migration | [Features](phase-30-fishnet-prediction/README.md) | ✅ | Abgeschlossen |
 | 31 | Netzwerk | Adaptive Reconciliation & Smooth Correction | — | ❌ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
@@ -384,7 +384,7 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [x] [30.6 PlayerController + NetworkPlayer Integration](phase-30-fishnet-prediction/30.6-network-integration.md)
 - [x] [30.7 Alten Prediction-Code aufräumen](phase-30-fishnet-prediction/30.7-prediction-cleanup.md)
 - [x] [30.8 NetworkAnimationSync Replay-Guard](phase-30-fishnet-prediction/30.8-animation-sync-replay.md)
-- [ ] [30.9 Tests + Verifikation](phase-30-fishnet-prediction/30.9-tests-verification.md)
+- [x] [30.9 Tests + Verifikation](phase-30-fishnet-prediction/30.9-tests-verification.md)
 
 ---
 
