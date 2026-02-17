@@ -73,12 +73,14 @@ namespace Wiesenwischer.GameKit.Network.Editor
             bool hasNetworkObject = _playerPrefab.GetComponent<NetworkObject>() != null;
             bool hasNetworkPlayer = _playerPrefab.GetComponent<NetworkPlayer>() != null;
             bool hasNetworkCharacterDriver = _playerPrefab.GetComponent<NetworkCharacterDriver>() != null;
+            bool hasNetworkAnimationSync = _playerPrefab.GetComponent<NetworkAnimationSync>() != null;
             bool hasReconcileSmoother = _playerPrefab.GetComponent<ReconcileSmoother>() != null;
 
             DrawStatusLine("PlayerController", hasPlayerController, true);
             DrawStatusLine("NetworkObject", hasNetworkObject);
             DrawStatusLine("NetworkPlayer", hasNetworkPlayer);
             DrawStatusLine("NetworkCharacterDriver", hasNetworkCharacterDriver);
+            DrawStatusLine("NetworkAnimationSync", hasNetworkAnimationSync);
             DrawStatusLine("ReconcileSmoother", hasReconcileSmoother);
 
             if (!hasPlayerController)
@@ -91,7 +93,7 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 return;
             }
 
-            bool allPresent = hasNetworkObject && hasNetworkPlayer && hasNetworkCharacterDriver && hasReconcileSmoother;
+            bool allPresent = hasNetworkObject && hasNetworkPlayer && hasNetworkCharacterDriver && hasNetworkAnimationSync && hasReconcileSmoother;
 
             if (allPresent)
             {
@@ -130,7 +132,11 @@ namespace Wiesenwischer.GameKit.Network.Editor
             if (prefabRoot.GetComponent<NetworkCharacterDriver>() == null)
                 prefabRoot.AddComponent<NetworkCharacterDriver>();
 
-            // 4. ReconcileSmoother (visuelles Smoothing fuer Reconciliation)
+            // 4. NetworkAnimationSync (Animation State + Parameter Sync)
+            if (prefabRoot.GetComponent<NetworkAnimationSync>() == null)
+                prefabRoot.AddComponent<NetworkAnimationSync>();
+
+            // 5. ReconcileSmoother (visuelles Smoothing fuer Reconciliation)
             if (prefabRoot.GetComponent<ReconcileSmoother>() == null)
                 prefabRoot.AddComponent<ReconcileSmoother>();
 

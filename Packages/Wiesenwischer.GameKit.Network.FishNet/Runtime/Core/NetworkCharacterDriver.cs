@@ -179,7 +179,8 @@ namespace Wiesenwischer.GameKit.Network
             // Owner Reconcile Smoothing: Error nach Replay berechnen.
             // state.ContainsTicked() = erster nicht-replayed Tick → alle Replays sind durch.
             // TransientPosition enthaelt jetzt die korrigierte Prediction (Reconcile + Replays).
-            if (_didReconcile && state.ContainsTicked() && _smoother != null)
+            // NICHT auf dem Server/Host: Server ist autoritaet, Reconcile-Error ist nur FP-Noise.
+            if (_didReconcile && !IsServerStarted && state.ContainsTicked() && _smoother != null)
             {
                 Vector3 correctedPos = _motor.TransientPosition;
                 float correctedRot = _motor.TransientRotation.eulerAngles.y;
