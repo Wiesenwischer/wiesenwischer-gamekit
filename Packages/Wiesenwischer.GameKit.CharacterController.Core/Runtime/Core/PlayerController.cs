@@ -164,8 +164,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void Start()
         {
-            // Provider nach Awake auflösen (CameraBrain muss zuerst initialisiert sein)
+            // Camera-Provider nach Awake auflösen (CameraBrain muss zuerst initialisiert sein)
             ResolveProviders();
+
+            // Offline-Modus: Input Provider aus der Scene suchen, falls keiner lokal vorhanden.
+            // Online: NetworkPlayer.EnableLocalPlayer() setzt den Provider explizit.
+            if (InputProvider == null && !NetworkRole.IsNetworkActive)
+                InputProvider = FindObjectOfType<PlayerInputProvider>();
         }
 
         private void Update()
@@ -220,18 +225,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 return;
             }
 
-            // Find Input Provider
+            // Input Provider: Serialisierte Referenz oder GetComponent (fuer NPCs mit AIInputProvider).
+            // Spieler-Input kommt von aussen via SetInputProvider() (NetworkPlayer oder Offline-Discovery).
             if (_inputProviderComponent != null)
-            {
                 InputProvider = _inputProviderComponent as IMovementInputProvider;
-            }
             InputProvider ??= GetComponent<IMovementInputProvider>();
-
-            if (InputProvider == null)
-            {
-                Debug.LogWarning($"[PlayerController] WARNUNG auf '{gameObject.name}': " +
-                    "Kein Input Provider gefunden.");
-            }
 
             // Validate config
             if (_config == null)
@@ -441,6 +439,14 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         #endregion
 
         #region Public Methods
+
+        /// <summary>
+        /// Setzt den Input Provider von aussen (z.B. NetworkPlayer fuer Owner, Scene-Discovery fuer Offline).
+        /// </summary>
+        public void SetInputProvider(IMovementInputProvider provider)
+        {
+            InputProvider = provider;
+        }
 
         /// <summary>
         /// Fuehrt einen vollstaendigen Simulations-Tick aus.

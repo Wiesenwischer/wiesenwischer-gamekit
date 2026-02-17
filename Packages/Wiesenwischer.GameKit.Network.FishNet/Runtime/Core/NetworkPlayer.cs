@@ -58,18 +58,17 @@ namespace Wiesenwischer.GameKit.Network
 
         private void EnableLocalPlayer()
         {
-            // Input ist bereits aktiv — PlayerInputProvider.OnEnable() klont das
-            // InputActionAsset und aktiviert die ActionMap automatisch.
+            // Scene-InputProvider mit diesem Player verbinden.
+            // PlayerInputProvider liegt in der Scene (nicht auf dem Prefab).
+            var sceneInput = FindObjectOfType<PlayerInputProvider>();
+            if (sceneInput != null)
+                _playerController.SetInputProvider(sceneInput);
+
             OnLocalPlayerReady?.Invoke(transform);
         }
 
         private void ConfigureRemotePlayer()
         {
-            // Input deaktivieren — Remote-Player braucht keinen lokalen Input.
-            // Sicher, da jede Instanz ihren eigenen InputActionAsset-Klon hat.
-            var inputProvider = GetComponent<IMovementInputProvider>();
-            inputProvider?.Deactivate();
-
             // Animation Bridge in Remote-Modus setzen
             var animBridge = GetComponentInChildren<AnimatorParameterBridge>();
             if (animBridge != null)
