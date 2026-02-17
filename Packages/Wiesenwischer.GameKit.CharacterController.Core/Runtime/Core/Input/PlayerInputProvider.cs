@@ -189,19 +189,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
 
         #region Public Methods
 
-        public void Activate()
-        {
-            _actionMap?.Enable();
-            _isActive = true;
-        }
-
-        public void Deactivate()
-        {
-            _actionMap?.Disable();
-            _isActive = false;
-            ResetInput();
-        }
-
         public InputSnapshot CreateSnapshot(int tick)
         {
             InputButtons buttons = InputButtons.None;

@@ -126,27 +126,16 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         }
 
         /// <summary>
-        /// Aktiviert den Input Provider.
-        /// </summary>
-        public void Activate() => _isActive = true;
-
-        /// <summary>
-        /// Deaktiviert den Input Provider und setzt Input/Ziele zurueck.
-        /// </summary>
-        public void Deactivate()
-        {
-            _isActive = false;
-            ResetInput();
-            ClearTarget();
-        }
-
-        /// <summary>
         /// Aktiviert oder deaktiviert den Input Provider.
         /// </summary>
         public void SetActive(bool active)
         {
-            if (active) Activate();
-            else Deactivate();
+            _isActive = active;
+            if (!active)
+            {
+                ResetInput();
+                ClearTarget();
+            }
         }
 
         #endregion
