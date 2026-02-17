@@ -100,11 +100,17 @@ namespace Wiesenwischer.GameKit.Network
             _interpStartTime = Time.time;
             _interpDeltaTime = tickDelta;
 
-            // Kein Visual-Restore noetig:
-            // - transform.position hat nach Simulate() die Simulations-Position
-            // - LateUpdate (Order 50) setzt die visuelle Position VOR CameraBrain (100)
-            // - pre-Simulate sync in NetworkCharacterDriver stellt sicher dass der Motor
-            //   immer TransientPosition liest, nicht die LateUpdate-Visual-Position
+            // Sofort korrekte visuelle Position setzen.
+            // factor=0 (interpStartTime = Time.time = jetzt), also visual = tickStart + offset.
+            // Verhindert dass Animator, IK oder andere Systeme zwischen OnPostTick und LateUpdate
+            // die rohe Simulations-Position sehen. LateUpdate ueberschreibt dann mit dem
+            // korrekt interpolierten Wert (der bei factor=0 identisch ist).
+            if (_initialized)
+            {
+                Vector3 visualPos = _tickStartPos + _positionOffset;
+                Quaternion visualRot = _tickStartRot * Quaternion.Euler(0f, _rotationOffset, 0f);
+                transform.SetPositionAndRotation(visualPos, visualRot);
+            }
         }
 
         #endregion

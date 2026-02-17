@@ -195,36 +195,59 @@ namespace Wiesenwischer.GameKit.Network.Tests
         #region OnPostTick Behavior
 
         [Test]
-        public void OnPostTick_DoesNotModifyTransformPosition()
+        public void OnPostTick_SetsVisualPositionImmediately()
         {
-            // OnPreTick + Simulate: transform hat Simulations-Position
+            // OnPreTick: tickStart = startPos, keine Corrections
             Vector3 startPos = new Vector3(5f, 1f, 3f);
             _smoother.OnPreTick(startPos, Quaternion.identity);
 
+            // Simulate wuerde jetzt transform.position auf neue SimPos setzen
             Vector3 simPos = new Vector3(5.2f, 1f, 3.1f);
             _go.transform.position = simPos;
 
-            // OnPostTick speichert Tick-Daten, aendert aber NICHT transform.position.
-            // Die visuelle Position wird erst in LateUpdate (Order 50) gesetzt,
-            // VOR CameraBrain (100) und GroundingSmoother (100).
+            // OnPostTick setzt sofort die korrekte visuelle Position:
+            // Bei factor=0 → visual = tickStart + offset (offset=0) = startPos
             _smoother.OnPostTick(simPos, Quaternion.identity, 0.033f);
 
-            // Transform bleibt auf der Simulations-Position
-            Assert.AreEqual(simPos.x, _go.transform.position.x, 0.001f);
-            Assert.AreEqual(simPos.y, _go.transform.position.y, 0.001f);
-            Assert.AreEqual(simPos.z, _go.transform.position.z, 0.001f);
+            // Transform muss auf tickStart sein (= startPos, da offset=0 und factor=0)
+            Assert.AreEqual(startPos.x, _go.transform.position.x, 0.001f);
+            Assert.AreEqual(startPos.y, _go.transform.position.y, 0.001f);
+            Assert.AreEqual(startPos.z, _go.transform.position.z, 0.001f);
         }
 
         [Test]
-        public void OnPostTick_WorksWithoutPriorOnPreTick()
+        public void OnPostTick_IncludesCorrectionOffset()
+        {
+            Vector3 startPos = new Vector3(5f, 1f, 3f);
+            _smoother.OnPreTick(startPos, Quaternion.identity);
+
+            // Reconcile Correction: 0.1m Offset
+            _smoother.OnReconcileComplete(
+                new Vector3(5f, 1f, 3f), 0f,
+                new Vector3(4.9f, 1f, 3f), 0f);
+
+            // offset = (5,1,3) - (4.9,1,3) = (0.1, 0, 0)
+            // tickStart wurde auf correctedPos gesetzt: (4.9, 1, 3)
+
+            _go.transform.position = new Vector3(5.2f, 1f, 3.1f); // simPos
+
+            _smoother.OnPostTick(new Vector3(5.2f, 1f, 3.1f), Quaternion.identity, 0.033f);
+
+            // visual = tickStart + offset = (4.9,1,3) + (0.1,0,0) = (5.0, 1, 3)
+            Assert.AreEqual(5.0f, _go.transform.position.x, 0.001f);
+            Assert.AreEqual(1.0f, _go.transform.position.y, 0.001f);
+            Assert.AreEqual(3.0f, _go.transform.position.z, 0.001f);
+        }
+
+        [Test]
+        public void OnPostTick_DoesNotModifyWhenNotInitialized()
         {
             Vector3 somePos = new Vector3(3f, 1f, 2f);
             _go.transform.position = somePos;
 
-            // OnPostTick OHNE vorheriges OnPreTick → _initialized bleibt false
+            // OnPostTick OHNE vorheriges OnPreTick → _initialized = false → kein Restore
             _smoother.OnPostTick(somePos, Quaternion.identity, 0.033f);
 
-            // Transform bleibt unveraendert
             Assert.AreEqual(somePos.x, _go.transform.position.x, 0.001f);
             Assert.IsFalse(_smoother.IsActive);
         }
