@@ -53,6 +53,10 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _positionOffset;
         private float _rotationOffset;
 
+        // --- Diagnose: Erkennung externer Transform-Writes ---
+        private Vector3 _lastSetPosition;
+        private int _diagFrameCount;
+
         /// <summary>Snap-Threshold fuer externe Abfrage.</summary>
         public float SnapThreshold => _snapThreshold;
 
@@ -171,6 +175,19 @@ namespace Wiesenwischer.GameKit.Network
             // (KCC handhabt Interpolation selbst via CustomInterpolationUpdate)
             if (!_initialized) return;
 
+            // --- DIAGNOSE: Erkennung ob etwas anderes Transform.position aendert ---
+            if (_debugLog)
+            {
+                _diagFrameCount++;
+                Vector3 currentPos = transform.position;
+                float drift = (currentPos - _lastSetPosition).magnitude;
+                if (drift > 0.0001f)
+                {
+                    Debug.LogWarning($"[Smoother DIAG] Frame {_diagFrameCount}: Transform.position EXTERN geaendert! " +
+                        $"Erwartet={_lastSetPosition:F4} Ist={currentPos:F4} Drift={drift:F4}m");
+                }
+            }
+
             // 1. Tick-Interpolation (ersetzt CharacterMotorSystem.CustomInterpolationUpdate)
             float factor = (_interpDeltaTime > 0f)
                 ? Mathf.Clamp01((Time.time - _interpStartTime) / _interpDeltaTime)
@@ -201,8 +218,21 @@ namespace Wiesenwischer.GameKit.Network
             }
 
             // 3. Final Visual = Interpolation + Correction Offset
-            transform.position = interpPos + _positionOffset;
-            transform.rotation = interpRot * Quaternion.Euler(0f, _rotationOffset, 0f);
+            Vector3 finalPos = interpPos + _positionOffset;
+            Quaternion finalRot = interpRot * Quaternion.Euler(0f, _rotationOffset, 0f);
+
+            transform.position = finalPos;
+            transform.rotation = finalRot;
+            _lastSetPosition = finalPos;
+
+            // --- DIAGNOSE: Detailliertes Logging alle N Frames ---
+            if (_debugLog && _diagFrameCount % 30 == 0)
+            {
+                Debug.Log($"[Smoother DIAG] Frame {_diagFrameCount}: " +
+                    $"tickStart={_tickStartPos:F3} tickEnd={_tickEndPos:F3} " +
+                    $"factor={factor:F3} interp={interpPos:F3} " +
+                    $"offset={_positionOffset:F4} final={finalPos:F3}");
+            }
         }
 
         #endregion

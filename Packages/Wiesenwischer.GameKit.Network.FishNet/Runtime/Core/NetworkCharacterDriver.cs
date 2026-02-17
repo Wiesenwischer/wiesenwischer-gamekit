@@ -52,6 +52,9 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _preReconcilePosition;
         private float _preReconcileRotation;
 
+        // --- Diagnose ---
+        [SerializeField] private bool _debugLog;
+
         #region Lifecycle
 
         public override void OnStartNetwork()
@@ -117,7 +120,12 @@ namespace Wiesenwischer.GameKit.Network
         {
             // 1. Interpolations-Startpunkt speichern (aktuelle Motor-Position VOR Simulation)
             if (_smoother != null && _motor != null)
+            {
                 _smoother.OnPreTick(_motor.TransientPosition, _motor.TransientRotation);
+
+                if (_debugLog)
+                    Debug.Log($"[Driver] OnTick: PreTick pos={_motor.TransientPosition:F3} transform={transform.position:F3} isOwner={IsOwner} isServer={IsServerStarted}");
+            }
 
             // 2. Input sammeln + Replicate aufrufen
             BuildAndReplicate();
@@ -130,8 +138,13 @@ namespace Wiesenwischer.GameKit.Network
 
             // 4. Interpolations-Endpunkt speichern (Motor-Position NACH Simulation)
             if (_smoother != null && _motor != null)
+            {
                 _smoother.OnPostTick(_motor.TransientPosition, _motor.TransientRotation,
                                      (float)TimeManager.TickDelta);
+
+                if (_debugLog)
+                    Debug.Log($"[Driver] OnPostTick: PostTick pos={_motor.TransientPosition:F3} transform={transform.position:F3}");
+            }
         }
 
         #endregion
@@ -192,6 +205,12 @@ namespace Wiesenwischer.GameKit.Network
             // NICHT auf dem Server/Host: Server ist autoritaet, Reconcile-Error ist nur FP-Noise.
             if (_didReconcile && !IsServerStarted && state.ContainsTicked() && _smoother != null)
             {
+                if (_debugLog)
+                {
+                    Vector3 error = _preReconcilePosition - _motor.TransientPosition;
+                    Debug.Log($"[Driver] Reconcile: prePos={_preReconcilePosition:F3} correctedPos={_motor.TransientPosition:F3} error={error.magnitude:F4}m");
+                }
+
                 _smoother.OnReconcileComplete(
                     _preReconcilePosition, _preReconcileRotation,
                     _motor.TransientPosition, _motor.TransientRotation.eulerAngles.y);
