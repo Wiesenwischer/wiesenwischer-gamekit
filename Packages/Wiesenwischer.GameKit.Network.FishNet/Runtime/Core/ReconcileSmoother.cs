@@ -6,24 +6,29 @@ namespace Wiesenwischer.GameKit.Network
     /// Einheitliches Visual-Smoothing fuer Netzwerk-Characters.
     /// Handhabt BEIDES: Tick-Interpolation UND Reconcile-Correction.
     ///
+    /// Verwendet One-Tick-Behind Interpolation:
+    /// - Display zeigt immer die VORHERIGE Tick-Bewegung (einen Tick hinter der Simulation)
+    /// - Dadurch hat die Interpolation eine VOLLE Tick-Dauer zum Erreichen von factor=1.0
+    /// - Kein Velocity-Sprung an Tick-Grenzen (neuer displayStart = vorheriges displayEnd)
+    /// - Multi-Tick-per-Frame wird graceful gehandhabt (kein Rangverlust)
+    /// - Visueller Latenz-Overhead: ~1 Tick (33ms bei 30Hz)
+    ///
     /// Ersetzt die KCC-eigene CustomInterpolationUpdate (CharacterMotorSystem.Settings.Interpolate = false).
     /// Damit gibt es nur EIN System das Transform.position in LateUpdate schreibt — kein Kaempfen.
     ///
-    /// Flow:
-    /// 1. OnPreTick(): Speichert Interpolations-Startpunkt (TransientPosition VOR Simulation)
-    /// 2. [Replicate]: Simulation laeuft, TransientPosition aendert sich
-    ///    → CharacterMotorSystem.Simulate() schreibt TransientPosition auf transform.position (fuer Collider-Queries)
-    ///    → NetworkCharacterDriver stellt transform = TransientPosition VOR Simulate() sicher (pre-Simulate sync)
-    /// 3. OnReconcileComplete(): Bei Reconcile — Error berechnen, Startpunkt korrigieren
-    /// 4. OnPostTick(): Speichert Interpolations-Endpunkt und Timing
-    /// 5. LateUpdate (Order 50): Interpoliert zwischen Start/End + decaying Correction-Offset
-    ///    → Laeuft VOR CameraBrain (100) und GroundingSmoother (100)
-    ///    → Kamera/Grounding lesen immer die korrekte visuelle Position
+    /// Buffer-Architektur (One-Tick-Behind):
+    ///   displayStart ──Lerp──▶ displayEnd    (aktuell angezeigte Range, = vorheriger Tick)
+    ///                           pendingEnd    (neueste Simulation, wird naechsten Tick angezeigt)
     ///
-    /// OnPostTick setzt sofort die korrekte visuelle Position (tickStart + offset bei factor=0).
-    /// Zwischen OnPostTick und LateUpdate hat transform.position diese visuelle Position.
-    /// Der pre-Simulate sync in NetworkCharacterDriver stellt sicher dass der Motor
-    /// immer TransientPosition liest, nicht die visuelle Position.
+    /// Flow:
+    /// 1. OnPreTick(): Buffer-Shift (pending → displayEnd → displayStart), Timing starten
+    /// 2. [Replicate]: Simulation laeuft, TransientPosition aendert sich
+    ///    → CharacterMotorSystem.Simulate() schreibt TransientPosition auf transform.position
+    ///    → NetworkCharacterDriver stellt transform = TransientPosition VOR Simulate() sicher
+    /// 3. OnReconcileComplete(): Bei Reconcile — Error zum Offset addieren, Buffer shiften
+    /// 4. OnPostTick(): Pending-Position speichern (wird naechsten Tick displayed)
+    /// 5. LateUpdate (Order 50): Interpoliert displayStart→displayEnd + decaying Offset
+    ///    → Laeuft VOR CameraBrain (100) und GroundingSmoother (100)
     /// </summary>
     [DefaultExecutionOrder(50)]
     public class ReconcileSmoother : MonoBehaviour
@@ -49,20 +54,28 @@ namespace Wiesenwischer.GameKit.Network
         [Tooltip("Loggt Corrections die groesser als MinCorrectionThreshold sind.")]
         [SerializeField] private bool _debugLog;
 
-        // --- Tick Interpolation ---
-        private Vector3 _tickStartPos;
-        private Quaternion _tickStartRot;
-        private Vector3 _tickEndPos;
-        private Quaternion _tickEndRot;
+        // --- One-Tick-Behind Buffer ---
+        // Display interpolates between displayStart and displayEnd (= previous tick's range).
+        // pendingEnd holds the latest simulation result (= current tick's end, displayed next tick).
+        private Vector3 _displayStartPos;
+        private Quaternion _displayStartRot;
+        private Vector3 _displayEndPos;
+        private Quaternion _displayEndRot;
+        private Vector3 _pendingEndPos;
+        private Quaternion _pendingEndRot;
+
+        // --- Timing ---
         private float _interpStartTime;
-        private float _interpDeltaTime;
+        private float _interpDuration;
+        private float _lastTickTime;
+        private int _warmupTicks;
         private bool _initialized;
 
         // --- Correction Offset ---
         private Vector3 _positionOffset;
         private float _rotationOffset;
 
-        // --- Jitter Detection ---
+        // --- Diagnostics ---
         private int _diagFrameCount;
         private Vector3 _diagLastFinalPos;
         private Vector3 _diagLastDelta;
@@ -78,42 +91,74 @@ namespace Wiesenwischer.GameKit.Network
         /// <summary>Aktueller Rotations-Offset in Grad (fuer Debug).</summary>
         public float CurrentRotationOffset => _rotationOffset;
 
-        /// <summary>Ob der Smoother aktiv interpoliert (nach erstem OnPreTick).</summary>
+        /// <summary>Ob der Smoother aktiv interpoliert (nach 2 Ticks Warmup).</summary>
         public bool IsActive => _initialized;
 
         #region Tick Lifecycle
 
         /// <summary>
         /// Wird von NetworkCharacterDriver VOR dem Tick aufgerufen.
-        /// Speichert den Interpolations-Startpunkt (= aktuelle Motor-Position).
+        /// Shiftet den Buffer: pending → displayEnd, displayEnd → displayStart.
+        /// Startet das Interpolations-Timing fuer die neue Display-Range.
+        ///
+        /// Continuity-Beweis:
+        ///   Vor Shift: visual bei factor≈1.0 = displayEnd
+        ///   Nach Shift: displayStart = old displayEnd, factor=0 → visual = displayStart = old displayEnd
+        ///   → Kein Sprung an der Tick-Grenze.
         /// </summary>
-        public void OnPreTick(Vector3 motorPos, Quaternion motorRot)
+        public void OnPreTick(Vector3 motorPos, Quaternion motorRot, float tickDelta)
         {
-            _tickStartPos = motorPos;
-            _tickStartRot = motorRot;
-            _initialized = true;
+            float now = Time.time;
+
+            if (_warmupTicks == 0)
+            {
+                // Erster Tick: Alles auf aktuelle Position initialisieren.
+                // Kein Display — wir brauchen mindestens 2 Ticks fuer eine Range.
+                _displayStartPos = _displayEndPos = _pendingEndPos = motorPos;
+                _displayStartRot = _displayEndRot = _pendingEndRot = motorRot;
+                _lastTickTime = now;
+                _warmupTicks = 1;
+                return;
+            }
+
+            // Buffer-Shift: displayEnd → displayStart, pendingEnd → displayEnd
+            _displayStartPos = _displayEndPos;
+            _displayStartRot = _displayEndRot;
+            _displayEndPos = _pendingEndPos;
+            _displayEndRot = _pendingEndRot;
+
+            // Timing: Interpolation laeuft von jetzt bis zum naechsten Tick.
+            // Verwende die tatsaechliche Zeit seit letztem Tick (adaptiv an Frame-Timing).
+            // Damit erreicht factor≈1.0 exakt wenn der naechste Tick feuert.
+            float rawDuration = now - _lastTickTime;
+            _interpDuration = (rawDuration > 0.001f) ? rawDuration : tickDelta;
+            _interpStartTime = now;
+            _lastTickTime = now;
+
+            if (_warmupTicks == 1)
+            {
+                _warmupTicks = 2;
+                _initialized = true;
+            }
         }
 
         /// <summary>
         /// Wird von NetworkCharacterDriver NACH dem Tick aufgerufen.
-        /// Speichert den Interpolations-Endpunkt und startet das Timing.
+        /// Speichert die Post-Simulation Position als Pending (wird naechsten Tick displayed).
         /// </summary>
         public void OnPostTick(Vector3 motorPos, Quaternion motorRot, float tickDelta)
         {
-            _tickEndPos = motorPos;
-            _tickEndRot = motorRot;
-            _interpStartTime = Time.time;
-            _interpDeltaTime = tickDelta;
+            _pendingEndPos = motorPos;
+            _pendingEndRot = motorRot;
 
             // Sofort korrekte visuelle Position setzen.
-            // factor=0 (interpStartTime = Time.time = jetzt), also visual = tickStart + offset.
             // Verhindert dass Animator, IK oder andere Systeme zwischen OnPostTick und LateUpdate
-            // die rohe Simulations-Position sehen. LateUpdate ueberschreibt dann mit dem
-            // korrekt interpolierten Wert (der bei factor=0 identisch ist).
+            // die rohe Simulations-Position sehen.
+            // factor=0 (interpStartTime = Time.time = jetzt), visual = displayStart + offset.
             if (_initialized)
             {
-                Vector3 visualPos = _tickStartPos + _positionOffset;
-                Quaternion visualRot = _tickStartRot * Quaternion.Euler(0f, _rotationOffset, 0f);
+                Vector3 visualPos = _displayStartPos + _positionOffset;
+                Quaternion visualRot = _displayStartRot * Quaternion.Euler(0f, _rotationOffset, 0f);
                 transform.SetPositionAndRotation(visualPos, visualRot);
             }
         }
@@ -124,7 +169,13 @@ namespace Wiesenwischer.GameKit.Network
 
         /// <summary>
         /// Wird nach Owner-Reconcile+Replay aufgerufen (in PerformReplicate, ContainsTicked).
-        /// Berechnet Error, akkumuliert Offset, und korrigiert den Interpolations-Startpunkt.
+        /// Berechnet Error, akkumuliert Offset, und shiftet den Display-Buffer.
+        ///
+        /// Buffer-Shift bei Correction:
+        ///   displayStart/End werden um den Korrekturvektor verschoben.
+        ///   Offset wird um den Error-Vektor erhoeht (= Gegenrichtung).
+        ///   → Visual bleibt EXAKT gleich (Shift + Offset heben sich auf).
+        ///   → Beim Decay des Offsets gleitet das Visual zur korrigierten Trajektorie.
         /// </summary>
         public void OnReconcileComplete(Vector3 preReconcilePos, float preReconcileRotY,
                                          Vector3 correctedPos, float correctedRotY)
@@ -134,18 +185,28 @@ namespace Wiesenwischer.GameKit.Network
 
             if (posError.sqrMagnitude > _snapThreshold * _snapThreshold)
             {
+                // Hard snap: Display auf korrigierte Position setzen
+                _displayStartPos = _displayEndPos = _pendingEndPos = correctedPos;
+                Quaternion corrRot = Quaternion.Euler(0f, correctedRotY, 0f);
+                _displayStartRot = _displayEndRot = _pendingEndRot = corrRot;
                 ClearOffset();
             }
             else
             {
+                // Smooth correction: Display-Buffer shiften + Offset akkumulieren.
+                // correction = -posError (Richtung von pre nach corrected)
+                Vector3 correction = correctedPos - preReconcilePos;
+                _displayStartPos += correction;
+                _displayEndPos += correction;
+
+                // Rotation analog: Display-Rotationen um Korrektur drehen
+                Quaternion rotCorrection = Quaternion.Euler(0f, -rotError, 0f);
+                _displayStartRot = rotCorrection * _displayStartRot;
+                _displayEndRot = rotCorrection * _displayEndRot;
+
                 _positionOffset += posError;
                 _rotationOffset += rotError;
             }
-
-            // Interpolations-Startpunkt auf korrigierte Position setzen.
-            // Verhindert dass die Interpolation die Korrektur-Distanz durchlaeuft.
-            _tickStartPos = correctedPos;
-            _tickStartRot = Quaternion.Euler(0f, correctedRotY, 0f);
 
             if (_debugLog && posError.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold)
                 Debug.Log($"[ReconcileSmoother] Reconcile: pos={posError.magnitude:F4}m rot={rotError:F2}°");
@@ -153,47 +214,44 @@ namespace Wiesenwischer.GameKit.Network
 
         /// <summary>
         /// Wird nach Spectator-Correction aufgerufen (nach Simulation mit neuem autoritativem Input).
-        /// Setzt tickStart = postPos (analog zu OnReconcileComplete), damit die Interpolation
-        /// die Korrektur nicht doppelt anwendet (offset + Lerp-Range wuerden sonst beide die
-        /// volle Distanz prePos→postPos enthalten).
+        /// Gleiche Buffer-Shift Logik wie OnReconcileComplete.
         /// </summary>
         public void OnSpectatorCorrection(Vector3 prePos, Vector3 postPos, Quaternion postRot)
         {
             Vector3 error = prePos - postPos;
 
             if (error.sqrMagnitude > _snapThreshold * _snapThreshold)
+            {
+                _displayStartPos = _displayEndPos = _pendingEndPos = postPos;
+                _displayStartRot = _displayEndRot = _pendingEndRot = postRot;
                 ClearOffset();
+            }
             else
-                _positionOffset += error;
+            {
+                Vector3 correction = postPos - prePos;
+                _displayStartPos += correction;
+                _displayEndPos += correction;
 
-            // Start- UND Endpunkt auf korrigierte Position setzen.
-            // Ohne tickStart-Update wuerde OnPostTick visual = prePos + (prePos - postPos) setzen
-            // → Doppel-Korrektur (visual springt hinter die pre-Correction Position).
-            _tickStartPos = postPos;
-            _tickStartRot = postRot;
-            _tickEndPos = postPos;
-            _tickEndRot = postRot;
+                _positionOffset += error;
+            }
 
             if (_debugLog && error.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold)
                 Debug.Log($"[ReconcileSmoother] Spectator: pos={error.magnitude:F4}m");
         }
 
-        /// <summary>
-        /// Setzt den Offset sofort auf Zero (hard snap).
-        /// </summary>
+        /// <summary>Setzt den Offset sofort auf Zero (hard snap).</summary>
         public void ClearOffset()
         {
             _positionOffset = Vector3.zero;
             _rotationOffset = 0f;
         }
 
-        /// <summary>
-        /// Setzt den Smoother komplett zurueck (z.B. bei Disconnect).
-        /// </summary>
+        /// <summary>Setzt den Smoother komplett zurueck (z.B. bei Disconnect).</summary>
         public void Reset()
         {
             ClearOffset();
             _initialized = false;
+            _warmupTicks = 0;
         }
 
         #endregion
@@ -202,7 +260,7 @@ namespace Wiesenwischer.GameKit.Network
 
         private void LateUpdate()
         {
-            // Offline-Guard: Ohne OnPreTick-Call kein Smoothing
+            // Offline-Guard: Ohne 2 Ticks Warmup kein Smoothing.
             // (KCC handhabt Interpolation selbst via CustomInterpolationUpdate)
             if (!_initialized) return;
 
@@ -211,19 +269,19 @@ namespace Wiesenwischer.GameKit.Network
             {
                 _diagStartupLogged = true;
                 Debug.Log($"[Smoother] ACTIVE on {gameObject.name} | " +
-                    $"tickDelta={_interpDeltaTime:F4}s snapThreshold={_snapThreshold}m " +
-                    $"correctionRate={_correctionRate}");
+                    $"interpDuration={_interpDuration:F4}s snapThreshold={_snapThreshold}m " +
+                    $"correctionRate={_correctionRate} mode=OneTickBehind");
             }
 
             _diagFrameCount++;
 
-            // 1. Tick-Interpolation (ersetzt CharacterMotorSystem.CustomInterpolationUpdate)
-            float factor = (_interpDeltaTime > 0f)
-                ? Mathf.Clamp01((Time.time - _interpStartTime) / _interpDeltaTime)
+            // 1. Tick-Interpolation (One-Tick-Behind: displayStart → displayEnd)
+            float factor = (_interpDuration > 0f)
+                ? Mathf.Clamp01((Time.time - _interpStartTime) / _interpDuration)
                 : 1f;
 
-            Vector3 interpPos = Vector3.Lerp(_tickStartPos, _tickEndPos, factor);
-            Quaternion interpRot = Quaternion.Slerp(_tickStartRot, _tickEndRot, factor);
+            Vector3 interpPos = Vector3.Lerp(_displayStartPos, _displayEndPos, factor);
+            Quaternion interpRot = Quaternion.Slerp(_displayStartRot, _displayEndRot, factor);
 
             // 2. Offset-Decay
             bool hasPosition = _positionOffset.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold;
@@ -250,20 +308,18 @@ namespace Wiesenwischer.GameKit.Network
             Vector3 finalPos = interpPos + _positionOffset;
             Quaternion finalRot = interpRot * Quaternion.Euler(0f, _rotationOffset, 0f);
 
-            // Pruefen ob etwas zwischen OnPostTick und LateUpdate die Position veraendert hat
+            // Diagnostics: Tamper-Detection
             if (_debugLog && _diagFrameCount > 1)
             {
-                Vector3 expectedPos = _diagLastFinalPos; // Was wir letztes Frame geschrieben haben
-                Vector3 actualPos = transform.position;  // Was transform.position JETZT ist (vor unserem Write)
+                Vector3 expectedPos = _diagLastFinalPos;
+                Vector3 actualPos = transform.position;
                 Vector3 tamperDelta = actualPos - expectedPos;
                 if (tamperDelta.sqrMagnitude > 0.0001f * 0.0001f) // 0.1mm
                 {
-                    // Tick-Frame: OnPostTick hat transform ueberschrieben → erwartet
                     bool tickThisFrame = _interpStartTime != _diagLastInterpStartTime;
                     if (!tickThisFrame)
                     {
-                        Debug.LogWarning($"[Smoother] TAMPERED! transform.position changed by " +
-                            $"{tamperDelta.magnitude:F4}m between LateUpdates (no tick). " +
+                        Debug.LogWarning($"[Smoother] TAMPERED! delta={tamperDelta.magnitude:F4}m " +
                             $"expected={expectedPos:F3} actual={actualPos:F3}");
                     }
                 }
@@ -277,8 +333,8 @@ namespace Wiesenwischer.GameKit.Network
                 Vector3 delta = finalPos - _diagLastFinalPos;
                 bool tickThisFrame = _interpStartTime != _diagLastInterpStartTime;
 
-                // Stillstand-Jitter: Position aendert sich obwohl tickStart==tickEnd und offset==0
-                bool shouldBeStill = (_tickStartPos - _tickEndPos).sqrMagnitude < 0.00001f
+                // Stillstand-Jitter: Position aendert sich obwohl displayStart==displayEnd und offset==0
+                bool shouldBeStill = (_displayStartPos - _displayEndPos).sqrMagnitude < 0.00001f
                                      && _positionOffset.sqrMagnitude < _minCorrectionThreshold * _minCorrectionThreshold;
                 if (shouldBeStill && delta.sqrMagnitude > 0.00001f && _diagFrameCount > 2)
                 {
@@ -286,7 +342,7 @@ namespace Wiesenwischer.GameKit.Network
                         $"factor={factor:F3} tick={tickThisFrame} frame={_diagFrameCount}");
                 }
 
-                // Stutter-Detection: Bewegungsdelta aendert sich stark zwischen Frames
+                // Stutter-Detection: Bewegungsdelta aendert sich stark zwischen non-tick Frames
                 if (!shouldBeStill && _diagLastDelta.sqrMagnitude > 0.00001f
                     && delta.sqrMagnitude > 0.00001f && !tickThisFrame)
                 {
@@ -303,9 +359,9 @@ namespace Wiesenwischer.GameKit.Network
                 if (_diagFrameCount % 120 == 0)
                 {
                     Debug.Log($"[Smoother] Status frame={_diagFrameCount}: " +
-                        $"pos={finalPos:F3} tickStart={_tickStartPos:F3} tickEnd={_tickEndPos:F3} " +
-                        $"factor={factor:F3} offset={_positionOffset:F4} " +
-                        $"tickDelta={_interpDeltaTime:F4}s fps={1f / Time.deltaTime:F0}");
+                        $"pos={finalPos:F3} start={_displayStartPos:F3} end={_displayEndPos:F3} " +
+                        $"pending={_pendingEndPos:F3} factor={factor:F3} offset={_positionOffset:F4} " +
+                        $"interpDur={_interpDuration:F4}s fps={1f / Time.deltaTime:F0}");
                 }
 
                 _diagLastFinalPos = finalPos;

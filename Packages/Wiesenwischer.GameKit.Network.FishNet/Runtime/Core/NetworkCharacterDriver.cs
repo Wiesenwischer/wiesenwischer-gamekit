@@ -13,9 +13,9 @@ namespace Wiesenwischer.GameKit.Network
     /// Treibt die Character-Simulation ueber FishNet's TimeManager.OnTick.
     /// Ersetzt NetworkInputSync + NetworkStateSync durch native [Replicate]/[Reconcile].
     ///
-    /// Tick-Flow:
-    /// OnTick:     Smoother.OnPreTick → BuildInput → [Replicate](SimulateTick + Motor.Simulate)
-    /// OnPostTick: CreateReconcile → Smoother.OnPostTick
+    /// Tick-Flow (One-Tick-Behind):
+    /// OnTick:     Smoother.OnPreTick (Buffer-Shift) → BuildInput → [Replicate](SimulateTick + Motor.Simulate)
+    /// OnPostTick: CreateReconcile → Smoother.OnPostTick (speichert Pending fuer naechsten Tick)
     ///
     /// KCC-Interpolation ist deaktiviert (Settings.Interpolate = false).
     /// ReconcileSmoother handhabt Tick-Interpolation UND Reconcile-Smoothing in einem System.
@@ -134,10 +134,11 @@ namespace Wiesenwischer.GameKit.Network
 
         protected override void TimeManager_OnTick()
         {
-            // 1. Interpolations-Startpunkt speichern (aktuelle Motor-Position VOR Simulation)
+            // 1. Buffer-Shift + Interpolations-Timing (One-Tick-Behind)
             if (_smoother != null && _motor != null)
             {
-                _smoother.OnPreTick(_motor.TransientPosition, _motor.TransientRotation);
+                _smoother.OnPreTick(_motor.TransientPosition, _motor.TransientRotation,
+                                    (float)TimeManager.TickDelta);
 
                 if (_debugLog)
                     Debug.Log($"[Driver] OnTick: PreTick pos={_motor.TransientPosition:F3} transform={transform.position:F3} isOwner={IsOwner} isServer={IsServerStarted}");
