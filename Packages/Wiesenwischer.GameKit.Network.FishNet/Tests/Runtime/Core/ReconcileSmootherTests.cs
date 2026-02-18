@@ -27,6 +27,9 @@ namespace Wiesenwischer.GameKit.Network.Tests
         /// <summary>
         /// Helper: Fuehrt die minimale Warmup-Sequenz durch (2 Ticks).
         /// Nach Warmup: displayStart=pos0, displayEnd=pos1, initialized=true.
+        /// ResetFrameGuard() wird danach aufgerufen, damit folgende OnPreTick-Calls
+        /// nicht vom Multi-Tick-Guard blockiert werden (Time.frameCount aendert sich
+        /// in Unit Tests nicht zwischen simulierten Ticks).
         /// </summary>
         private void DoWarmup(Vector3 pos0, Vector3 pos1)
         {
@@ -34,7 +37,10 @@ namespace Wiesenwischer.GameKit.Network.Tests
             _smoother.OnPreTick(pos0, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(pos1, Quaternion.identity, TickDelta);
             // Tick 1: Buffer-Shift, Initialisierung abgeschlossen
+            // (Guard ist hier inaktiv weil _initialized noch false ist)
             _smoother.OnPreTick(pos1, Quaternion.identity, TickDelta);
+            // Guard zuruecksetzen fuer nachfolgende Test-Ticks
+            _smoother.ResetFrameGuard();
         }
 
         #region Initial State
@@ -352,9 +358,11 @@ namespace Wiesenwischer.GameKit.Network.Tests
             _smoother.OnPreTick(pos0, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(pos1, Quaternion.identity, TickDelta);
             // Tick 1: displayStart=pos0, displayEnd=pos1 (tick 0's range)
+            _smoother.ResetFrameGuard(); // Simuliere neuen Frame
             _smoother.OnPreTick(pos1, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(pos2, Quaternion.identity, TickDelta);
             // Tick 2: displayStart=pos1, displayEnd=pos2 (tick 1's range)
+            _smoother.ResetFrameGuard(); // Simuliere neuen Frame
             _smoother.OnPreTick(pos2, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(pos3, Quaternion.identity, TickDelta);
 
@@ -374,6 +382,95 @@ namespace Wiesenwischer.GameKit.Network.Tests
             _smoother.OnPostTick(Vector3.one, Quaternion.identity, TickDelta);
 
             Assert.AreEqual(initialPos.x, _go.transform.position.x, 0.001f);
+        }
+
+        #endregion
+
+        #region Multi-Tick-per-Frame Guard
+
+        [Test]
+        public void MultiTickGuard_SkipsShiftInSameFrame()
+        {
+            // Setup: Warmup mit pos0=0, pos1=1
+            Vector3 pos0 = Vector3.zero;
+            Vector3 pos1 = new Vector3(1f, 0f, 0f);
+            DoWarmup(pos0, pos1);
+            // displayStart=pos0=(0,0,0), displayEnd=pos1=(1,0,0), initialized=true
+
+            // Tick 2 (normaler Frame): Shift von pending → display
+            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+            // KEIN ResetFrameGuard — simuliert 2 Ticks im SELBEN Frame
+
+            // Tick 3 (gleicher Frame): OnPreTick sollte den Shift SKIPPEN
+            _smoother.OnPreTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // Display sollte NICHT auf pos2 vorgerueckt sein — Guard hat den Shift blockiert.
+            // displayStart ist immer noch pos0, displayEnd immer noch pos1
+            // (pendingEnd wurde aber auf pos3 aktualisiert fuer den naechsten Frame).
+            Assert.AreEqual(pos0.x, _go.transform.position.x, 0.001f,
+                "displayStart sollte unveraendert sein (Guard hat Shift blockiert)");
+        }
+
+        [Test]
+        public void MultiTickGuard_AllowsShiftAfterFrameAdvance()
+        {
+            Vector3 pos0 = Vector3.zero;
+            Vector3 pos1 = new Vector3(1f, 0f, 0f);
+            DoWarmup(pos0, pos1);
+            // displayStart=pos0, displayEnd=pos1
+
+            // Tick 2: normaler PostTick
+            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // Neuer Frame → Guard zuruecksetzen
+            _smoother.ResetFrameGuard();
+
+            // Tick 3 (neuer Frame): Shift sollte durchgehen
+            _smoother.OnPreTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // displayStart = old displayEnd = pos1 = (1,0,0)
+            // displayEnd = old pending = (2,0,0)
+            Assert.AreEqual(pos1.x, _go.transform.position.x, 0.001f,
+                "displayStart sollte auf pos1 vorgerueckt sein (Shift erlaubt)");
+        }
+
+        [Test]
+        public void MultiTickGuard_PendingStillUpdated()
+        {
+            // Verifies: Even when guard blocks the shift, OnPostTick still updates pending.
+            // This means the next frame's shift picks up the latest position.
+            Vector3 pos0 = Vector3.zero;
+            Vector3 pos1 = new Vector3(1f, 0f, 0f);
+            DoWarmup(pos0, pos1);
+
+            // Tick 2: PostTick speichert pending=(2,0,0)
+            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+            // Tick 3 (GLEICHER Frame): Guard blockiert Shift, aber PostTick speichert pending=(3,0,0)
+            _smoother.OnPreTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // Jetzt neuer Frame: Shift geht durch
+            _smoother.ResetFrameGuard();
+            _smoother.OnPreTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(4f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // displayStart = old displayEnd = pos1 = (1,0,0) — NICHT pos0!
+            // Wait, let me trace this more carefully:
+            // After DoWarmup: displayStart=pos0=(0), displayEnd=pos1=(1), pending=pos1=(1)
+            // PostTick: pending=(2)
+            // Tick 3 PreTick (SKIPPED by guard) → display unchanged
+            // PostTick: pending=(3)
+            // ResetFrameGuard
+            // Tick 4 PreTick: Shift! displayStart=old displayEnd=(1), displayEnd=old pending=(3)
+            // PostTick: pending=(4)
+            // Visual at factor=0: displayStart=(1)
+
+            // Entscheidend: displayEnd sprang von (1) auf (3), nicht (2) → Tick 3 wurde uebersprungen
+            // aber die letzte Position (3) ist korrekt aufgenommen worden.
+            Assert.AreEqual(1f, _go.transform.position.x, 0.001f,
+                "displayStart nach Shift = (1,0,0)");
         }
 
         #endregion

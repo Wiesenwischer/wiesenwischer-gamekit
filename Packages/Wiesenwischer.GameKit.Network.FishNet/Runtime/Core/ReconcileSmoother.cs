@@ -70,6 +70,7 @@ namespace Wiesenwischer.GameKit.Network
         private float _lastTickTime;
         private int _warmupTicks;
         private bool _initialized;
+        private int _lastShiftFrame = -1;
 
         // --- Correction Offset ---
         private Vector3 _positionOffset;
@@ -101,6 +102,13 @@ namespace Wiesenwischer.GameKit.Network
         /// Shiftet den Buffer: pending → displayEnd, displayEnd → displayStart.
         /// Startet das Interpolations-Timing fuer die neue Display-Range.
         ///
+        /// Multi-Tick-per-Frame Guard:
+        ///   Maximal EIN Buffer-Shift pro Render-Frame.
+        ///   Wenn mehrere Ticks im selben Frame feuern (ParrelSync, Frame-Spikes),
+        ///   wird nur der erste Shift ausgefuehrt. Folge-Ticks aktualisieren nur pendingEnd.
+        ///   → Display springt NICHT um mehrere Ticks, sondern zeigt beim naechsten Frame
+        ///     eine etwas groessere Range (2-3x Geschwindigkeit statt Positions-Sprung).
+        ///
         /// Continuity-Beweis:
         ///   Vor Shift: visual bei factor≈1.0 = displayEnd
         ///   Nach Shift: displayStart = old displayEnd, factor=0 → visual = displayStart = old displayEnd
@@ -109,6 +117,7 @@ namespace Wiesenwischer.GameKit.Network
         public void OnPreTick(Vector3 motorPos, Quaternion motorRot, float tickDelta)
         {
             float now = Time.time;
+            int frame = Time.frameCount;
 
             if (_warmupTicks == 0)
             {
@@ -117,9 +126,22 @@ namespace Wiesenwischer.GameKit.Network
                 _displayStartPos = _displayEndPos = _pendingEndPos = motorPos;
                 _displayStartRot = _displayEndRot = _pendingEndRot = motorRot;
                 _lastTickTime = now;
+                _lastShiftFrame = frame;
                 _warmupTicks = 1;
                 return;
             }
+
+            // Multi-Tick-per-Frame Guard: Maximal EIN Shift pro Render-Frame.
+            // Folge-Ticks im selben Frame skippen den Shift.
+            // OnPostTick aktualisiert trotzdem pendingEnd — beim naechsten Frame-Shift
+            // springt displayEnd auf die neueste Position (groessere Range, kein Positions-Sprung).
+            if (frame == _lastShiftFrame && _initialized)
+            {
+                if (_debugLog)
+                    Debug.Log($"[Smoother] Multi-tick skip: frame={frame} pos={motorPos:F3}");
+                return;
+            }
+            _lastShiftFrame = frame;
 
             // Buffer-Shift: displayEnd → displayStart, pendingEnd → displayEnd
             _displayStartPos = _displayEndPos;
@@ -252,7 +274,15 @@ namespace Wiesenwischer.GameKit.Network
             ClearOffset();
             _initialized = false;
             _warmupTicks = 0;
+            _lastShiftFrame = -1;
         }
+
+        /// <summary>
+        /// Setzt den Multi-Tick-per-Frame Guard zurueck.
+        /// Nur fuer Unit Tests noetig, da Time.frameCount dort nicht zwischen
+        /// simulierten Ticks inkrementiert.
+        /// </summary>
+        public void ResetFrameGuard() => _lastShiftFrame = -1;
 
         #endregion
 
