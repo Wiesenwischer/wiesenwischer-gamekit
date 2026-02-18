@@ -62,7 +62,12 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _positionOffset;
         private float _rotationOffset;
 
+        // --- Jitter Detection ---
         private int _diagFrameCount;
+        private Vector3 _diagLastFinalPos;
+        private Vector3 _diagLastDelta;
+        private float _diagLastInterpStartTime;
+        private bool _diagStartupLogged;
 
         /// <summary>Snap-Threshold fuer externe Abfrage.</summary>
         public float SnapThreshold => _snapThreshold;
@@ -201,8 +206,16 @@ namespace Wiesenwischer.GameKit.Network
             // (KCC handhabt Interpolation selbst via CustomInterpolationUpdate)
             if (!_initialized) return;
 
-            if (_debugLog)
-                _diagFrameCount++;
+            // Startup-Log (einmalig)
+            if (_debugLog && !_diagStartupLogged)
+            {
+                _diagStartupLogged = true;
+                Debug.Log($"[Smoother] ACTIVE on {gameObject.name} | " +
+                    $"tickDelta={_interpDeltaTime:F4}s snapThreshold={_snapThreshold}m " +
+                    $"correctionRate={_correctionRate}");
+            }
+
+            _diagFrameCount++;
 
             // 1. Tick-Interpolation (ersetzt CharacterMotorSystem.CustomInterpolationUpdate)
             float factor = (_interpDeltaTime > 0f)
@@ -237,15 +250,67 @@ namespace Wiesenwischer.GameKit.Network
             Vector3 finalPos = interpPos + _positionOffset;
             Quaternion finalRot = interpRot * Quaternion.Euler(0f, _rotationOffset, 0f);
 
+            // Pruefen ob etwas zwischen OnPostTick und LateUpdate die Position veraendert hat
+            if (_debugLog && _diagFrameCount > 1)
+            {
+                Vector3 expectedPos = _diagLastFinalPos; // Was wir letztes Frame geschrieben haben
+                Vector3 actualPos = transform.position;  // Was transform.position JETZT ist (vor unserem Write)
+                Vector3 tamperDelta = actualPos - expectedPos;
+                if (tamperDelta.sqrMagnitude > 0.0001f * 0.0001f) // 0.1mm
+                {
+                    // Tick-Frame: OnPostTick hat transform ueberschrieben → erwartet
+                    bool tickThisFrame = _interpStartTime != _diagLastInterpStartTime;
+                    if (!tickThisFrame)
+                    {
+                        Debug.LogWarning($"[Smoother] TAMPERED! transform.position changed by " +
+                            $"{tamperDelta.magnitude:F4}m between LateUpdates (no tick). " +
+                            $"expected={expectedPos:F3} actual={actualPos:F3}");
+                    }
+                }
+            }
+
             transform.SetPositionAndRotation(finalPos, finalRot);
 
-            // --- DIAGNOSE ---
-            if (_debugLog && _diagFrameCount % 30 == 0)
+            // --- JITTER DETECTION ---
+            if (_debugLog)
             {
-                Debug.Log($"[Smoother] Frame {_diagFrameCount}: " +
-                    $"tickStart={_tickStartPos:F3} tickEnd={_tickEndPos:F3} " +
-                    $"factor={factor:F3} interp={interpPos:F3} " +
-                    $"offset={_positionOffset:F4} final={finalPos:F3}");
+                Vector3 delta = finalPos - _diagLastFinalPos;
+                bool tickThisFrame = _interpStartTime != _diagLastInterpStartTime;
+
+                // Stillstand-Jitter: Position aendert sich obwohl tickStart==tickEnd und offset==0
+                bool shouldBeStill = (_tickStartPos - _tickEndPos).sqrMagnitude < 0.00001f
+                                     && _positionOffset.sqrMagnitude < _minCorrectionThreshold * _minCorrectionThreshold;
+                if (shouldBeStill && delta.sqrMagnitude > 0.00001f && _diagFrameCount > 2)
+                {
+                    Debug.LogWarning($"[Smoother] STILL-JITTER! delta={delta.magnitude:F6}m " +
+                        $"factor={factor:F3} tick={tickThisFrame} frame={_diagFrameCount}");
+                }
+
+                // Stutter-Detection: Bewegungsdelta aendert sich stark zwischen Frames
+                if (!shouldBeStill && _diagLastDelta.sqrMagnitude > 0.00001f
+                    && delta.sqrMagnitude > 0.00001f && !tickThisFrame)
+                {
+                    float ratio = delta.magnitude / _diagLastDelta.magnitude;
+                    if (ratio < 0.3f || ratio > 3f)
+                    {
+                        Debug.LogWarning($"[Smoother] STUTTER! delta={delta.magnitude:F4}m " +
+                            $"prevDelta={_diagLastDelta.magnitude:F4}m ratio={ratio:F2} " +
+                            $"factor={factor:F3} frame={_diagFrameCount}");
+                    }
+                }
+
+                // Status alle 120 Frames
+                if (_diagFrameCount % 120 == 0)
+                {
+                    Debug.Log($"[Smoother] Status frame={_diagFrameCount}: " +
+                        $"pos={finalPos:F3} tickStart={_tickStartPos:F3} tickEnd={_tickEndPos:F3} " +
+                        $"factor={factor:F3} offset={_positionOffset:F4} " +
+                        $"tickDelta={_interpDeltaTime:F4}s fps={1f / Time.deltaTime:F0}");
+                }
+
+                _diagLastFinalPos = finalPos;
+                _diagLastDelta = delta;
+                _diagLastInterpStartTime = _interpStartTime;
             }
         }
 

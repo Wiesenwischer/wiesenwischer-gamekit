@@ -78,6 +78,22 @@ namespace Wiesenwischer.GameKit.Network
             // KCC-Interpolation deaktivieren — ReconcileSmoother uebernimmt.
             // CustomInterpolationUpdate kaempft sonst gegen den Smoother (Doppel-Korrektur).
             CharacterMotorSystem.Settings.Interpolate = false;
+
+            if (_debugLog)
+            {
+                Debug.Log($"[Driver] OnStartNetwork: {gameObject.name} | " +
+                    $"isOwner={base.Owner.IsLocalClient} isServer={base.IsServerStarted} " +
+                    $"smoother={(_smoother != null ? "OK" : "MISSING!")} " +
+                    $"motor={(_motor != null ? "OK" : "MISSING!")} " +
+                    $"tickRate={TimeManager.TickRate}Hz " +
+                    $"tickDelta={TimeManager.TickDelta:F4}s " +
+                    $"AutoSim={CharacterMotorSystem.Settings.AutoSimulation} " +
+                    $"KCC-Interp={CharacterMotorSystem.Settings.Interpolate}");
+
+                if (_smoother == null)
+                    Debug.LogError($"[Driver] ReconcileSmoother NICHT GEFUNDEN auf {gameObject.name}! " +
+                        "Tick-Interpolation ist deaktiviert — Character wird mit Tick-Rate statt Frame-Rate gerendert!");
+            }
         }
 
         public override void OnStopNetwork()
