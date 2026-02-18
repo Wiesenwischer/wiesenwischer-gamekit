@@ -71,6 +71,7 @@ namespace Wiesenwischer.GameKit.Network
         private int _warmupTicks;
         private bool _initialized;
         private int _lastShiftFrame = -1;
+        private int _pendingTicks;
 
         // --- Correction Offset ---
         private Vector3 _positionOffset;
@@ -106,8 +107,14 @@ namespace Wiesenwischer.GameKit.Network
         ///   Maximal EIN Buffer-Shift pro Render-Frame.
         ///   Wenn mehrere Ticks im selben Frame feuern (ParrelSync, Frame-Spikes),
         ///   wird nur der erste Shift ausgefuehrt. Folge-Ticks aktualisieren nur pendingEnd.
-        ///   → Display springt NICHT um mehrere Ticks, sondern zeigt beim naechsten Frame
-        ///     eine etwas groessere Range (2-3x Geschwindigkeit statt Positions-Sprung).
+        ///
+        /// Adaptive interpDuration:
+        ///   Wenn Ticks uebersprungen wurden (Multi-Tick Guard), deckt die Display-Range
+        ///   mehrere Ticks Bewegung ab. interpDuration wird proportional skaliert:
+        ///     interpDuration = max(rawDuration, tickDelta * akkumulierteTicks)
+        ///   → Konstante visuelle Geschwindigkeit statt Speed-Burst.
+        ///   → Display faellt kurzzeitig weiter hinter Simulation, holt aber mit
+        ///     normaler Geschwindigkeit auf.
         ///
         /// Continuity-Beweis:
         ///   Vor Shift: visual bei factor≈1.0 = displayEnd
@@ -127,6 +134,7 @@ namespace Wiesenwischer.GameKit.Network
                 _displayStartRot = _displayEndRot = _pendingEndRot = motorRot;
                 _lastTickTime = now;
                 _lastShiftFrame = frame;
+                _pendingTicks = 0;
                 _warmupTicks = 1;
                 return;
             }
@@ -149,13 +157,19 @@ namespace Wiesenwischer.GameKit.Network
             _displayEndPos = _pendingEndPos;
             _displayEndRot = _pendingEndRot;
 
-            // Timing: Interpolation laeuft von jetzt bis zum naechsten Tick.
-            // Verwende die tatsaechliche Zeit seit letztem Tick (adaptiv an Frame-Timing).
-            // Damit erreicht factor≈1.0 exakt wenn der naechste Tick feuert.
+            // Adaptive Timing: Bei Multi-Tick wird interpDuration proportional skaliert.
+            // Wenn 3 Ticks akkumuliert: Display-Range = 3 Ticks, interpDuration = 3×tickDelta.
+            // → Visuelle Geschwindigkeit bleibt konstant statt 3× Speed-Burst.
             float rawDuration = now - _lastTickTime;
-            _interpDuration = (rawDuration > 0.001f) ? rawDuration : tickDelta;
+            int ticksAccumulated = Mathf.Max(_pendingTicks, 1);
+            float minDuration = tickDelta * ticksAccumulated;
+            _interpDuration = Mathf.Max(rawDuration > 0.001f ? rawDuration : tickDelta, minDuration);
             _interpStartTime = now;
             _lastTickTime = now;
+            _pendingTicks = 0;
+
+            if (_debugLog && ticksAccumulated > 1)
+                Debug.Log($"[Smoother] Adaptive: {ticksAccumulated} ticks, interpDur={_interpDuration:F4}s");
 
             if (_warmupTicks == 1)
             {
@@ -172,6 +186,7 @@ namespace Wiesenwischer.GameKit.Network
         {
             _pendingEndPos = motorPos;
             _pendingEndRot = motorRot;
+            _pendingTicks++;
 
             // Sofort korrekte visuelle Position setzen.
             // Verhindert dass Animator, IK oder andere Systeme zwischen OnPostTick und LateUpdate
@@ -275,6 +290,7 @@ namespace Wiesenwischer.GameKit.Network
             _initialized = false;
             _warmupTicks = 0;
             _lastShiftFrame = -1;
+            _pendingTicks = 0;
         }
 
         /// <summary>
@@ -372,9 +388,12 @@ namespace Wiesenwischer.GameKit.Network
                         $"factor={factor:F3} tick={tickThisFrame} frame={_diagFrameCount}");
                 }
 
-                // Stutter-Detection: Bewegungsdelta aendert sich stark zwischen non-tick Frames
-                if (!shouldBeStill && _diagLastDelta.sqrMagnitude > 0.00001f
-                    && delta.sqrMagnitude > 0.00001f && !tickThisFrame)
+                // Stutter-Detection: Bewegungsdelta aendert sich stark zwischen non-tick Frames.
+                // Minimum 3cm — kleinere Deltas (Anlaufen, Abbremsen) sind unsichtbar
+                // und erzeugen False Positives durch hohe Verhaeltnisse bei winzigen Absolutwerten.
+                const float minStutterDelta = 0.03f;
+                if (!shouldBeStill && _diagLastDelta.sqrMagnitude > minStutterDelta * minStutterDelta
+                    && delta.sqrMagnitude > minStutterDelta * minStutterDelta && !tickThisFrame)
                 {
                     float ratio = delta.magnitude / _diagLastDelta.magnitude;
                     if (ratio < 0.3f || ratio > 3f)
