@@ -25,22 +25,13 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         /// <summary>
-        /// Helper: Fuehrt die minimale Warmup-Sequenz durch (2 Ticks).
-        /// Nach Warmup: displayStart=pos0, displayEnd=pos1, initialized=true.
-        /// ResetFrameGuard() wird danach aufgerufen, damit folgende OnPreTick-Calls
-        /// nicht vom Multi-Tick-Guard blockiert werden (Time.frameCount aendert sich
-        /// in Unit Tests nicht zwischen simulierten Ticks).
+        /// Helper: Initialisiert den Smoother mit einer Position.
+        /// Nach Aufruf: _initialized=true, _smoothPos=initPos, _targetPos=initPos.
         /// </summary>
-        private void DoWarmup(Vector3 pos0, Vector3 pos1)
+        private void DoInit(Vector3 initPos)
         {
-            // Tick 0: Initialisierung
-            _smoother.OnPreTick(pos0, Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(pos1, Quaternion.identity, TickDelta);
-            // Tick 1: Buffer-Shift, Initialisierung abgeschlossen
-            // (Guard ist hier inaktiv weil _initialized noch false ist)
-            _smoother.OnPreTick(pos1, Quaternion.identity, TickDelta);
-            // Guard zuruecksetzen fuer nachfolgende Test-Ticks
-            _smoother.ResetFrameGuard();
+            _smoother.OnPreTick(initPos, Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(initPos, Quaternion.identity, TickDelta);
         }
 
         #region Initial State
@@ -66,30 +57,19 @@ namespace Wiesenwischer.GameKit.Network.Tests
 
         #endregion
 
-        #region Warmup
+        #region Initialization
 
         [Test]
-        public void OnPreTick_FirstCall_DoesNotActivate()
+        public void OnPreTick_FirstCall_Activates()
         {
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
-            Assert.IsFalse(_smoother.IsActive);
-        }
-
-        [Test]
-        public void OnPreTick_SecondCall_Activates()
-        {
-            // Tick 0
-            _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(Vector3.forward, Quaternion.identity, TickDelta);
-            // Tick 1: Buffer-Shift → initialized
-            _smoother.OnPreTick(Vector3.forward, Quaternion.identity, TickDelta);
             Assert.IsTrue(_smoother.IsActive);
         }
 
         [Test]
         public void Reset_SetsActiveFalse()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
             _smoother.Reset();
             Assert.IsFalse(_smoother.IsActive);
         }
@@ -97,12 +77,24 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void Reset_ClearsOffset()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
             _smoother.OnReconcileComplete(Vector3.one, 0f, Vector3.zero, 0f);
             _smoother.Reset();
 
             Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
             Assert.AreEqual(0f, _smoother.CurrentRotationOffset, 0.001f);
+        }
+
+        [Test]
+        public void LateUpdate_DoesNothing_WhenNotInitialized()
+        {
+            Vector3 initialPos = new Vector3(99f, 0f, 0f);
+            _go.transform.position = initialPos;
+
+            // LateUpdate ohne Initialisierung → transform bleibt unveraendert
+            _smoother.SendMessage("LateUpdate");
+
+            Assert.AreEqual(initialPos.x, _go.transform.position.x, 0.001f);
         }
 
         #endregion
@@ -112,7 +104,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void OnReconcileComplete_AccumulatesOffset()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
 
             Vector3 preReconcile = new Vector3(10f, 0f, 5f);
             Vector3 corrected = new Vector3(10.1f, 0f, 5.05f);
@@ -127,7 +119,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void OnReconcileComplete_AccumulatesMultipleCorrections()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
 
             // Erste Korrektur
             _smoother.OnReconcileComplete(
@@ -146,7 +138,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void OnReconcileComplete_SnapsOnLargeError()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
 
             // Kleiner Error erst
             _smoother.OnReconcileComplete(Vector3.one, 0f, Vector3.zero, 0f);
@@ -164,7 +156,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void OnReconcileComplete_HandlesRotation()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
 
             _smoother.OnReconcileComplete(Vector3.zero, 90f, Vector3.zero, 85f);
 
@@ -173,27 +165,26 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         [Test]
-        public void OnReconcileComplete_BufferShiftPreservesVisual()
+        public void OnReconcileComplete_PreservesVisual()
         {
-            // Verifies: displayStart + offset = unchanged after correction.
-            // This prevents visual jump at the moment of reconcile.
-            Vector3 pos0 = new Vector3(5f, 0f, 0f);
-            Vector3 pos1 = new Vector3(6f, 0f, 0f);
-            DoWarmup(pos0, pos1);
-            // displayStart = pos0 = (5,0,0), displayEnd = pos1 = (6,0,0)
+            // Verifies: _smoothPos + offset is unchanged after correction.
+            // _smoothPos shifts by correction, offset absorbs error → net visual = same.
+            Vector3 initPos = new Vector3(5f, 0f, 0f);
+            DoInit(initPos);
+            // _smoothPos = (5,0,0), offset = (0,0,0)
 
-            // OnPostTick sets visual = displayStart + offset (offset=0) = (5,0,0)
-            _smoother.OnPostTick(new Vector3(7f, 0f, 0f), Quaternion.identity, TickDelta);
-            Vector3 visualBefore = _go.transform.position; // (5,0,0)
+            // Get visual position before correction
+            _smoother.OnPostTick(new Vector3(6f, 0f, 0f), Quaternion.identity, TickDelta);
+            Vector3 visualBefore = _go.transform.position; // _smoothPos + offset = (5,0,0)
 
             // Correction: pre=10, corrected=10.1
+            // → correction = (0.1,0,0), _smoothPos → (5.1,0,0), offset = (-0.1,0,0)
             _smoother.OnReconcileComplete(
                 new Vector3(10f, 0f, 0f), 0f,
                 new Vector3(10.1f, 0f, 0f), 0f);
-            // correction = (0.1,0,0), displayStart shifted to (5.1,0,0), offset = (-0.1,0,0)
 
-            // visual at factor=0 after correction: displayStart + offset = 5.1 + (-0.1) = 5.0
-            _smoother.OnPostTick(new Vector3(7.1f, 0f, 0f), Quaternion.identity, TickDelta);
+            // Check visual after correction: (5.1,0,0) + (-0.1,0,0) = (5.0,0,0)
+            _smoother.OnPostTick(new Vector3(6.1f, 0f, 0f), Quaternion.identity, TickDelta);
             Vector3 visualAfter = _go.transform.position;
 
             Assert.AreEqual(visualBefore.x, visualAfter.x, 0.001f);
@@ -206,7 +197,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void OnSpectatorCorrection_AccumulatesOffset()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
 
             Vector3 prePos = new Vector3(5f, 0f, 3f);
             Vector3 postPos = new Vector3(5.1f, 0f, 3.05f);
@@ -221,7 +212,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void OnSpectatorCorrection_SnapsOnLargeError()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
 
             // Erst kleinen Offset aufbauen
             _smoother.OnSpectatorCorrection(Vector3.one, Vector3.zero, Quaternion.identity);
@@ -235,31 +226,27 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         [Test]
-        public void OnSpectatorCorrection_NoVisualJump()
+        public void OnSpectatorCorrection_PreservesVisual()
         {
-            // Regression: Ohne Buffer-Shift wuerde die Correction das Visual springen lassen.
-            // Mit Buffer-Shift hebt sich die Verschiebung mit dem Offset auf → kein Sprung.
-            Vector3 pos0 = new Vector3(9f, 0f, 0f);
-            Vector3 pos1 = new Vector3(10f, 0f, 0f);
-            DoWarmup(pos0, pos1);
-            // displayStart = pos0, displayEnd = pos1
+            // _smoothPos shifts by correction, offset absorbs error → visual unchanged.
+            Vector3 initPos = new Vector3(9f, 0f, 0f);
+            DoInit(initPos);
+            // _smoothPos = (9,0,0), offset = (0,0,0)
 
-            // Set visual via OnPostTick
-            _smoother.OnPostTick(new Vector3(11f, 0f, 0f), Quaternion.identity, TickDelta);
-            Vector3 visualBefore = _go.transform.position; // displayStart + offset = (9,0,0)
+            _smoother.OnPostTick(new Vector3(10f, 0f, 0f), Quaternion.identity, TickDelta);
+            Vector3 visualBefore = _go.transform.position; // (9,0,0)
 
-            // Spectator correction
+            // Spectator correction: correction = (0.05,0,0)
+            // → _smoothPos → (9.05,0,0), offset = (-0.05,0,0)
             _smoother.OnSpectatorCorrection(
                 new Vector3(11f, 0f, 0f),
                 new Vector3(11.05f, 0f, 0f),
                 Quaternion.identity);
-            // correction = (0.05,0,0), displayStart → (9.05,0,0), offset = (-0.05,0,0)
 
-            // Check via OnPostTick
             _smoother.OnPostTick(new Vector3(11.05f, 0f, 0f), Quaternion.identity, TickDelta);
             Vector3 visualAfter = _go.transform.position;
 
-            // displayStart + offset = 9.05 + (-0.05) = 9.0 = unchanged
+            // (9.05,0,0) + (-0.05,0,0) = (9.0,0,0) = unchanged
             Assert.AreEqual(visualBefore.x, visualAfter.x, 0.001f);
         }
 
@@ -270,7 +257,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         [Test]
         public void ClearOffset_SnapsToZero()
         {
-            DoWarmup(Vector3.zero, Vector3.forward);
+            DoInit(Vector3.zero);
             _smoother.OnReconcileComplete(Vector3.one, 10f, Vector3.zero, 0f);
             _smoother.ClearOffset();
 
@@ -283,46 +270,44 @@ namespace Wiesenwischer.GameKit.Network.Tests
         #region OnPostTick Behavior
 
         [Test]
-        public void OnPostTick_SetsVisualToDisplayStart()
+        public void OnPostTick_SetsVisualToSmoothPos()
         {
-            // After warmup: displayStart = pos0. factor=0 at OnPostTick time.
-            // Visual should be at displayStart (one tick behind).
-            Vector3 pos0 = new Vector3(5f, 1f, 3f);
-            Vector3 pos1 = new Vector3(5.1f, 1f, 3.05f);
-            DoWarmup(pos0, pos1);
+            // After init: _smoothPos = initPos. OnPostTick updates target but
+            // sets transform to _smoothPos + offset (visual position, not simulation position).
+            Vector3 initPos = new Vector3(5f, 1f, 3f);
+            DoInit(initPos);
 
-            // Simulate: motor moves to new position
+            // Motor bewegt sich, aber visual bleibt bei _smoothPos
             Vector3 simPos = new Vector3(5.2f, 1f, 3.1f);
-            _go.transform.position = simPos;
+            _go.transform.position = simPos; // Simuliert Motor-Schreibzugriff
 
             _smoother.OnPostTick(simPos, Quaternion.identity, TickDelta);
 
-            // Transform muss auf displayStart sein (= pos0, one tick behind)
-            Assert.AreEqual(pos0.x, _go.transform.position.x, 0.001f);
-            Assert.AreEqual(pos0.y, _go.transform.position.y, 0.001f);
-            Assert.AreEqual(pos0.z, _go.transform.position.z, 0.001f);
+            // Transform muss bei _smoothPos sein (= initPos, SmoothDamp lief noch nicht)
+            Assert.AreEqual(initPos.x, _go.transform.position.x, 0.001f);
+            Assert.AreEqual(initPos.y, _go.transform.position.y, 0.001f);
+            Assert.AreEqual(initPos.z, _go.transform.position.z, 0.001f);
         }
 
         [Test]
         public void OnPostTick_IncludesCorrectionOffset()
         {
-            Vector3 pos0 = new Vector3(5f, 1f, 3f);
-            Vector3 pos1 = new Vector3(5.1f, 1f, 3.05f);
-            DoWarmup(pos0, pos1);
+            Vector3 initPos = new Vector3(5f, 1f, 3f);
+            DoInit(initPos);
 
             // Reconcile Correction: 0.1m Error
             _smoother.OnReconcileComplete(
                 new Vector3(5f, 1f, 3f), 0f,
                 new Vector3(4.9f, 1f, 3f), 0f);
 
-            // offset = (5,1,3) - (4.9,1,3) = (0.1, 0, 0)
-            // correction = (4.9,1,3) - (5,1,3) = (-0.1, 0, 0)
-            // displayStart shifted: pos0 + (-0.1, 0, 0) = (4.9, 1, 3)
+            // error = (0.1, 0, 0), correction = (-0.1, 0, 0)
+            // _smoothPos shifted: (5,1,3) + (-0.1,0,0) = (4.9, 1, 3)
+            // offset = (0.1, 0, 0)
 
             _go.transform.position = new Vector3(5.2f, 1f, 3.1f);
             _smoother.OnPostTick(new Vector3(5.2f, 1f, 3.1f), Quaternion.identity, TickDelta);
 
-            // visual = displayStart + offset = (4.9,1,3) + (0.1,0,0) = (5.0, 1, 3)
+            // visual = _smoothPos + offset = (4.9,1,3) + (0.1,0,0) = (5.0, 1, 3)
             Assert.AreEqual(5.0f, _go.transform.position.x, 0.001f);
             Assert.AreEqual(1.0f, _go.transform.position.y, 0.001f);
             Assert.AreEqual(3.0f, _go.transform.position.z, 0.001f);
@@ -334,7 +319,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
             Vector3 somePos = new Vector3(3f, 1f, 2f);
             _go.transform.position = somePos;
 
-            // OnPostTick OHNE Warmup → _initialized = false → kein Restore
+            // OnPostTick OHNE Initialisierung → kein Restore
             _smoother.OnPostTick(somePos, Quaternion.identity, TickDelta);
 
             Assert.AreEqual(somePos.x, _go.transform.position.x, 0.001f);
@@ -343,132 +328,43 @@ namespace Wiesenwischer.GameKit.Network.Tests
 
         #endregion
 
-        #region One-Tick-Behind Specifics
+        #region Target Update
 
         [Test]
-        public void BufferShift_DisplaysOneTickBehind()
+        public void OnPostTick_UpdatesTarget_VisualStaysAtSmoothPos()
         {
-            // After 3 ticks: display should show tick 1's range (tick 0 end → tick 1 end).
-            Vector3 pos0 = Vector3.zero;
-            Vector3 pos1 = new Vector3(1f, 0f, 0f);
-            Vector3 pos2 = new Vector3(2f, 0f, 0f);
-            Vector3 pos3 = new Vector3(3f, 0f, 0f);
+            DoInit(Vector3.zero);
 
-            // Tick 0: init
-            _smoother.OnPreTick(pos0, Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(pos1, Quaternion.identity, TickDelta);
-            // Tick 1: displayStart=pos0, displayEnd=pos1 (tick 0's range)
-            _smoother.ResetFrameGuard(); // Simuliere neuen Frame
-            _smoother.OnPreTick(pos1, Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(pos2, Quaternion.identity, TickDelta);
-            // Tick 2: displayStart=pos1, displayEnd=pos2 (tick 1's range)
-            _smoother.ResetFrameGuard(); // Simuliere neuen Frame
-            _smoother.OnPreTick(pos2, Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(pos3, Quaternion.identity, TickDelta);
+            // Target aendern via OnPostTick
+            Vector3 newTarget = new Vector3(1f, 0f, 0f);
+            _smoother.OnPostTick(newTarget, Quaternion.identity, TickDelta);
 
-            // After OnPostTick of tick 2: visual at factor=0 = displayStart = pos1
-            // (simulation is at pos3, but display is at pos1 = one tick behind)
-            Assert.AreEqual(pos1.x, _go.transform.position.x, 0.001f);
+            // Visual ist bei _smoothPos (0,0,0), nicht beim Target (1,0,0)
+            // SmoothDamp lief noch nicht — Target ist voraus
+            Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
         }
 
         [Test]
-        public void WarmupPeriod_DoesNotWriteTransform()
+        public void MultipleTicksSameFrame_UpdatesTarget_NoIssue()
         {
-            Vector3 initialPos = new Vector3(99f, 0f, 0f);
-            _go.transform.position = initialPos;
+            // Verifies: Multiple ticks in same frame just update target.
+            // SmoothDamp handles the larger distance naturally.
+            DoInit(Vector3.zero);
 
-            // Tick 0 (warmup): should NOT modify transform
+            // 3 Ticks im selben Frame: Target springt von 0 → 1 → 2 → 3
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(Vector3.one, Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
 
-            Assert.AreEqual(initialPos.x, _go.transform.position.x, 0.001f);
-        }
-
-        #endregion
-
-        #region Multi-Tick-per-Frame Guard
-
-        /// <summary>
-        /// Helper: Manuelles Warmup OHNE ResetFrameGuard am Ende.
-        /// Damit bleibt der Guard aktiv fuer den aktuellen Frame.
-        /// Verwendet fuer Guard-Tests die den Frame-State kontrollieren muessen.
-        /// Nach Aufruf: displayStart=pos0, displayEnd=pos1, initialized=true,
-        /// _lastShiftFrame=aktueller Frame.
-        /// </summary>
-        private void DoWarmupKeepGuard(Vector3 pos0, Vector3 pos1)
-        {
-            _smoother.OnPreTick(pos0, Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(pos1, Quaternion.identity, TickDelta);
-            // Zweiter OnPreTick: warmupTicks=1, _initialized noch false → Guard greift nicht
-            _smoother.OnPreTick(pos1, Quaternion.identity, TickDelta);
-            // Jetzt: initialized=true, _lastShiftFrame=aktueller Frame
-            // KEIN ResetFrameGuard — Guard bleibt aktiv
-        }
-
-        [Test]
-        public void MultiTickGuard_SkipsShiftInSameFrame()
-        {
-            DoWarmupKeepGuard(Vector3.zero, new Vector3(1f, 0f, 0f));
-            // displayStart=(0), displayEnd=(1), _lastShiftFrame=currentFrame
-
-            // PostTick im selben Frame: pending=(2)
+            _smoother.OnPreTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
 
-            // OnPreTick im SELBEN Frame: Guard blockiert Shift
             _smoother.OnPreTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
 
-            // displayStart ist unveraendert (0) — Guard hat Shift blockiert
-            Assert.AreEqual(0f, _go.transform.position.x, 0.001f,
-                "displayStart sollte unveraendert sein (Guard hat Shift blockiert)");
-        }
-
-        [Test]
-        public void MultiTickGuard_AllowsShiftAfterFrameAdvance()
-        {
-            DoWarmupKeepGuard(Vector3.zero, new Vector3(1f, 0f, 0f));
-            // displayStart=(0), displayEnd=(1)
-
-            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
-
-            // Neuer Frame → Guard zuruecksetzen
-            _smoother.ResetFrameGuard();
-
-            // Tick im neuen Frame: Shift erlaubt
-            _smoother.OnPreTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
-
-            // displayStart = old displayEnd = (1)
-            Assert.AreEqual(1f, _go.transform.position.x, 0.001f,
-                "displayStart sollte auf (1) vorgerueckt sein (Shift erlaubt)");
-        }
-
-        [Test]
-        public void MultiTickGuard_PendingStillUpdated()
-        {
-            // Verifies: Even when guard blocks the shift, OnPostTick still updates pending.
-            // Next frame's shift picks up the LATEST pending, not an intermediate one.
-            DoWarmupKeepGuard(Vector3.zero, new Vector3(1f, 0f, 0f));
-            // displayStart=(0), displayEnd=(1), pending=(1)
-
-            // PostTick: pending=(2)
-            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
-
-            // Gleicher Frame: Guard blockiert Shift, PostTick aktualisiert pending=(3)
-            _smoother.OnPreTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
-
-            // Neuer Frame: Shift geht durch
-            _smoother.ResetFrameGuard();
-            _smoother.OnPreTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(new Vector3(4f, 0f, 0f), Quaternion.identity, TickDelta);
-
-            // Trace:
-            // displayStart = old displayEnd = (1)
-            // displayEnd = old pending = (3) ← NICHT (2)! Beweis: Pending wurde trotz Guard aktualisiert.
-            // visual at factor=0 = displayStart = (1)
-            Assert.AreEqual(1f, _go.transform.position.x, 0.001f,
-                "displayStart nach Shift = (1) — Pending wurde trotz Guard aktualisiert");
+            // Visual ist bei _smoothPos (0,0,0), Target bei (3,0,0)
+            // Kein Crash, kein Guard noetig — SmoothDamp wird im naechsten LateUpdate
+            // smooth Richtung (3,0,0) gehen
+            Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
         }
 
         #endregion
