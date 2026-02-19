@@ -368,5 +368,88 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         #endregion
+
+        #region Velocity Prediction
+
+        [Test]
+        public void VelocityTracking_ConsecutiveTicks_VisualStaysAtSmoothPos()
+        {
+            // Nach zwei Ticks mit Bewegung wird Velocity berechnet.
+            // Visual bleibt bei _smoothPos (SmoothDamp lief noch nicht in LateUpdate).
+            DoInit(Vector3.zero);
+
+            // Tick 1: Bewegung nach (1,0,0)
+            _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // Tick 2: Bewegung nach (2,0,0) → Velocity intern berechnet
+            _smoother.OnPreTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // Visual = _smoothPos + offset = (0,0,0) + (0,0,0)
+            Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
+        }
+
+        [Test]
+        public void SnapReconcile_ResetsVelocityState()
+        {
+            // Nach Snap: _smoothPos, _prevTargetPos und _targetVelocity werden zurueckgesetzt.
+            // Naechstes OnPostTick zeigt Visual an korrigierter Position.
+            DoInit(Vector3.zero);
+
+            // Velocity aufbauen: zwei Ticks mit Bewegung
+            _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPreTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // Grosser Reconcile → Snap (Error > 2m Threshold)
+            _smoother.OnReconcileComplete(
+                new Vector3(2f, 0f, 0f), 0f,
+                new Vector3(10f, 0f, 0f), 0f);
+
+            Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
+
+            // OnPostTick nach Snap: Visual an geSnapter Position
+            _smoother.OnPostTick(new Vector3(10f, 0f, 0f), Quaternion.identity, TickDelta);
+            Assert.AreEqual(10f, _go.transform.position.x, 0.001f);
+        }
+
+        [Test]
+        public void SnapSpectator_ResetsVelocityState()
+        {
+            DoInit(Vector3.zero);
+
+            // Velocity aufbauen
+            _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            // Grosser Spectator-Error → Snap
+            _smoother.OnSpectatorCorrection(
+                Vector3.zero, new Vector3(5f, 0f, 0f), Quaternion.identity);
+
+            Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
+
+            // Visual an geSnapter Position
+            _smoother.OnPostTick(new Vector3(5f, 0f, 0f), Quaternion.identity, TickDelta);
+            Assert.AreEqual(5f, _go.transform.position.x, 0.001f);
+        }
+
+        [Test]
+        public void Reset_ClearsVelocityState()
+        {
+            DoInit(Vector3.zero);
+
+            // Velocity aufbauen
+            _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
+
+            _smoother.Reset();
+
+            Assert.IsFalse(_smoother.IsActive);
+            Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
+        }
+
+        #endregion
     }
 }
