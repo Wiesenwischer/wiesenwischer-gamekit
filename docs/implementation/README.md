@@ -1,6 +1,6 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-17
+> **Letzte Aktualisierung:** 2026-02-19
 > **Status:** In Entwicklung
 
 ---
@@ -35,6 +35,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Abgeschlossen |
 | [Character Platform](#character-platform) | 11–19 | Offen |
+| [Combat Animation Tuning Tool](#combat-animation-tuning-tool) | 32–34 | Offen |
 
 ---
 
@@ -73,6 +74,9 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 27 | Camera | Camera Behaviours | [Features](phase-27-camera-behaviours/README.md) | ✅ | Abgeschlossen |
 | 28 | Camera | Camera Intent System & Presets | [Features](phase-28-camera-intents/README.md) | ✅ | Abgeschlossen |
 | 29 | Camera | Shared Orientation & Facing Integration | [Features](phase-29-orientation-facing/README.md) | ✅ | Abgeschlossen |
+| 32 | Tooling | Combat Timing Data Model & Runtime | [Features](phase-32-combat-timing-data/README.md) | ✅ | Offen |
+| 33 | Tooling | Combat Preview Scene & Runtime Editor | — | ❌ | Offen |
+| 34 | Tooling | AAA Timeline UI & Visual Polish | — | ❌ | Offen |
 
 ---
 
@@ -122,6 +126,11 @@ Character Platform (unabhängig von den anderen Epics)
                                                │
                                                v
                         Phase 19 (Morph Graph & HD Anatomy)
+
+Combat Animation Tuning Tool
+  Phase 5 (Ability System) ──> Phase 32 (Combat Timing Data) ──> Phase 33 (Preview & Editor)
+                                                                        └──> Phase 34 (AAA Timeline UI)
+                               Phase 32 ──> Phase 9 (Combat Abilities nutzt Timing-Fundament)
 ```
 
 **Hinweis:** Die Epics haben **keine feste Reihenfolge** untereinander. Die Reihenfolge ergibt sich aus den Phasen-Abhängigkeiten und der aktuellen Priorität. Insbesondere kann der Character Creator komplett parallel zu den anderen Epics entwickelt werden.
@@ -794,6 +803,79 @@ Modulares AAA-Kamerasystem mit Brain-Architektur, Behaviour Stack, Intent System
 - [x] [29.9 Play Mode Verifikation](phase-29-orientation-facing/29.9-play-mode-verifikation.md)
 
 **Referenz:** Spec Kapitel 17–20, 23
+
+---
+
+# Combat Animation Tuning Tool
+
+Data-driven Runtime-Tool für visuelles Combat-Timing-Tuning — Frame-basierte Timeline, Combat Sandbox und AAA Editor UX. Ermöglicht Testern und Designern das visuelle Bearbeiten von Attack Timing innerhalb eines gebauten Unity Spiels (kein Unity Editor notwendig).
+
+**Haupt-Spezifikation (konsolidiert):**
+- [Combat Animation Tuning Tool Specification](../specs/animation-tooling/CombatAnimationTuningTool_Specification.md)
+
+**Quell-Spezifikationen:**
+- [Unity Combat Animation Tuning Tool Spec](../specs/animation-tooling/1.%20Unity_Combat_Animation_Tuning_Tool_Spec.md)
+- [Unity Combat Animation Tuning Tool FULL SPEC](../specs/animation-tooling/2.%20Unity_Combat_Animation_Tuning_Tool_FULL_SPEC.md)
+- [Unity Combat Visual Tuning Tool SPEC](../specs/animation-tooling/3.%20Unity_Combat_Visual_Tuning_Tool_SPEC.md)
+- [Unity Combat AAA Timeline Architecture SPEC](../specs/animation-tooling/4.%20Unity_Combat_AAA_Timeline_Architecture_SPEC.md)
+
+---
+
+### Phase 32: Combat Timing Data Model & Runtime
+**Branch:** `integration/phase-32-combat-timing-data`
+**Ausgearbeitet:** ✅ Ja — [Detail-Dokument](phase-32-combat-timing-data/README.md)
+
+**Ziel:** Data-driven Combat Timing Fundament — AttackDefinition, Attack Mapping Layer, Runtime Frame Berechnung und Hit Detection. Grundlage für das Tuning Tool und die späteren Combat Abilities.
+
+**Schritte:**
+- [ ] [32.1 Package-Struktur & Grundtypen](phase-32-combat-timing-data/32.1-package-grundtypen.md)
+- [ ] [32.2 AttackDefinition & AttackDatabase](phase-32-combat-timing-data/32.2-attack-definition-database.md)
+- [ ] [32.3 AttackMapping Layer](phase-32-combat-timing-data/32.3-attack-mapping.md)
+- [ ] [32.4 AttackRuntime — Frame Berechnung](phase-32-combat-timing-data/32.4-attack-runtime.md)
+- [ ] [32.5 Hit Detection System](phase-32-combat-timing-data/32.5-hit-detection.md)
+- [ ] [32.6 JSON Serialisierung / Persistenz](phase-32-combat-timing-data/32.6-json-persistenz.md)
+- [ ] [32.7 Unit Tests](phase-32-combat-timing-data/32.7-unit-tests.md)
+
+**Spec-Referenz:** Konsolidierte Spec Kapitel 2 (Architekturentscheidungen), 3 (Projektstruktur), 4 (Datenmodell), 5 (Runtime Combat System), 12 (Speicherung)
+
+---
+
+### Phase 33: Combat Preview Scene & Runtime Editor
+**Branch:** `integration/phase-33-combat-preview-editor`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Combat Sandbox Scene mit Player + Enemy Dummy für kontextbezogenes Testen. Runtime Editor UI mit Animation Scrubbing, Live Play Mode, Frame Step Controls und grundlegender Timeline-Ansicht.
+
+**Schritte (vorläufig):**
+- [ ] 33.1 Combat Preview Scene anlegen (CombatPreviewRoot, PlayerPreview, EnemyDummy, PreviewCamera)
+- [ ] 33.2 Enemy Dummy (Hit Reaction Animation, Damage Numbers, Debug Hitbox)
+- [ ] 33.3 Animation Preview Controller (Scrubbing Mode, Live Play Mode)
+- [ ] 33.4 Frame Step Controls (+1 / -1 Frame)
+- [ ] 33.5 AttackEditorUI — Grundstruktur (Panel, Slider, Buttons)
+- [ ] 33.6 Grundlegende Timeline-Ansicht (Frame Counter, Hit Window Overlay)
+- [ ] 33.7 Hitbox Debug Visualisierung (Collider transparent, aktiv bei Hit Window)
+
+**Spec-Referenz:** Konsolidierte Spec Kapitel 6 (Combat Preview Scene), 7 (Runtime Editor Tool), 9 (Hitbox Debug), 10 (Tool UI Layout)
+
+---
+
+### Phase 34: AAA Timeline UI & Visual Polish
+**Branch:** `integration/phase-34-aaa-timeline-ui`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Professionelle Timeline UI im Video-Editor-Stil — Drag & Resize Hit Windows, Coordinate Mapping, Attack Phasen Visualisierung (Windup/Active/Recovery), AAA Visual Feedback und Performance-Optimierung.
+
+**Schritte (vorläufig):**
+- [ ] 34.1 Timeline UI Hierarchie (TimelineRoot, BackgroundBar, FrameMarkers, Cursor, HitWindowContainer)
+- [ ] 34.2 Coordinate Mapping System (Frame ↔ Position Umrechnung)
+- [ ] 34.3 Current Frame Cursor (live Update, vertikale Linie)
+- [ ] 34.4 Hit Window Drag Behaviour (Position verschieben)
+- [ ] 34.5 Hit Window Resize Behaviour (Left/Right Handles → hitStartFrame/hitEndFrame)
+- [ ] 34.6 Attack Phasen Visualisierung (Windup / Active / Recovery Blöcke)
+- [ ] 34.7 Visual Feedback & AAA UX (Farben, Hover, Grid Lines, Cursor Icons)
+- [ ] 34.8 Performance Optimierung (kein Layout Rebuild pro Frame, kein Instantiate/Destroy)
+
+**Spec-Referenz:** Konsolidierte Spec Kapitel 8 (AAA Timeline Architecture), 11 (Performance Regeln)
 
 ---
 
