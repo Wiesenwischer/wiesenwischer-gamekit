@@ -6,28 +6,29 @@ namespace Wiesenwischer.GameKit.Network
     /// Einheitliches Visual-Smoothing fuer Netzwerk-Characters.
     /// Handhabt BEIDES: Tick-Interpolation UND Reconcile-Correction.
     ///
-    /// Verwendet Velocity-Prediction + SmoothDamp:
-    /// - Zwischen Ticks: Target wird per bekannter Velocity extrapoliert → gleichmaessige Bewegung
-    /// - SmoothDamp verfolgt das extrapolierte Target → Velocity-Kontinuitaet
-    /// - Kein Stutter bei ungleichmaessiger Tick-Verteilung (0-Tick vs 2-Tick Frames)
+    /// Verwendet Dead Reckoning + Drift-Korrektur:
+    /// - Jeden Frame: _smoothPos += _targetVelocity * deltaTime (konstante Geschwindigkeit)
+    /// - Drift-Korrektur: sanftes Ziehen Richtung Simulation (verhindert Divergenz)
+    /// - Ergebnis: gleichmaessige Deltas proportional zu deltaTime, unabhaengig von Tick-Verteilung
     ///
-    /// Problem ohne Prediction:
-    ///   Bei ParrelSync alternieren Frame-Zeiten (z.B. 20ms/46ms).
-    ///   FishNet akkumuliert Zeit → alternierend 0 und 2 Ticks pro Frame.
-    ///   Ohne Prediction: 0-Tick-Frame → Target statisch → SmoothDamp kaum Bewegung (0.05m)
-    ///                     2-Tick-Frame → Target springt 0.4m → SmoothDamp grosser Schritt (0.25m)
-    ///   → Sichtbares Alternieren (5:1 Ratio) = Stutter.
+    /// Warum nicht SmoothDamp/Prediction:
+    ///   SmoothDamp verfolgt ein Target. Auf Tick-Frames springt das Target (tick fires),
+    ///   auf Nicht-Tick-Frames bleibt es statisch. SmoothDamp mit kleinem smoothTime
+    ///   (&lt; frameTime) snappt quasi zum Target → visuelles Oszillieren.
     ///
-    /// Loesung:
-    ///   Zwischen Ticks das Target per letzter Tick-Velocity extrapolieren:
-    ///     predictedTarget = _targetPos + _targetVelocity * timeSinceLastTick
-    ///   SmoothDamp jagt ein GLEICHMAESSIG BEWEGTES Target → konstante Deltas.
-    ///   Bei Tick-Update: Prediction wird auf echte Position korrigiert (nahtlos).
+    ///   Prediction extrapoliert das Target per Velocity, aber Time.time ist in OnPostTick
+    ///   und LateUpdate identisch → timeSinceUpdate=0 auf Tick-Frames, ~0.03s auf Nicht-Tick-Frames.
+    ///   Das Target oszilliert zwischen _targetPos und _targetPos + velocity*dt → noch schlimmer.
+    ///
+    /// Dead Reckoning vermeidet das Problem:
+    ///   _smoothPos += velocity * deltaTime produziert IMMER einen proportionalen Schritt,
+    ///   egal ob ein Tick gefeuert hat oder nicht. Die Drift-Korrektur ist sanft genug
+    ///   (Rate=2/s → ~6% des Drifts pro Frame) um keine sichtbare Perturbation zu erzeugen.
     ///
     /// Architektur:
     ///   _targetPos      = neueste Post-Tick Motor-Position (wird jeden Tick aktualisiert)
-    ///   _targetVelocity = Geschwindigkeit zwischen letzten beiden Ticks (fuer Extrapolation)
-    ///   _smoothPos      = aktuelle visuelle Position (SmoothDamp verfolgt predicted Target)
+    ///   _targetVelocity = Geschwindigkeit zwischen letzten beiden Ticks (fuer Dead Reckoning)
+    ///   _smoothPos      = aktuelle visuelle Position (Dead Reckoning + Drift-Korrektur)
     ///   _positionOffset = Reconcile-Correction Offset (exponentieller Decay)
     ///
     /// Visual = _smoothPos + _positionOffset
@@ -40,7 +41,7 @@ namespace Wiesenwischer.GameKit.Network
     /// 2. [Replicate]: Simulation laeuft, TransientPosition aendert sich
     /// 3. OnReconcileComplete(): Bei Reconcile — Error zum Offset addieren, _smoothPos shiften
     /// 4. OnPostTick(): Target + Velocity aktualisieren (neueste Simulation)
-    /// 5. LateUpdate (Order 50): Extrapolate Target, SmoothDamp, Offset-Decay
+    /// 5. LateUpdate (Order 50): Dead Reckoning, Drift-Korrektur, Offset-Decay
     ///    → Laeuft VOR CameraBrain (100) und GroundingSmoother (100)
     /// </summary>
     [DefaultExecutionOrder(50)]
@@ -60,11 +61,11 @@ namespace Wiesenwischer.GameKit.Network
         [SerializeField] private float _rotationCorrectionRate = 0.25f;
 
         [Header("Smoothing")]
-        [Tooltip("SmoothDamp smoothTime als Faktor der Tick-Dauer. " +
-                 "0.5 = halbe Tick-Dauer (~16ms bei 30Hz). " +
-                 "Kleinere Werte = weniger Lag, hoehere Werte = weicheres Smoothing.")]
-        [Range(0.1f, 2f)]
-        [SerializeField] private float _smoothTimeFactor = 0.5f;
+        [Tooltip("Drift-Korrektur Rate pro Sekunde. " +
+                 "Hoehere Werte = schnellere Korrektur aber weniger smooth. " +
+                 "2.0 = ~6% Korrektur pro Frame bei 30fps.")]
+        [Range(0.5f, 10f)]
+        [SerializeField] private float _driftCorrectionRate = 2f;
 
         [Header("Thresholds")]
         [Tooltip("Unter diesem Wert wird der Offset auf Zero gesetzt (verhindert Micro-Jitter).")]
@@ -78,20 +79,16 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _targetPos;
         private Quaternion _targetRot;
 
-        // --- Velocity Prediction ---
-        // Extrapoliert _targetPos zwischen Ticks, damit SmoothDamp ein
-        // gleichmaessig bewegtes Target verfolgt statt eines stationaeren.
+        // --- Dead Reckoning ---
+        // Velocity aus konsekutiven Ticks, fuer frame-unabhaengige Bewegung.
         private Vector3 _prevTargetPos;
         private Vector3 _targetVelocity;
-        private Quaternion _targetAngularVelocity;
-        private float _lastTargetUpdateTime;
+        private float _targetAngularVelocityY;
         private float _tickDelta;
 
-        // --- Visual (SmoothDamp state) ---
+        // --- Visual (Dead Reckoning state) ---
         private Vector3 _smoothPos;
         private Quaternion _smoothRot;
-        private Vector3 _smoothVelocity;
-        private float _smoothTime;
 
         // --- Correction Offset ---
         private Vector3 _positionOffset;
@@ -126,7 +123,6 @@ namespace Wiesenwischer.GameKit.Network
         /// </summary>
         public void OnPreTick(Vector3 motorPos, Quaternion motorRot, float tickDelta)
         {
-            _smoothTime = tickDelta * _smoothTimeFactor;
             _tickDelta = tickDelta;
 
             if (!_initialized)
@@ -134,19 +130,17 @@ namespace Wiesenwischer.GameKit.Network
                 _targetPos = _prevTargetPos = _smoothPos = motorPos;
                 _targetRot = _smoothRot = motorRot;
                 _targetVelocity = Vector3.zero;
-                _targetAngularVelocity = Quaternion.identity;
-                _smoothVelocity = Vector3.zero;
-                _lastTargetUpdateTime = Time.time;
+                _targetAngularVelocityY = 0f;
                 _initialized = true;
 
                 if (_debugLog)
-                    Debug.Log($"[Smoother] Initialized at {motorPos:F3}, smoothTime={_smoothTime:F4}s");
+                    Debug.Log($"[Smoother] Initialized at {motorPos:F3}, tickDelta={tickDelta:F4}s");
             }
         }
 
         /// <summary>
         /// Wird von NetworkCharacterDriver NACH dem Tick aufgerufen.
-        /// Aktualisiert Target-Position und berechnet Tick-Velocity fuer Extrapolation.
+        /// Aktualisiert Target-Position und berechnet Tick-Velocity fuer Dead Reckoning.
         /// Setzt Transform auf die aktuelle visuelle Position (verhindert dass Animator/IK
         /// die rohe Simulations-Position sehen).
         /// </summary>
@@ -158,16 +152,16 @@ namespace Wiesenwischer.GameKit.Network
             {
                 _targetVelocity = (motorPos - _prevTargetPos) / tickDelta;
 
-                // Rotations-Velocity: Delta-Rotation pro Tick
-                _targetAngularVelocity = motorRot * Quaternion.Inverse(_targetRot);
+                // Rotations-Velocity: Y-Rotation Delta pro Tick
+                float prevY = _targetRot.eulerAngles.y;
+                float currY = motorRot.eulerAngles.y;
+                _targetAngularVelocityY = Mathf.DeltaAngle(prevY, currY) / tickDelta;
             }
 
             _prevTargetPos = motorPos;
             _targetPos = motorPos;
             _targetRot = motorRot;
-            _smoothTime = tickDelta * _smoothTimeFactor;
             _tickDelta = tickDelta;
-            _lastTargetUpdateTime = Time.time;
 
             // Sofort korrekte visuelle Position setzen.
             // Verhindert dass Animator, IK oder andere Systeme zwischen OnPostTick und LateUpdate
@@ -206,9 +200,8 @@ namespace Wiesenwischer.GameKit.Network
                 _targetPos = _prevTargetPos = _smoothPos = correctedPos;
                 Quaternion corrRot = Quaternion.Euler(0f, correctedRotY, 0f);
                 _targetRot = _smoothRot = corrRot;
-                _smoothVelocity = Vector3.zero;
                 _targetVelocity = Vector3.zero;
-                _targetAngularVelocity = Quaternion.identity;
+                _targetAngularVelocityY = 0f;
                 ClearOffset();
             }
             else
@@ -242,9 +235,8 @@ namespace Wiesenwischer.GameKit.Network
             {
                 _targetPos = _prevTargetPos = _smoothPos = postPos;
                 _targetRot = _smoothRot = postRot;
-                _smoothVelocity = Vector3.zero;
                 _targetVelocity = Vector3.zero;
-                _targetAngularVelocity = Quaternion.identity;
+                _targetAngularVelocityY = 0f;
                 ClearOffset();
             }
             else
@@ -271,9 +263,8 @@ namespace Wiesenwischer.GameKit.Network
         {
             ClearOffset();
             _initialized = false;
-            _smoothVelocity = Vector3.zero;
             _targetVelocity = Vector3.zero;
-            _targetAngularVelocity = Quaternion.identity;
+            _targetAngularVelocityY = 0f;
         }
 
         #endregion
@@ -291,47 +282,44 @@ namespace Wiesenwischer.GameKit.Network
             {
                 _diagStartupLogged = true;
                 Debug.Log($"[Smoother] ACTIVE on {gameObject.name} | " +
-                    $"smoothTime={_smoothTime:F4}s snapThreshold={_snapThreshold}m " +
-                    $"correctionRate={_correctionRate} mode=SmoothDamp+VelocityPrediction");
+                    $"snapThreshold={_snapThreshold}m " +
+                    $"correctionRate={_correctionRate} driftRate={_driftCorrectionRate}/s " +
+                    $"mode=DeadReckoning");
             }
 
             _diagFrameCount++;
+            float dt = Time.deltaTime;
 
-            // 1. Velocity Prediction: Target zwischen Ticks extrapolieren.
-            //    Auf 0-Tick-Frames bewegt sich das predicted Target weiter statt statisch zu sein.
-            //    → SmoothDamp erzeugt gleichmaessige Deltas statt alternierend 0.05/0.25m.
-            //    Cap bei 2×tickDelta (verhindert Ueber-Extrapolation bei Frame-Spikes).
-            float timeSinceUpdate = Mathf.Min(
-                Time.time - _lastTargetUpdateTime,
-                _tickDelta * 2f);
-            Vector3 predictedTarget = _targetPos + _targetVelocity * timeSinceUpdate;
+            // 1. Dead Reckoning: Visual per Velocity bewegen.
+            //    Produziert IMMER einen proportionalen Schritt (velocity * deltaTime),
+            //    unabhaengig davon ob ein Tick gefeuert hat.
+            //    → Kein Stutter bei alternierenden 0-Tick/2-Tick Frames.
+            _smoothPos += _targetVelocity * dt;
 
-            // Rotation: Extrapolation per Slerp-Anteil
-            float rotPredictionFactor = (_tickDelta > 0f) ? timeSinceUpdate / _tickDelta : 0f;
-            Quaternion predictedRot = _targetRot * Quaternion.Slerp(
-                Quaternion.identity, _targetAngularVelocity, rotPredictionFactor);
+            // Rotation: Dead Reckoning per Angular Velocity
+            _smoothRot *= Quaternion.Euler(0f, _targetAngularVelocityY * dt, 0f);
 
-            // 2. SmoothDamp Position toward predicted target
-            //    Bietet Velocity-Kontinuitaet: kein Speed-Sprung wenn Target sich aendert.
-            float safeSmoothTime = Mathf.Max(_smoothTime, 0.001f);
-            _smoothPos = Vector3.SmoothDamp(
-                _smoothPos, predictedTarget, ref _smoothVelocity,
-                safeSmoothTime, Mathf.Infinity, Time.deltaTime);
+            // 2. Drift-Korrektur: Sanft Richtung Simulation ziehen.
+            //    Verhindert Divergenz bei Geschwindigkeitsaenderungen, Kurven, etc.
+            //    Exponentieller Decay: alpha = 1 - exp(-dt * rate)
+            //    Bei rate=2, dt=0.030: alpha ≈ 0.058 → ~6% des Drifts pro Frame.
+            float driftAlpha = 1f - Mathf.Exp(-dt * _driftCorrectionRate);
 
-            // 3. Exponential Rotation smoothing toward predicted rotation
-            float rotAlpha = 1f - Mathf.Exp(-Time.deltaTime / safeSmoothTime);
-            _smoothRot = Quaternion.Slerp(_smoothRot, predictedRot, rotAlpha);
+            Vector3 posDrift = _targetPos - _smoothPos;
+            _smoothPos += posDrift * driftAlpha;
 
-            // 4. Offset-Decay
+            _smoothRot = Quaternion.Slerp(_smoothRot, _targetRot, driftAlpha);
+
+            // 3. Offset-Decay (Reconcile Correction)
             bool hasPosition = _positionOffset.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold;
             bool hasRotation = Mathf.Abs(_rotationOffset) > _minCorrectionThreshold;
 
             if (hasPosition || hasRotation)
             {
                 // Frame-rate-unabhaengiger exponentieller Decay.
-                float dt = Time.deltaTime * 60f;
-                float posFactor = Mathf.Pow(1f - _correctionRate, dt);
-                float rotFactor = Mathf.Pow(1f - _rotationCorrectionRate, dt);
+                float dt60 = dt * 60f;
+                float posFactor = Mathf.Pow(1f - _correctionRate, dt60);
+                float rotFactor = Mathf.Pow(1f - _rotationCorrectionRate, dt60);
 
                 _positionOffset *= posFactor;
                 _rotationOffset *= rotFactor;
@@ -343,7 +331,7 @@ namespace Wiesenwischer.GameKit.Network
                     _rotationOffset = 0f;
             }
 
-            // 5. Final Visual = Smooth Position + Correction Offset
+            // 4. Final Visual = Smooth Position + Correction Offset
             Vector3 finalPos = _smoothPos + _positionOffset;
             Quaternion finalRot = _smoothRot * Quaternion.Euler(0f, _rotationOffset, 0f);
 
@@ -353,6 +341,7 @@ namespace Wiesenwischer.GameKit.Network
             if (_debugLog)
             {
                 Vector3 delta = finalPos - _diagLastFinalPos;
+                Vector3 drift = _targetPos - _smoothPos;
 
                 // Stutter-Detection: Bewegungsdelta aendert sich stark zwischen Frames.
                 const float minStutterDelta = 0.03f;
@@ -365,7 +354,7 @@ namespace Wiesenwischer.GameKit.Network
                     {
                         Debug.LogWarning($"[Smoother] STUTTER! delta={delta.magnitude:F4}m " +
                             $"prevDelta={_diagLastDelta.magnitude:F4}m ratio={ratio:F2} " +
-                            $"dt={Time.deltaTime:F4}s tSinceUpd={timeSinceUpdate:F4}s " +
+                            $"dt={dt:F4}s drift={drift.magnitude:F3}m " +
                             $"frame={_diagFrameCount}");
                     }
                 }
@@ -375,9 +364,9 @@ namespace Wiesenwischer.GameKit.Network
                 {
                     Debug.Log($"[Smoother] Status frame={_diagFrameCount}: " +
                         $"pos={finalPos:F3} smooth={_smoothPos:F3} target={_targetPos:F3} " +
-                        $"predicted={predictedTarget:F3} vel={_targetVelocity:F3} " +
+                        $"vel={_targetVelocity:F3} drift={drift:F3} " +
                         $"offset={_positionOffset:F4} " +
-                        $"smoothTime={_smoothTime:F4}s fps={1f / Time.deltaTime:F0}");
+                        $"driftRate={_driftCorrectionRate}/s fps={1f / dt:F0}");
                 }
 
                 _diagLastFinalPos = finalPos;

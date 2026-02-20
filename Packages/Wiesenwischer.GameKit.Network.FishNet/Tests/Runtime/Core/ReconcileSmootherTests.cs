@@ -283,7 +283,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
 
             _smoother.OnPostTick(simPos, Quaternion.identity, TickDelta);
 
-            // Transform muss bei _smoothPos sein (= initPos, SmoothDamp lief noch nicht)
+            // Transform muss bei _smoothPos sein (= initPos, Dead Reckoning lief noch nicht)
             Assert.AreEqual(initPos.x, _go.transform.position.x, 0.001f);
             Assert.AreEqual(initPos.y, _go.transform.position.y, 0.001f);
             Assert.AreEqual(initPos.z, _go.transform.position.z, 0.001f);
@@ -340,7 +340,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
             _smoother.OnPostTick(newTarget, Quaternion.identity, TickDelta);
 
             // Visual ist bei _smoothPos (0,0,0), nicht beim Target (1,0,0)
-            // SmoothDamp lief noch nicht — Target ist voraus
+            // Dead Reckoning lief noch nicht — Target ist voraus
             Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
         }
 
@@ -362,20 +362,20 @@ namespace Wiesenwischer.GameKit.Network.Tests
             _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
 
             // Visual ist bei _smoothPos (0,0,0), Target bei (3,0,0)
-            // Kein Crash, kein Guard noetig — SmoothDamp wird im naechsten LateUpdate
+            // Kein Crash, kein Guard noetig — Dead Reckoning wird im naechsten LateUpdate
             // smooth Richtung (3,0,0) gehen
             Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
         }
 
         #endregion
 
-        #region Velocity Prediction
+        #region Dead Reckoning
 
         [Test]
         public void VelocityTracking_ConsecutiveTicks_VisualStaysAtSmoothPos()
         {
             // Nach zwei Ticks mit Bewegung wird Velocity berechnet.
-            // Visual bleibt bei _smoothPos (SmoothDamp lief noch nicht in LateUpdate).
+            // Visual bleibt bei _smoothPos (Dead Reckoning lief noch nicht in LateUpdate).
             DoInit(Vector3.zero);
 
             // Tick 1: Bewegung nach (1,0,0)
