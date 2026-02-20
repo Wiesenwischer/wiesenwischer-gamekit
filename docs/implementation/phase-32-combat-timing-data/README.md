@@ -35,15 +35,25 @@ Dieses Fundament dient als Grundlage für:
 
 ## Architektur-Entscheidungen
 
-### Neues Package: `Wiesenwischer.GameKit.Combat.Core`
+### Neues Package: `Wiesenwischer.GameKit.Combat.Core` (unabhängig von Abilities.Core)
 
-**Warum ein eigenes Package statt Erweiterung von Abilities.Core?**
+**Entscheidung:** `Combat.Core` hat **keine Abhängigkeit** zu `Abilities.Core` oder anderen GameKit-Packages.
 
-- `AttackDefinition` (Frame-Timing) ist konzeptionell verschieden von `AbilityDefinition` (Lifecycle)
-- Nicht alle Abilities sind Combat-Abilities (Buffs, Utility)
-- Tooling (Phase 33/34) braucht nur Combat-Daten, nicht das Ability-Framework
-- Clean Separation: Combat-Daten → Combat.Core, Ability-Lifecycle → Abilities.Core
-- Integration in Phase 9: `CombatAbility` hält Referenzen auf beide
+**Geprüfte Alternativen:**
+
+| Option | Beschreibung | Bewertung |
+|--------|-------------|-----------|
+| **A: Unabhängig (gewählt)** | Combat.Core standalone, Integration in Phase 9 über eine `CombatAbility`-Klasse die beide Packages referenziert | Sauberste Trennung, Tuning Tool bleibt schlank |
+| **B: Combat.Core → Abilities.Core** | Combat.Core referenziert Abilities.Core, `AttackDefinition` kennt `AbilityDefinition` | Weniger Verdrahtung in Phase 9, aber Tuning Tool zieht transitiv Abilities.Core + CharacterController.Core rein |
+| **C: AbilityDefinition erweitern** | Frame-Timing-Felder direkt auf `AbilityDefinition` (ScriptableObject) | Am einfachsten, aber: SO ist im Build nicht runtime-editierbar → bricht Tuning Tool. Und: polluted non-Combat Abilities mit Combat-Feldern |
+
+**Warum Option A gewählt wurde:**
+
+1. **Persistenz-Inkompatibilität:** `AbilityDefinition` ist ein **ScriptableObject** (Editor-Daten, im Build nicht editierbar). `AttackDefinition` muss **`[Serializable]`** sein für Runtime-JSON-Editing im Tuning Tool. Diese Anforderungen schließen sich gegenseitig aus.
+2. **Tuning Tool Scope:** Phase 33/34 braucht nur Combat-Timing-Daten + Animator — kein AbilitySystem-Lifecycle (Cooldown, Priority, Activation). Abhängigkeit zu Abilities.Core würde transitiv `CharacterController.Core` reinziehen.
+3. **Nicht jede Ability ist Combat:** Buffs, Heals, Utility-Abilities brauchen kein Frame-Timing. Erweiterung von AbilityDefinition würde diese unnötig aufblähen.
+4. **Kosten der Trennung sind gering:** Phase 9 braucht lediglich eine `CombatAbility`-Klasse die `IAbility` implementiert und eine `AttackDefinition`-Referenz hält — kein eigenes Bridge-Package nötig.
+5. **Richtung der Erweiterbarkeit:** Abhängigkeit hinzufügen ist einfach (ein Eintrag in .asmdef), entfernen ist schwer. Falls sich in Phase 9 herausstellt, dass die Trennung unpraktisch ist, kann die Referenz jederzeit nachgezogen werden.
 
 ### Package-Abhängigkeiten
 
@@ -52,16 +62,16 @@ Wiesenwischer.GameKit.Combat.Core
   └── (keine GameKit-Abhängigkeiten — standalone Datenmodell)
 
 Spätere Integration (Phase 9):
-  Wiesenwischer.GameKit.Combat.Abilities
-    ├── Wiesenwischer.GameKit.Combat.Core
-    └── Wiesenwischer.GameKit.Abilities.Core
+  CombatAbility-Klasse (in Abilities.Core oder Game-Assembly)
+    referenziert: Wiesenwischer.GameKit.Combat.Core (AttackDefinition)
+    referenziert: Wiesenwischer.GameKit.Abilities.Core (IAbility, AbilityDefinition)
 ```
 
 ### Datenmodell: Serializable statt ScriptableObject
 
 `AttackDefinition` ist `[Serializable]` (keine ScriptableObject), weil:
 - Runtime Tool muss Daten zur Laufzeit editieren und speichern (JSON)
-- ScriptableObjects sind Editor-Daten und nicht runtime-editierbar
+- ScriptableObjects sind Editor-Daten und nicht runtime-editierbar im Build
 - `AttackDatabase` (ScriptableObject) hält eine Collection von AttackDefinitions für Editor-Workflow
 
 ---
