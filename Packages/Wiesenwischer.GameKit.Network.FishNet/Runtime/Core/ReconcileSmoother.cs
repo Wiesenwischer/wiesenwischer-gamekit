@@ -6,26 +6,30 @@ namespace Wiesenwischer.GameKit.Network
     /// Einheitliches Visual-Smoothing fuer Netzwerk-Characters.
     /// Handhabt BEIDES: Tick-Interpolation UND Reconcile-Correction.
     ///
-    /// Verwendet MoveTowards mit rate-basierter Interpolation (inspiriert von FishNet UniversalTickSmoother):
-    /// - Pro Tick: rate = Distance(_smoothPos, targetPos) / tickDelta
-    /// - Jeden Frame: _smoothPos = MoveTowards(_smoothPos, _targetPos, rate * deltaTime)
-    /// - MoveTowards clampt am Ziel → kein Overshoot, kein Drift
+    /// Verwendet Exponential Smoothing:
+    /// - Jeden Frame: _smoothPos = Lerp(_smoothPos, _targetPos, alpha)
+    ///   wobei alpha = 1 - exp(-deltaTime / smoothTime)
+    /// - Erzeugt gleichmaessige visuelle Geschwindigkeit proportional zur Distanz
+    /// - Kein Stoppen, kein Sprinten, keine Velocity-Berechnung
     ///
-    /// Warum nicht Dead Reckoning:
-    ///   Dead Reckoning berechnet _targetVelocity = (motorPos - prevPos) / tickDelta.
-    ///   Bei Reconcile-Replays enthaelt das Delta ALLE Replay-Ticks,
-    ///   wird aber nur durch EINEN tickDelta geteilt → Velocity K× zu hoch → katastrophaler Drift.
+    /// Warum nicht MoveTowards:
+    ///   MoveTowards clampt am Ziel → Visual stoppt, wartet auf naechsten Tick,
+    ///   sprintet dann zum neuen Target. Da OnPostTick und LateUpdate im SELBEN
+    ///   Unity-Frame laufen, bewegt sich das Visual ~96% der Strecke auf Tick-Frames
+    ///   und ~4% auf Nicht-Tick-Frames → sichtbares 10:1 Stutter-Pattern.
     ///
-    /// MoveTowards vermeidet das Problem:
-    ///   Rate basiert auf TATSAECHLICHER Distanz von _smoothPos zum neuen Target.
-    ///   OnReconcileComplete shiftet _smoothPos um den Correction-Betrag,
-    ///   sodass die Distanz im naechsten OnPostTick korrekt ist (~ein Tick Bewegung).
-    ///   Keine Velocity-Berechnung, keine Replay-Vergiftung.
+    /// Exponential Smoothing vermeidet das:
+    ///   Die visuelle Geschwindigkeit ist IMMER proportional zur Distanz zum Target.
+    ///   Auf Tick-Frames steigt die Distanz (neues Target), auf Nicht-Tick-Frames
+    ///   sinkt sie (Visual naehert sich). Die resultierende Geschwindigkeit aendert
+    ///   sich sanft → gleichmaessige Frame-Deltas.
+    ///
+    ///   Steady-State Lag: ~speed * smoothTime. Bei smoothTime=0.033s und 2m/s = 6.6cm.
+    ///   Bei smoothTime=0.033s und 5m/s = 16.5cm. Visuell nicht wahrnehmbar.
     ///
     /// Architektur:
     ///   _targetPos      = neueste Post-Tick Motor-Position (wird jeden Tick aktualisiert)
-    ///   _moveRate        = Geschwindigkeit in m/s (Distance / tickDelta)
-    ///   _smoothPos      = aktuelle visuelle Position (MoveTowards zum Target)
+    ///   _smoothPos      = aktuelle visuelle Position (exponential approach)
     ///   _positionOffset = Reconcile-Correction Offset (exponentieller Decay)
     ///
     /// Visual = _smoothPos + _positionOffset
@@ -37,8 +41,8 @@ namespace Wiesenwischer.GameKit.Network
     /// 1. OnPreTick(): Initialisierung (einmalig beim ersten Tick)
     /// 2. [Replicate]: Simulation laeuft, TransientPosition aendert sich
     /// 3. OnReconcileComplete(): Bei Reconcile — Error zum Offset addieren, _smoothPos shiften
-    /// 4. OnPostTick(): Target aktualisieren, MoveRate berechnen
-    /// 5. LateUpdate (Order 50): MoveTowards, Offset-Decay
+    /// 4. OnPostTick(): Target aktualisieren
+    /// 5. LateUpdate (Order 50): Exponential Smoothing, Offset-Decay
     ///    → Laeuft VOR CameraBrain (100) und GroundingSmoother (100)
     /// </summary>
     [DefaultExecutionOrder(50)]
@@ -57,6 +61,14 @@ namespace Wiesenwischer.GameKit.Network
         [Range(0.01f, 0.5f)]
         [SerializeField] private float _rotationCorrectionRate = 0.25f;
 
+        [Header("Interpolation")]
+        [Tooltip("Zeitkonstante fuer Exponential Smoothing in Sekunden.\n" +
+                 "Hoeher = smoother aber mehr visueller Lag.\n" +
+                 "Empfohlen: 1-2× tickDelta (0.017-0.033 bei 60Hz).\n" +
+                 "Lag ≈ Geschwindigkeit × SmoothTime (bei 5m/s und 0.033s = 16cm).")]
+        [Range(0.01f, 0.1f)]
+        [SerializeField] private float _interpSmoothTime = 0.033f;
+
         [Header("Thresholds")]
         [Tooltip("Unter diesem Wert wird der Offset auf Zero gesetzt (verhindert Micro-Jitter).")]
         [SerializeField] private float _minCorrectionThreshold = 0.001f;
@@ -69,14 +81,7 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _targetPos;
         private Quaternion _targetRot;
 
-        // --- MoveTowards Rate ---
-        // Rate = Distance(_smoothPos, _targetPos) / tickDelta → m/s bzw. deg/s.
-        // Gibt die exakte Geschwindigkeit um das Target in einer Tick-Periode zu erreichen.
-        private float _moveRate;
-        private float _rotMoveRate;
-        private float _tickDelta;
-
-        // --- Visual (MoveTowards state) ---
+        // --- Visual (exponential smoothing state) ---
         private Vector3 _smoothPos;
         private Quaternion _smoothRot;
 
@@ -86,6 +91,7 @@ namespace Wiesenwischer.GameKit.Network
 
         // --- State ---
         private bool _initialized;
+        private float _tickDelta;
 
         // --- Diagnostics ---
         private int _diagFrameCount;
@@ -119,8 +125,6 @@ namespace Wiesenwischer.GameKit.Network
             {
                 _targetPos = _smoothPos = motorPos;
                 _targetRot = _smoothRot = motorRot;
-                _moveRate = 0f;
-                _rotMoveRate = 0f;
                 _initialized = true;
 
                 if (_debugLog)
@@ -130,7 +134,7 @@ namespace Wiesenwischer.GameKit.Network
 
         /// <summary>
         /// Wird von NetworkCharacterDriver NACH dem Tick aufgerufen.
-        /// Aktualisiert Target-Position und berechnet MoveTowards-Rate.
+        /// Aktualisiert Target-Position.
         /// Setzt Transform auf die aktuelle visuelle Position (verhindert dass Animator/IK
         /// die rohe Simulations-Position sehen).
         /// </summary>
@@ -139,21 +143,6 @@ namespace Wiesenwischer.GameKit.Network
             _targetPos = motorPos;
             _targetRot = motorRot;
             _tickDelta = tickDelta;
-
-            // MoveTowards-Rate berechnen: Distanz / tickDelta.
-            // Gibt die exakte Geschwindigkeit um das Target in einer Tick-Periode zu erreichen.
-            // OnReconcileComplete hat _smoothPos bereits korrigiert → Distanz ist ~normal.
-            if (tickDelta > 0f)
-            {
-                float dist = Vector3.Distance(_smoothPos, motorPos);
-                if (dist > 0.001f)
-                    _moveRate = dist / tickDelta;
-                // else: Rate behalten — MoveTowards clampt natuerlich am Ziel
-
-                float rotDist = Quaternion.Angle(_smoothRot, motorRot);
-                if (rotDist > 0.01f)
-                    _rotMoveRate = rotDist / tickDelta;
-            }
 
             // Sofort korrekte visuelle Position setzen.
             // Verhindert dass Animator, IK oder andere Systeme zwischen OnPostTick und LateUpdate
@@ -192,8 +181,6 @@ namespace Wiesenwischer.GameKit.Network
                 _targetPos = _smoothPos = correctedPos;
                 Quaternion corrRot = Quaternion.Euler(0f, correctedRotY, 0f);
                 _targetRot = _smoothRot = corrRot;
-                _moveRate = 0f;
-                _rotMoveRate = 0f;
                 ClearOffset();
             }
             else
@@ -227,8 +214,6 @@ namespace Wiesenwischer.GameKit.Network
             {
                 _targetPos = _smoothPos = postPos;
                 _targetRot = _smoothRot = postRot;
-                _moveRate = 0f;
-                _rotMoveRate = 0f;
                 ClearOffset();
             }
             else
@@ -255,8 +240,6 @@ namespace Wiesenwischer.GameKit.Network
         {
             ClearOffset();
             _initialized = false;
-            _moveRate = 0f;
-            _rotMoveRate = 0f;
         }
 
         #endregion
@@ -276,17 +259,24 @@ namespace Wiesenwischer.GameKit.Network
                 Debug.Log($"[Smoother] ACTIVE on {gameObject.name} | " +
                     $"snapThreshold={_snapThreshold}m " +
                     $"correctionRate={_correctionRate} " +
-                    $"mode=MoveTowards");
+                    $"smoothTime={_interpSmoothTime:F3}s " +
+                    $"mode=ExponentialSmoothing");
             }
 
             _diagFrameCount++;
             float dt = Time.deltaTime;
 
-            // 1. MoveTowards: Konstante Geschwindigkeit zum Target.
-            //    Clampt am Ziel → kein Overshoot, kein Drift.
-            //    Rate = Distance(_smoothPos, _targetPos) / tickDelta (berechnet in OnPostTick).
-            _smoothPos = Vector3.MoveTowards(_smoothPos, _targetPos, _moveRate * dt);
-            _smoothRot = Quaternion.RotateTowards(_smoothRot, _targetRot, _rotMoveRate * dt);
+            // 1. Exponential Smoothing: sanftes Annähern ans Target.
+            //    alpha = 1 - exp(-dt / smoothTime):
+            //      - dt klein (schneller Frame) → alpha klein → wenig Bewegung
+            //      - dt gross (langsamer Frame) → alpha gross → mehr Bewegung
+            //      - Frame-rate-unabhaengig: gleiche visuelle Geschwindigkeit bei 30 oder 120 fps
+            //    Ergebnis: gleichmaessige visuelle Geschwindigkeit proportional zur Distanz.
+            //    Kein Stoppen (exponential approach erreicht Target nie exakt),
+            //    kein Sprinten (kein diskretes Umschalten der Rate).
+            float alpha = 1f - Mathf.Exp(-dt / _interpSmoothTime);
+            _smoothPos = Vector3.Lerp(_smoothPos, _targetPos, alpha);
+            _smoothRot = Quaternion.Slerp(_smoothRot, _targetRot, alpha);
 
             // 2. Offset-Decay (Reconcile Correction)
             bool hasPosition = _positionOffset.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold;
@@ -332,7 +322,7 @@ namespace Wiesenwischer.GameKit.Network
                     {
                         Debug.LogWarning($"[Smoother] STUTTER! delta={delta.magnitude:F4}m " +
                             $"prevDelta={_diagLastDelta.magnitude:F4}m ratio={ratio:F2} " +
-                            $"dt={dt:F4}s distToTarget={distToTarget:F3}m rate={_moveRate:F1}m/s " +
+                            $"dt={dt:F4}s distToTarget={distToTarget:F3}m alpha={alpha:F3} " +
                             $"frame={_diagFrameCount}");
                     }
                 }
@@ -342,7 +332,7 @@ namespace Wiesenwischer.GameKit.Network
                 {
                     Debug.Log($"[Smoother] Status frame={_diagFrameCount}: " +
                         $"pos={finalPos:F3} smooth={_smoothPos:F3} target={_targetPos:F3} " +
-                        $"distToTarget={distToTarget:F3}m rate={_moveRate:F1}m/s " +
+                        $"distToTarget={distToTarget:F3}m smoothTime={_interpSmoothTime:F3}s " +
                         $"offset={_positionOffset:F4} " +
                         $"fps={1f / dt:F0}");
                 }

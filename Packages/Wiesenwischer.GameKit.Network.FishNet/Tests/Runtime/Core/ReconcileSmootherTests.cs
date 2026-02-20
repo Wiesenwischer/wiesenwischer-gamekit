@@ -283,7 +283,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
 
             _smoother.OnPostTick(simPos, Quaternion.identity, TickDelta);
 
-            // Transform muss bei _smoothPos sein (= initPos, MoveTowards lief noch nicht)
+            // Transform muss bei _smoothPos sein (= initPos, LateUpdate lief noch nicht)
             Assert.AreEqual(initPos.x, _go.transform.position.x, 0.001f);
             Assert.AreEqual(initPos.y, _go.transform.position.y, 0.001f);
             Assert.AreEqual(initPos.z, _go.transform.position.z, 0.001f);
@@ -340,15 +340,15 @@ namespace Wiesenwischer.GameKit.Network.Tests
             _smoother.OnPostTick(newTarget, Quaternion.identity, TickDelta);
 
             // Visual ist bei _smoothPos (0,0,0), nicht beim Target (1,0,0)
-            // MoveTowards lief noch nicht — Target ist voraus
+            // Exponential Smoothing lief noch nicht — Target ist voraus
             Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
         }
 
         [Test]
         public void MultipleTicksSameFrame_UpdatesTarget_NoIssue()
         {
-            // Multiple ticks in same frame: target updates, rate recalculates.
-            // MoveTowards handles larger distances naturally via rate.
+            // Multiple ticks in same frame: target updates each time.
+            // Exponential Smoothing handles it naturally (larger distance → faster approach).
             DoInit(Vector3.zero);
 
             // 3 Ticks im selben Frame: Target springt von 0 → 1 → 2 → 3
@@ -362,26 +362,26 @@ namespace Wiesenwischer.GameKit.Network.Tests
             _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta);
 
             // Visual ist bei _smoothPos (0,0,0), Target bei (3,0,0)
-            // Rate = 3m / 0.033s ≈ 90 m/s → MoveTowards holt ueber naechste Frames auf
+            // Exponential Smoothing im naechsten LateUpdate naehert sich smooth
             Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
         }
 
         #endregion
 
-        #region MoveTowards
+        #region Exponential Smoothing
 
         [Test]
-        public void MoveTowards_ConsecutiveTicks_VisualStaysAtSmoothPos()
+        public void ExponentialSmoothing_VisualStaysBehindTarget()
         {
-            // Nach zwei Ticks mit Bewegung: Visual bleibt bei _smoothPos
-            // (MoveTowards lief noch nicht in LateUpdate).
+            // Nach Ticks mit Bewegung: Visual bleibt bei _smoothPos
+            // (Exponential Smoothing lief noch nicht in LateUpdate).
             DoInit(Vector3.zero);
 
             // Tick 1: Bewegung nach (1,0,0)
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
 
-            // Tick 2: Bewegung nach (2,0,0) → Rate intern berechnet
+            // Tick 2: Bewegung nach (2,0,0)
             _smoother.OnPreTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
 
@@ -390,9 +390,9 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         [Test]
-        public void SnapReconcile_ResetsRateState()
+        public void SnapReconcile_ResetsState()
         {
-            // Nach Snap: _smoothPos und Rate werden zurueckgesetzt.
+            // Nach Snap: _smoothPos wird auf korrigierte Position gesetzt.
             // Naechstes OnPostTick zeigt Visual an korrigierter Position.
             DoInit(Vector3.zero);
 
@@ -415,7 +415,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         [Test]
-        public void SnapSpectator_ResetsRateState()
+        public void SnapSpectator_ResetsState()
         {
             DoInit(Vector3.zero);
 
@@ -435,13 +435,14 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         [Test]
-        public void Reset_ClearsMoveState()
+        public void Reset_ClearsAllState()
         {
             DoInit(Vector3.zero);
 
-            // Bewegung aufbauen
+            // Bewegung + Offset aufbauen
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnReconcileComplete(Vector3.one, 0f, Vector3.zero, 0f);
 
             _smoother.Reset();
 
