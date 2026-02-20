@@ -52,6 +52,9 @@ namespace Wiesenwischer.GameKit.Network
         private Vector3 _preReconcilePosition;
         private float _preReconcileRotation;
 
+        // --- Velocity (fuer ReconcileSmoother) ---
+        private Vector3 _lastTickVelocity;
+
         // --- Diagnose ---
         [SerializeField] private bool _debugLog;
 
@@ -153,14 +156,14 @@ namespace Wiesenwischer.GameKit.Network
             // 3. Reconcile-Daten erstellen und senden
             CreateReconcile();
 
-            // 4. Interpolations-Endpunkt speichern (Motor-Position NACH Simulation)
+            // 4. Velocity-Based Snap+Absorb: Motor-Position + Velocity an Smoother uebergeben
             if (_smoother != null && _motor != null)
             {
                 _smoother.OnPostTick(_motor.TransientPosition, _motor.TransientRotation,
-                                     (float)TimeManager.TickDelta);
+                                     (float)TimeManager.TickDelta, _lastTickVelocity);
 
                 if (_debugLog)
-                    Debug.Log($"[Driver] OnPostTick: PostTick pos={_motor.TransientPosition:F3} transform={transform.position:F3}");
+                    Debug.Log($"[Driver] OnPostTick: pos={_motor.TransientPosition:F3} vel={_lastTickVelocity:F3} |vel|={_lastTickVelocity.magnitude:F3}m/s");
             }
         }
 
@@ -299,7 +302,16 @@ namespace Wiesenwischer.GameKit.Network
                 // → falsche Collision/Ground-Queries → Server korrigiert → ewiger Jitter.
                 _motor.Transform.SetPositionAndRotation(_motor.TransientPosition, _motor.TransientRotation);
 
+                Vector3 preSimPos = _motor.TransientPosition;
                 CharacterMotorSystem.Simulate((float)TimeManager.TickDelta, _motorList);
+
+                // Velocity = tatsaechliche Motor-Bewegung pro Tick.
+                // Wird an ReconcileSmoother uebergeben fuer Velocity-Based Visual Movement.
+                // Immun gegen Reconcile-Replay-Poisoning (basiert auf Motor-Delta, nicht auf Input-Velocity).
+                float td = (float)TimeManager.TickDelta;
+                _lastTickVelocity = td > 0f
+                    ? (_motor.TransientPosition - preSimPos) / td
+                    : Vector3.zero;
             }
 
             // Spectator Correction: Error berechnen nachdem Simulation mit neuem Input gelaufen ist
