@@ -79,18 +79,27 @@ namespace Wiesenwischer.GameKit.Network
             // CustomInterpolationUpdate kaempft sonst gegen den Smoother (Doppel-Korrektur).
             CharacterMotorSystem.Settings.Interpolate = false;
 
+            // Dedicated Server braucht kein Visual-Smoothing (kein Rendering).
+            // Host (Server+Client) braucht es fuer lokale Visuals.
+            // _smoother = null verhindert alle Smoother-Aufrufe in OnTick/OnPostTick/Reconcile.
+            // LateUpdate im Smoother returned sofort (_initialized bleibt false).
+            if (IsServerStarted && !IsClientStarted)
+                _smoother = null;
+
             if (_debugLog)
             {
+                bool isDedicatedServer = IsServerStarted && !IsClientStarted;
                 Debug.Log($"[Driver] OnStartNetwork: {gameObject.name} | " +
                     $"isOwner={base.Owner.IsLocalClient} isServer={base.IsServerStarted} " +
-                    $"smoother={(_smoother != null ? "OK" : "MISSING!")} " +
+                    $"isDedicatedServer={isDedicatedServer} " +
+                    $"smoother={(_smoother != null ? "OK" : isDedicatedServer ? "SKIPPED (server)" : "MISSING!")} " +
                     $"motor={(_motor != null ? "OK" : "MISSING!")} " +
                     $"tickRate={TimeManager.TickRate}Hz " +
                     $"tickDelta={TimeManager.TickDelta:F4}s " +
                     $"AutoSim={CharacterMotorSystem.Settings.AutoSimulation} " +
                     $"KCC-Interp={CharacterMotorSystem.Settings.Interpolate}");
 
-                if (_smoother == null)
+                if (_smoother == null && !isDedicatedServer)
                     Debug.LogError($"[Driver] ReconcileSmoother NICHT GEFUNDEN auf {gameObject.name}! " +
                         "Tick-Interpolation ist deaktiviert — Character wird mit Tick-Rate statt Frame-Rate gerendert!");
             }

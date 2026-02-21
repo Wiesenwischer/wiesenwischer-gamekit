@@ -80,8 +80,18 @@ namespace Wiesenwischer.GameKit.Network
         [Tooltip("Loggt Corrections die groesser als MinCorrectionThreshold sind.")]
         [SerializeField] private bool _debugLog;
 
+        [Header("Queue")]
+        [Tooltip("Ab dieser Queue-Tiefe wird die Consumption beschleunigt (Catchup).\n" +
+                 "Normal: 1 Goal pro tickDelta. Darüber: leicht schneller.")]
+        [SerializeField] private int _catchupThreshold = 2;
+
+        [Tooltip("Beschleunigungs-Faktor pro Queue-Eintrag ueber dem Threshold.\n" +
+                 "0.25 = 25% schneller pro Extra-Eintrag (queue=3 → 1.25x, queue=4 → 1.5x).")]
+        [Range(0.1f, 0.5f)]
+        [SerializeField] private float _catchupRate = 0.25f;
+
         // --- Goal Queue ---
-        private const int MaxQueueSize = 4;
+        private const int HardQueueLimit = 8;
         private readonly Queue<Vector3> _goalQueue = new Queue<Vector3>();
         private Vector3 _fromPos;        // Interpolation start (previous consumed goal)
         private Vector3 _toPos;          // Interpolation end (current goal)
@@ -310,9 +320,21 @@ namespace Wiesenwischer.GameKit.Network
             //    _interpT schreitet mit 1/tickDelta pro Sekunde voran.
             //    Bei _interpT >= 1 und vorhandenen Goals: naechstes Goal konsumieren.
             //    Bei leerer Queue und _interpT >= 1: halten (kein Overshoot).
+            //
+            //    Adaptive Catchup: Wenn die Queue waechst (Tick-Burst, Frame-Hitch),
+            //    wird die Consumption leicht beschleunigt statt Goals hart zu droppen.
+            //    queue=2 → 1.25x, queue=3 → 1.5x, queue=4 → 1.75x (bei defaults).
+            //    Visuell: Character bewegt sich kurzzeitig ~25-75% schneller — kaum sichtbar.
+            //    Ohne Catchup: Hard-Drop → visueller Teleport.
             bool canAdvance = _interpT < 1f || _goalQueue.Count > 0;
             if (canAdvance && _tickDelta > 0f)
-                _interpT += dt / _tickDelta;
+            {
+                int excess = _goalQueue.Count - _catchupThreshold;
+                float speedMultiplier = excess > 0
+                    ? 1f + excess * _catchupRate
+                    : 1f;
+                _interpT += dt / _tickDelta * speedMultiplier;
+            }
 
             // Goals konsumieren wenn Tick-Grenze ueberschritten
             while (_interpT >= 1f && _goalQueue.Count > 0)
@@ -325,8 +347,9 @@ namespace Wiesenwischer.GameKit.Network
             // Clampen: wenn Queue leer und am Ende, nicht ueber 1 hinaus
             _interpT = Mathf.Min(_interpT, 1f);
 
-            // Safety: Queue-Ueberlauf verhindern (z.B. nach langer Pause mit Tick-Burst)
-            while (_goalQueue.Count > MaxQueueSize)
+            // Hard-Limit: Sollte mit Adaptive Catchup nie erreicht werden.
+            // Safety fuer extreme Faelle (z.B. Editor-Pause mit anschliessend 100+ Ticks).
+            while (_goalQueue.Count > HardQueueLimit)
             {
                 _fromPos = _toPos;
                 _toPos = _goalQueue.Dequeue();
