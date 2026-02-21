@@ -1,6 +1,6 @@
 # Master-Implementierungsplan - Wiesenwischer GameKit
 
-> **Letzte Aktualisierung:** 2026-02-19
+> **Letzte Aktualisierung:** 2026-02-20
 > **Status:** In Entwicklung
 
 ---
@@ -30,12 +30,13 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 |------|--------|--------|
 | [Lebendige Charaktere — Animation Pipeline](#lebendige-charaktere--animation-pipeline) | 1–4, 20–23 | Abgeschlossen |
 | [Fähigkeiten & Action Combat](#fähigkeiten--action-combat) | 5, 9 | In Arbeit |
-| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7, 30–31 | In Arbeit |
+| [MMO-Netzwerk & Synchronisation](#mmo-netzwerk--synchronisation) | 6–7, 30–31, 38 | In Arbeit |
 | [Natürliche Bewegung — Inverse Kinematics](#natürliche-bewegung--inverse-kinematics) | 8, 24, 25 | Abgeschlossen |
 | [Reiten, Gleiten & Schwimmen](#reiten-gleiten--schwimmen) | 10 | Offen |
 | [AAA Third-Person Camera System](#aaa-third-person-camera-system) | 26–29 | Abgeschlossen |
 | [Character Platform](#character-platform) | 11–19 | Offen |
 | [Combat Animation Tuning Tool](#combat-animation-tuning-tool) | 32–34 | Offen |
+| [Build Pipeline & Launcher](#build-pipeline--launcher) | 35–37 | Offen |
 
 ---
 
@@ -52,6 +53,7 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 7 | Netzwerk | Netzwerk-Animation | [Features](phase-7-network-animation/README.md) | ✅ | Abgeschlossen |
 | 30 | Netzwerk | FishNet Native Prediction Migration | [Features](phase-30-fishnet-prediction/README.md) | ✅ | Abgeschlossen |
 | 31 | Netzwerk | Adaptive Reconciliation & Smooth Correction | [Features](phase-31-adaptive-reconciliation/README.md) | ✅ | Abgeschlossen |
+| 38 | Netzwerk | Adaptive Correction Rate (RTT-basiert) | — | ❌ | Offen |
 | 8 | IK | IK System | [Features](phase-8-ik-system/README.md) | ✅ | Abgeschlossen |
 | 24 | IK | FootIK Terrain-Adaptive Verbesserungen | [Features](phase-24-footik-improvements/README.md) | ✅ | Abgeschlossen |
 | 25 | IK | Foot Locking (Anti-Sliding) | [Features](phase-25-foot-locking/README.md) | ✅ | Abgeschlossen |
@@ -77,6 +79,9 @@ Jedes Epic gruppiert zusammengehörige Phasen. Jede Phase hat eigene Detail-Doku
 | 32 | Tooling | Combat Timing Data Model & Runtime | [Features](phase-32-combat-timing-data/README.md) | ✅ | Offen |
 | 33 | Tooling | Combat Preview Scene & Runtime Editor | — | ❌ | Offen |
 | 34 | Tooling | AAA Timeline UI & Visual Polish | — | ❌ | Offen |
+| 35 | Build | CI Build Pipeline — Unity Build & GitHub Actions | — | ❌ | Offen |
+| 36 | Build | Launcher Core — Download & Update Engine | — | ❌ | Offen |
+| 37 | Build | Launcher UI & Distribution | — | ❌ | Offen |
 
 ---
 
@@ -96,6 +101,7 @@ Fähigkeiten & Action Combat
 MMO-Netzwerk
   Phase 5 ──> Phase 6 ──> Phase 7 ──> Phase 30 (FishNet Native Prediction)
                                                        └──> Phase 31 (Adaptive Reconciliation)
+                                                                    └──> Phase 38 (Adaptive Correction Rate)
                              ↑
                           Phase 8 (IK Target Sync benötigt IK-Module)
 
@@ -131,6 +137,9 @@ Combat Animation Tuning Tool
   Phase 5 (Ability System) ──> Phase 32 (Combat Timing Data) ──> Phase 33 (Preview & Editor)
                                                                         └──> Phase 34 (AAA Timeline UI)
                                Phase 32 ──> Phase 9 (Combat Abilities nutzt Timing-Fundament)
+
+Build Pipeline & Launcher (unabhängig von den anderen Epics)
+  Phase 35 (CI Build Pipeline) ──> Phase 36 (Launcher Core) ──> Phase 37 (Launcher UI)
 ```
 
 **Hinweis:** Die Epics haben **keine feste Reihenfolge** untereinander. Die Reihenfolge ergibt sich aus den Phasen-Abhängigkeiten und der aktuellen Priorität. Insbesondere kann der Character Creator komplett parallel zu den anderen Epics entwickelt werden.
@@ -383,6 +392,7 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 
 **Relevante Spezifikationen:**
 - [Phase 30 Spezifikation](../specs/networking/Wiesenwischer_Phase30_FishNet_Native_Prediction_Migration.md)
+- [Phase 38 Spezifikation: Adaptive Correction Rate](../specs/networking/Wiesenwischer_Phase38_Adaptive_Correction_Rate.md)
 
 **Schritte:**
 - [x] [30.1 ISimulationDriver + SimulateTick Extraktion](phase-30-fishnet-prediction/30.1-simulation-driver.md)
@@ -412,6 +422,30 @@ FishNet-Integration für Multiplayer: Input- und Positions-Sync, Client-Side Pre
 - [x] [31.3 Spectator Prediction Verbesserung](phase-31-adaptive-reconciliation/31.3-spectator-prediction.md)
 - [x] [31.4 Debug Visualization](phase-31-adaptive-reconciliation/31.4-debug-visualization.md)
 - [x] [31.5 Tests + Dokumentation](phase-31-adaptive-reconciliation/31.5-tests-documentation.md)
+
+---
+
+### Phase 38: Adaptive Correction Rate (RTT-basiert)
+**Branch:** `integration/phase-38-adaptive-correction-rate`
+**Ausgearbeitet:** ❌ Nein
+**Abhängigkeit:** Phase 31 (ReconcileSmoother muss existieren)
+
+**Ziel:** ReconcileSmoother dynamisch an die aktuelle Netzwerk-Latenz anpassen. Bei hoher Latenz (mehr Reconcile-Korrekturen) langsamer decayen → mehr Zeit für Smoothing. Bei niedriger Latenz schneller decayen → snappigere Visuals. Inspiriert von FishNets `UniversalTickSmoother`, der Interpolation adaptive an RTT × TickDelta skaliert (Movement Multiplier 0.95–1.05×).
+
+**Konzept:**
+- `ReconcileSmoother._correctionRate` wird zur Laufzeit angepasst statt statisch konfiguriert
+- RTT aus `FishNet.Managing.NetworkManager.TimeManager.RoundTripTime` auslesen
+- RTT → Tick-Count umrechnen (`rttTicks = RTT / TickDelta`)
+- Correction Rate Mapping: z.B. `correctionRate = Mathf.Lerp(0.15f, 0.6f, Mathf.InverseLerp(1, 8, rttTicks))`
+- Auch `_snapThreshold` könnte RTT-adaptiv werden (höhere Latenz → großzügigerer Threshold)
+- Optional: EMA-Smoothing auf RTT um Spikes zu filtern
+
+**Schritte (vorläufig):**
+- [ ] 38.1 RTT-Provider Interface + FishNet-Implementierung
+- [ ] 38.2 Adaptive CorrectionRate im ReconcileSmoother
+- [ ] 38.3 Adaptive SnapThreshold (optional)
+- [ ] 38.4 Debug UI — RTT + aktuelle CorrectionRate anzeigen
+- [ ] 38.5 Tests + Verifikation unter simulierter Latenz
 
 ---
 
@@ -876,6 +910,73 @@ Data-driven Runtime-Tool für visuelles Combat-Timing-Tuning — Frame-basierte 
 - [ ] 34.8 Performance Optimierung (kein Layout Rebuild pro Frame, kein Instantiate/Destroy)
 
 **Spec-Referenz:** Konsolidierte Spec Kapitel 8 (AAA Timeline Architecture), 11 (Performance Regeln)
+
+---
+
+# Build Pipeline & Launcher
+
+Automatisierte CI Build Pipeline mit GitHub Actions, Artifact Hosting über GitHub Releases und ein .NET/WPF Launcher mit Auto-Update-Funktion — reproduzierbare Builds und einfache Distribution für Tester.
+
+**Haupt-Spezifikation (konsolidiert):**
+- [Build Pipeline, Launcher & Auto-Update Specification](../specs/BuildPipeline_Launcher_AutoUpdate_Specification.md)
+
+---
+
+### Phase 35: CI Build Pipeline — Unity Build & GitHub Actions
+**Branch:** `integration/phase-35-ci-build-pipeline`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** Automatisierte Unity Builds bei Push auf `main` — headless Build, ZIP-Packaging, SHA-256 Hash, Manifest-Generierung und GitHub Release Upload.
+
+**Schritte (vorläufig):**
+- [ ] 35.1 Unity BuildScript (`BuildScript.cs` in `build/`)
+- [ ] 35.2 GitHub Actions Workflow Grundgerüst (`build.yml`)
+- [ ] 35.3 ZIP Packaging + SHA-256 Hash Berechnung
+- [ ] 35.4 Manifest-Generierung (`manifest.json`)
+- [ ] 35.5 GitHub Release Upload (softprops/action-gh-release)
+- [ ] 35.6 Channel-Logik (dev via `main`, stable via `v*` Tags)
+- [ ] 35.7 Library Cache + Workflow Artifacts
+
+**Spec-Referenz:** Kapitel 2, 3, 4, 12
+
+---
+
+### Phase 36: Launcher Core — Download & Update Engine
+**Branch:** `integration/phase-36-launcher-core`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** .NET 8 WPF Projekt mit Update-Engine — Manifest abrufen, Versionen vergleichen, ZIP herunterladen, SHA-256 verifizieren, Staging-Extraktion, Atomic Swap und Game starten.
+
+**Schritte (vorläufig):**
+- [ ] 36.1 .NET 8 WPF Projekt-Struktur anlegen
+- [ ] 36.2 Local State Management (`local.json`)
+- [ ] 36.3 Manifest Fetcher (GitHub Releases → `manifest.json`)
+- [ ] 36.4 Version Vergleich (SemVer)
+- [ ] 36.5 Download Engine (HttpClient mit Progress)
+- [ ] 36.6 SHA-256 Integrity Check
+- [ ] 36.7 Staging Extraction + Atomic Swap + Rollback
+- [ ] 36.8 Game Launcher (Process starten, File-Lock-Prüfung)
+
+**Spec-Referenz:** Kapitel 5, 6, 7
+
+---
+
+### Phase 37: Launcher UI & Distribution
+**Branch:** `integration/phase-37-launcher-ui`
+**Ausgearbeitet:** ❌ Nein
+
+**Ziel:** WPF-Benutzeroberfläche mit Progress Bar, Play Button, Channel-Auswahl, Fehleranzeige und Logging. Launcher-Packaging für Verteilung.
+
+**Schritte (vorläufig):**
+- [ ] 37.1 WPF UI Layout (MainWindow, MVVM-Grundstruktur)
+- [ ] 37.2 Update Status + Progress Bar + Speed-Anzeige
+- [ ] 37.3 Play Button (deaktiviert während Update)
+- [ ] 37.4 Channel-Auswahl (dev/stable Toggle)
+- [ ] 37.5 Fehleranzeige + Retry + Log-Viewer
+- [ ] 37.6 Auto-Check on Start + UX-Polish
+- [ ] 37.7 Launcher Packaging (portable ZIP / Installer)
+
+**Spec-Referenz:** Kapitel 8, 9, 11
 
 ---
 
