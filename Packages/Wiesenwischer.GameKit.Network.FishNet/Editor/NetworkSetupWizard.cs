@@ -119,98 +119,103 @@ namespace Wiesenwischer.GameKit.Network.Editor
             string prefabPath = AssetDatabase.GetAssetPath(_playerPrefab);
             var prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
 
-            Undo.SetCurrentGroupName("Setup Network Components");
-            int undoGroup = Undo.GetCurrentGroup();
-
-            // 1. NetworkObject (FishNet)
-            if (prefabRoot.GetComponent<NetworkObject>() == null)
-                prefabRoot.AddComponent<NetworkObject>();
-
-            // 1b. Prediction aktivieren (Voraussetzung fuer [Replicate]/[Reconcile])
-            var nob = prefabRoot.GetComponent<NetworkObject>();
-            if (nob != null)
+            try
             {
-                var nobSo = new SerializedObject(nob);
-                var predProp = nobSo.FindProperty("_enablePrediction");
-                if (predProp != null) predProp.boolValue = true;
-                var fwdProp = nobSo.FindProperty("_enableStateForwarding");
-                if (fwdProp != null) fwdProp.boolValue = true;
-                nobSo.ApplyModifiedProperties();
+                // 1. NetworkObject (FishNet)
+                if (prefabRoot.GetComponent<NetworkObject>() == null)
+                    prefabRoot.AddComponent<NetworkObject>();
+
+                // 1b. Prediction aktivieren (Voraussetzung fuer [Replicate]/[Reconcile])
+                var nob = prefabRoot.GetComponent<NetworkObject>();
+                if (nob != null)
+                {
+                    var nobSo = new SerializedObject(nob);
+                    var predProp = nobSo.FindProperty("_enablePrediction");
+                    if (predProp != null) predProp.boolValue = true;
+                    var fwdProp = nobSo.FindProperty("_enableStateForwarding");
+                    if (fwdProp != null) fwdProp.boolValue = true;
+                    nobSo.ApplyModifiedPropertiesWithoutUndo();
+                }
+
+                // 2. NetworkPlayer
+                if (prefabRoot.GetComponent<NetworkPlayer>() == null)
+                    prefabRoot.AddComponent<NetworkPlayer>();
+
+                // 3. NetworkCharacterDriver
+                if (prefabRoot.GetComponent<NetworkCharacterDriver>() == null)
+                    prefabRoot.AddComponent<NetworkCharacterDriver>();
+
+                // 4. NetworkAnimationSync
+                if (prefabRoot.GetComponent<NetworkAnimationSync>() == null)
+                    prefabRoot.AddComponent<NetworkAnimationSync>();
+
+                // 5. NetworkTickSmoother (FishNet's eingebautes visuelles Smoothing)
+                if (prefabRoot.GetComponent<NetworkTickSmoother>() == null)
+                    prefabRoot.AddComponent<NetworkTickSmoother>();
+
+                // Smoother konfigurieren (auch wenn er schon existierte)
+                var smoother = prefabRoot.GetComponent<NetworkTickSmoother>();
+                if (smoother != null)
+                {
+                    var so = new SerializedObject(smoother);
+
+                    // TargetTransform = root (das Objekt das sich jeden Tick bewegt)
+                    var initSettings = so.FindProperty("_initializationSettings");
+                    if (initSettings != null)
+                    {
+                        var targetProp = initSettings.FindPropertyRelative("TargetTransform");
+                        if (targetProp != null)
+                            targetProp.objectReferenceValue = prefabRoot.transform;
+                    }
+
+                    // Adaptive Interpolation fuer Owner (Low = RTT + 3 Ticks)
+                    var controllerSettings = so.FindProperty("_controllerMovementSettings");
+                    if (controllerSettings != null)
+                    {
+                        var adaptiveProp = controllerSettings.FindPropertyRelative("AdaptiveInterpolationValue");
+                        if (adaptiveProp != null)
+                            adaptiveProp.intValue = (int)AdaptiveInterpolationType.Low;
+
+                        var teleportProp = controllerSettings.FindPropertyRelative("EnableTeleport");
+                        if (teleportProp != null)
+                            teleportProp.boolValue = true;
+
+                        var thresholdProp = controllerSettings.FindPropertyRelative("TeleportThreshold");
+                        if (thresholdProp != null)
+                            thresholdProp.floatValue = 5f;
+                    }
+
+                    // Adaptive Interpolation fuer Spectator (Moderate = RTT + 4 Ticks)
+                    var spectatorSettings = so.FindProperty("_spectatorMovementSettings");
+                    if (spectatorSettings != null)
+                    {
+                        var adaptiveProp = spectatorSettings.FindPropertyRelative("AdaptiveInterpolationValue");
+                        if (adaptiveProp != null)
+                            adaptiveProp.intValue = (int)AdaptiveInterpolationType.Moderate;
+
+                        var teleportProp = spectatorSettings.FindPropertyRelative("EnableTeleport");
+                        if (teleportProp != null)
+                            teleportProp.boolValue = true;
+
+                        var thresholdProp = spectatorSettings.FindPropertyRelative("TeleportThreshold");
+                        if (thresholdProp != null)
+                            thresholdProp.floatValue = 5f;
+                    }
+
+                    // FavorPredictionNetworkTransform deaktivieren (wir nutzen kein NetworkTransform)
+                    var favorProp = so.FindProperty("_favorPredictionNetworkTransform");
+                    if (favorProp != null)
+                        favorProp.boolValue = false;
+
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
             }
-
-            // 2. NetworkPlayer
-            if (prefabRoot.GetComponent<NetworkPlayer>() == null)
-                prefabRoot.AddComponent<NetworkPlayer>();
-
-            // 3. NetworkCharacterDriver (ersetzt NetworkInputSync + NetworkStateSync + RemotePlayerInterpolator)
-            if (prefabRoot.GetComponent<NetworkCharacterDriver>() == null)
-                prefabRoot.AddComponent<NetworkCharacterDriver>();
-
-            // 4. NetworkAnimationSync (Animation State + Parameter Sync)
-            if (prefabRoot.GetComponent<NetworkAnimationSync>() == null)
-                prefabRoot.AddComponent<NetworkAnimationSync>();
-
-            // 5. NetworkTickSmoother (FishNet's eingebautes visuelles Smoothing)
-            if (prefabRoot.GetComponent<NetworkTickSmoother>() == null)
+            finally
             {
-                var smoother = prefabRoot.AddComponent<NetworkTickSmoother>();
-
-                // TargetTransform = root (das Objekt das sich jeden Tick bewegt)
-                var smootherSo = new SerializedObject(smoother);
-                var initSettings = smootherSo.FindProperty("_initializationSettings");
-                if (initSettings != null)
-                {
-                    var targetProp = initSettings.FindPropertyRelative("TargetTransform");
-                    if (targetProp != null)
-                        targetProp.objectReferenceValue = prefabRoot.transform;
-                }
-
-                // Adaptive Interpolation fuer Owner (Low = RTT + 3 Ticks)
-                var controllerSettings = smootherSo.FindProperty("_controllerMovementSettings");
-                if (controllerSettings != null)
-                {
-                    var adaptiveProp = controllerSettings.FindPropertyRelative("AdaptiveInterpolationValue");
-                    if (adaptiveProp != null)
-                        adaptiveProp.intValue = (int)AdaptiveInterpolationType.Low;
-
-                    var teleportProp = controllerSettings.FindPropertyRelative("EnableTeleport");
-                    if (teleportProp != null)
-                        teleportProp.boolValue = true;
-
-                    var thresholdProp = controllerSettings.FindPropertyRelative("TeleportThreshold");
-                    if (thresholdProp != null)
-                        thresholdProp.floatValue = 5f;
-                }
-
-                // Adaptive Interpolation fuer Spectator (Moderate = RTT + 4 Ticks)
-                var spectatorSettings = smootherSo.FindProperty("_spectatorMovementSettings");
-                if (spectatorSettings != null)
-                {
-                    var adaptiveProp = spectatorSettings.FindPropertyRelative("AdaptiveInterpolationValue");
-                    if (adaptiveProp != null)
-                        adaptiveProp.intValue = (int)AdaptiveInterpolationType.Moderate;
-
-                    var teleportProp = spectatorSettings.FindPropertyRelative("EnableTeleport");
-                    if (teleportProp != null)
-                        teleportProp.boolValue = true;
-
-                    var thresholdProp = spectatorSettings.FindPropertyRelative("TeleportThreshold");
-                    if (thresholdProp != null)
-                        thresholdProp.floatValue = 5f;
-                }
-
-                // FavorPredictionNetworkTransform deaktivieren (wir nutzen kein NetworkTransform)
-                var favorProp = smootherSo.FindProperty("_favorPredictionNetworkTransform");
-                if (favorProp != null)
-                    favorProp.boolValue = false;
-
-                smootherSo.ApplyModifiedProperties();
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
             }
-
-            PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
-            PrefabUtility.UnloadPrefabContents(prefabRoot);
-
-            Undo.CollapseUndoOperations(undoGroup);
 
             // Referenz aktualisieren
             _playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
@@ -220,7 +225,7 @@ namespace Wiesenwischer.GameKit.Network.Editor
             if (networkObject != null)
                 RegisterInDefaultPrefabObjects(networkObject);
 
-            Debug.Log("[NetworkSetupWizard] Network-Komponenten erfolgreich hinzugefügt.");
+            Debug.Log("[NetworkSetupWizard] Network-Komponenten erfolgreich hinzugefuegt.");
         }
 
         private void RegisterInDefaultPrefabObjects(NetworkObject networkObject)
