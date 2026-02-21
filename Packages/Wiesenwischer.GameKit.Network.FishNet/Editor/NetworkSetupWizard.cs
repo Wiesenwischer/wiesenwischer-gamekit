@@ -164,15 +164,17 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 }
                 else
                 {
-                    if (visualChild.GetComponent<NetworkTickSmoother>() == null)
-                        visualChild.AddComponent<NetworkTickSmoother>();
+                    var visualGo = visualChild.gameObject;
+
+                    if (visualGo.GetComponent<NetworkTickSmoother>() == null)
+                        visualGo.AddComponent<NetworkTickSmoother>();
 
                     // Alten Smoother auf Root entfernen falls vorhanden (Migration)
                     var rootSmoother = prefabRoot.GetComponent<NetworkTickSmoother>();
                     if (rootSmoother != null)
                         Object.DestroyImmediate(rootSmoother);
 
-                    var smoother = visualChild.GetComponent<NetworkTickSmoother>();
+                    var smoother = visualGo.GetComponent<NetworkTickSmoother>();
                     if (smoother != null)
                     {
                         var so = new SerializedObject(smoother);
