@@ -243,39 +243,6 @@ namespace Wiesenwischer.GameKit.Network
                 Debug.Log($"[ReconcileSmoother] Reconcile: pos={posError.magnitude:F4}m rot={rotError:F2}°");
         }
 
-        /// <summary>
-        /// Wird nach Spectator-Correction aufgerufen (nach Simulation mit neuem autoritativem Input).
-        /// Gleiche Logik wie OnReconcileComplete: Endpoints + Queue shiften, Error zum Offset.
-        /// </summary>
-        public void OnSpectatorCorrection(Vector3 prePos, Vector3 postPos, Quaternion postRot)
-        {
-            Vector3 error = prePos - postPos;
-
-            if (error.sqrMagnitude > _snapThreshold * _snapThreshold)
-            {
-                _fromPos = _toPos = postPos;
-                _goalQueue.Clear();
-                _interpT = 1f;
-                _targetRot = _smoothRot = postRot;
-                ClearOffset();
-            }
-            else
-            {
-                Vector3 correction = postPos - prePos;
-                _fromPos += correction;
-                _toPos += correction;
-
-                int count = _goalQueue.Count;
-                for (int i = 0; i < count; i++)
-                    _goalQueue.Enqueue(_goalQueue.Dequeue() + correction);
-
-                _positionOffset += error;
-            }
-
-            if (_debugLog && error.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold)
-                Debug.Log($"[ReconcileSmoother] Spectator: pos={error.magnitude:F4}m");
-        }
-
         /// <summary>Setzt den Offset sofort auf Zero (hard snap).</summary>
         public void ClearOffset()
         {

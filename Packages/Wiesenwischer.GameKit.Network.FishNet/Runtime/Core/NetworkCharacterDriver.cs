@@ -44,8 +44,6 @@ namespace Wiesenwischer.GameKit.Network
         // --- Spectator Prediction ---
         [SerializeField] private int _spectatorMaxPredictTicks = 4;
         private MoveReplicateData _lastTickedReplicateData;
-        private Vector3 _spectatorPreCorrectionPos;
-        private bool _spectatorNeedsCorrection;
 
         // --- Reconcile Smoothing ---
         private bool _didReconcile;
@@ -230,7 +228,6 @@ namespace Wiesenwischer.GameKit.Network
             // state.ContainsTicked() = erster nicht-replayed Tick → alle Replays sind durch.
             // TransientPosition enthaelt jetzt die korrigierte Prediction (Reconcile + Replays).
             // NICHT auf dem Server/Host: Server ist autoritaet, Reconcile-Error ist nur FP-Noise.
-            bool handledReconcile = false;
             if (_didReconcile && !IsServerStarted && state.ContainsTicked() && _smoother != null)
             {
                 if (_debugLog)
@@ -243,30 +240,22 @@ namespace Wiesenwischer.GameKit.Network
                     _preReconcilePosition, _preReconcileRotation,
                     _motor.TransientPosition, _motor.TransientRotation.eulerAngles.y);
                 _didReconcile = false;
-                handledReconcile = true;
             }
 
             // --- Spectator Prediction (Non-Owner) ---
             // FishNet reconciled Non-Owner-Objekte ebenfalls via ReconcileToStates.
-            // Wenn Reconcile gerade gelaufen ist, KEINE zusaetzliche Spectator-Correction:
-            //   OnReconcileComplete: offset += (preReconcile - postReplay) [korrekt]
-            //   OnSpectatorCorrection: offset += (postReplay - postSim) = -movement [FALSCH!]
-            //   → Jeder Tick addiert -movement zum Offset → persistenter visueller Lag bei Bewegung.
-            // lastTickedReplicateData IMMER aktualisieren (fuer Future-Tick Prediction).
+            // Reconcile-Corrections werden via OnReconcileComplete gehandhabt (gleicher Pfad wie Owner).
+            // KEIN separater Spectator-Correction-Offset:
+            //   OnSpectatorCorrection erfasste prePos-postPos = -movement (nicht den Reconcile-Error).
+            //   → Jeder Tick addierte -movement zum Offset → persistenter 1.5-2.5m Offset + Stutter.
+            //   Die Goal-Queue interpoliert natuerlich zur korrekten Position.
             if (!IsServerStarted && !IsOwner)
             {
                 if (state.ContainsTicked())
                 {
-                    // Input fuer Future-Tick Prediction speichern (immer, auch nach Reconcile)
+                    // Input fuer Future-Tick Prediction speichern
                     _lastTickedReplicateData.Dispose();
                     _lastTickedReplicateData = input;
-
-                    // Spectator-Correction NUR wenn kein Reconcile diesen Tick gehandhabt hat
-                    if (!handledReconcile)
-                    {
-                        _spectatorPreCorrectionPos = _motor.TransientPosition;
-                        _spectatorNeedsCorrection = true;
-                    }
                 }
                 else if (state.IsFuture())
                 {
@@ -309,16 +298,6 @@ namespace Wiesenwischer.GameKit.Network
                 _motor.Transform.SetPositionAndRotation(_motor.TransientPosition, _motor.TransientRotation);
 
                 CharacterMotorSystem.Simulate((float)TimeManager.TickDelta, _motorList);
-            }
-
-            // Spectator Correction: Error berechnen nachdem Simulation mit neuem Input gelaufen ist
-            if (_spectatorNeedsCorrection && state.ContainsTicked() && _smoother != null)
-            {
-                _smoother.OnSpectatorCorrection(
-                    _spectatorPreCorrectionPos,
-                    _motor.TransientPosition,
-                    _motor.TransientRotation);
-                _spectatorNeedsCorrection = false;
             }
 
             // Replay-Guard zuruecksetzen

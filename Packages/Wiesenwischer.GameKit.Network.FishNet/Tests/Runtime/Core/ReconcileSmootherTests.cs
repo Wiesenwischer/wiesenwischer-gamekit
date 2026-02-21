@@ -283,73 +283,11 @@ namespace Wiesenwischer.GameKit.Network.Tests
 
         #endregion
 
-        #region Spectator Correction
-
-        [Test]
-        public void OnSpectatorCorrection_AccumulatesOffset()
-        {
-            DoInit(Vector3.zero);
-
-            Vector3 prePos = new Vector3(5f, 0f, 3f);
-            Vector3 postPos = new Vector3(5.1f, 0f, 3.05f);
-
-            _smoother.OnSpectatorCorrection(prePos, postPos, Quaternion.identity);
-
-            Vector3 expectedOffset = prePos - postPos;
-            Assert.AreEqual(expectedOffset.x, _smoother.CurrentOffset.x, 0.001f);
-            Assert.AreEqual(expectedOffset.z, _smoother.CurrentOffset.z, 0.001f);
-        }
-
-        [Test]
-        public void OnSpectatorCorrection_SnapsOnLargeError()
-        {
-            DoInit(Vector3.zero);
-
-            // Erst kleinen Offset aufbauen
-            _smoother.OnSpectatorCorrection(Vector3.one, Vector3.zero, Quaternion.identity);
-            Assert.AreNotEqual(Vector3.zero, _smoother.CurrentOffset);
-
-            // Grosser Error
-            _smoother.OnSpectatorCorrection(
-                Vector3.zero, new Vector3(5f, 0f, 0f), Quaternion.identity);
-
-            Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
-        }
-
-        [Test]
-        public void OnSpectatorCorrection_ShiftsEndpoints()
-        {
-            DoInit(new Vector3(5f, 0f, 0f));
-
-            // Goal enqueuen
-            _smoother.OnPostTick(new Vector3(6f, 0f, 0f), Quaternion.identity, TickDelta);
-
-            // Spectator correction: 0.05m
-            _smoother.OnSpectatorCorrection(
-                new Vector3(11f, 0f, 0f),
-                new Vector3(11.05f, 0f, 0f),
-                Quaternion.identity);
-
-            // Offset = pre - post = -0.05
-            Assert.AreEqual(-0.05f, _smoother.CurrentOffset.x, 0.001f);
-        }
-
-        [Test]
-        public void OnSpectatorCorrection_ClearsQueueOnSnap()
-        {
-            DoInit(Vector3.zero);
-
-            _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
-            Assert.AreEqual(1, _smoother.QueueCount);
-
-            _smoother.OnSpectatorCorrection(
-                Vector3.zero, new Vector3(5f, 0f, 0f), Quaternion.identity);
-
-            Assert.AreEqual(0, _smoother.QueueCount);
-            Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
-        }
-
-        #endregion
+        // Spectator Correction Tests entfernt:
+        // OnSpectatorCorrection war fehlerhaft — erfasste prePos-postPos = -movement
+        // statt den Reconcile-Error. Jeder Tick addierte -movement zum Offset
+        // → persistenter 1.5-2.5m Offset + Stutter (5-12:1 Ratio).
+        // Spectator-Corrections laufen jetzt via OnReconcileComplete (gleicher Pfad wie Owner).
 
         #region ClearOffset
 
@@ -465,20 +403,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
             Assert.AreEqual(0, _smoother.QueueCount);
         }
 
-        [Test]
-        public void SnapSpectator_ResetsState()
-        {
-            DoInit(Vector3.zero);
-
-            SimulateTick(new Vector3(1f, 0f, 0f));
-
-            // Grosser Spectator-Error → Snap
-            _smoother.OnSpectatorCorrection(
-                Vector3.zero, new Vector3(5f, 0f, 0f), Quaternion.identity);
-
-            Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
-            Assert.AreEqual(0, _smoother.QueueCount);
-        }
+        // SnapSpectator_ResetsState entfernt — OnSpectatorCorrection nicht mehr verwendet.
 
         #endregion
     }
