@@ -121,6 +121,9 @@ namespace Wiesenwischer.GameKit.Network.Editor
 
             try
             {
+                // 0. Missing Scripts entfernen (z.B. alter ReconcileSmoother)
+                GameObjectUtility.RemoveMonoBehavioursWithMissingScript(prefabRoot);
+
                 // 1. NetworkObject (FishNet)
                 if (prefabRoot.GetComponent<NetworkObject>() == null)
                     prefabRoot.AddComponent<NetworkObject>();
