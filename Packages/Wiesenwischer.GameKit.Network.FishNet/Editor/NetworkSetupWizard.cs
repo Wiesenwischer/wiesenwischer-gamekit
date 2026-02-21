@@ -1,3 +1,4 @@
+using FishNet.Component.Transforming;
 using FishNet.Component.Transforming.Beta;
 using FishNet.Managing;
 using FishNet.Managing.Object;
