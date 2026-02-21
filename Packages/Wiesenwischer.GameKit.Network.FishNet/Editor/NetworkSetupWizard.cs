@@ -76,7 +76,7 @@ namespace Wiesenwischer.GameKit.Network.Editor
             bool hasNetworkPlayer = _playerPrefab.GetComponent<NetworkPlayer>() != null;
             bool hasNetworkCharacterDriver = _playerPrefab.GetComponent<NetworkCharacterDriver>() != null;
             bool hasNetworkAnimationSync = _playerPrefab.GetComponent<NetworkAnimationSync>() != null;
-            bool hasNetworkTickSmoother = _playerPrefab.GetComponent<NetworkTickSmoother>() != null;
+            bool hasNetworkTickSmoother = _playerPrefab.GetComponentInChildren<NetworkTickSmoother>() != null;
 
             DrawStatusLine("PlayerController", hasPlayerController, true);
             DrawStatusLine("NetworkObject", hasNetworkObject);
@@ -152,65 +152,88 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 if (prefabRoot.GetComponent<NetworkAnimationSync>() == null)
                     prefabRoot.AddComponent<NetworkAnimationSync>();
 
-                // 5. NetworkTickSmoother (FishNet's eingebautes visuelles Smoothing)
-                if (prefabRoot.GetComponent<NetworkTickSmoother>() == null)
-                    prefabRoot.AddComponent<NetworkTickSmoother>();
-
-                // Smoother konfigurieren (auch wenn er schon existierte)
-                var smoother = prefabRoot.GetComponent<NetworkTickSmoother>();
-                if (smoother != null)
+                // 5. NetworkTickSmoother auf Visual-Child (NICHT Root!)
+                // FishNet setzt GraphicalTransform = this.transform.
+                // TargetTransform (Root/Motor) und GraphicalTransform MUESSEN verschieden sein.
+                // → Smoother gehoert auf das Visual-Child (Animator/Mesh).
+                var visualChild = FindVisualChild(prefabRoot);
+                if (visualChild == null)
                 {
-                    var so = new SerializedObject(smoother);
+                    Debug.LogError("[NetworkSetupWizard] Kein Visual-Child mit Animator gefunden! " +
+                                   "NetworkTickSmoother braucht ein separates Child-GameObject fuer das Mesh.");
+                }
+                else
+                {
+                    if (visualChild.GetComponent<NetworkTickSmoother>() == null)
+                        visualChild.AddComponent<NetworkTickSmoother>();
 
-                    // TargetTransform = root (das Objekt das sich jeden Tick bewegt)
-                    var initSettings = so.FindProperty("_initializationSettings");
-                    if (initSettings != null)
+                    // Alten Smoother auf Root entfernen falls vorhanden (Migration)
+                    var rootSmoother = prefabRoot.GetComponent<NetworkTickSmoother>();
+                    if (rootSmoother != null)
+                        Object.DestroyImmediate(rootSmoother);
+
+                    var smoother = visualChild.GetComponent<NetworkTickSmoother>();
+                    if (smoother != null)
                     {
-                        var targetProp = initSettings.FindPropertyRelative("TargetTransform");
-                        if (targetProp != null)
-                            targetProp.objectReferenceValue = prefabRoot.transform;
+                        var so = new SerializedObject(smoother);
+
+                        // TargetTransform = root (Motor, springt jeden Tick)
+                        // GraphicalTransform = this.transform (Visual-Child, wird automatisch gesetzt)
+                        var initSettings = so.FindProperty("_initializationSettings");
+                        if (initSettings != null)
+                        {
+                            var targetProp = initSettings.FindPropertyRelative("TargetTransform");
+                            if (targetProp != null)
+                                targetProp.objectReferenceValue = prefabRoot.transform;
+
+                            // DetachOnStart = true → Visual wird bei Start vom Root getrennt,
+                            // damit es nicht mit dem Root teleportiert wenn der Motor springt
+                            var detachProp = initSettings.FindPropertyRelative("DetachOnStart");
+                            if (detachProp != null)
+                                detachProp.boolValue = true;
+                        }
+
+                        // Adaptive Interpolation fuer Owner (Low = RTT + 3 Ticks)
+                        var controllerSettings = so.FindProperty("_controllerMovementSettings");
+                        if (controllerSettings != null)
+                        {
+                            var adaptiveProp = controllerSettings.FindPropertyRelative("AdaptiveInterpolationValue");
+                            if (adaptiveProp != null)
+                                adaptiveProp.intValue = (int)AdaptiveInterpolationType.Low;
+
+                            var teleportProp = controllerSettings.FindPropertyRelative("EnableTeleport");
+                            if (teleportProp != null)
+                                teleportProp.boolValue = true;
+
+                            var thresholdProp = controllerSettings.FindPropertyRelative("TeleportThreshold");
+                            if (thresholdProp != null)
+                                thresholdProp.floatValue = 5f;
+                        }
+
+                        // Adaptive Interpolation fuer Spectator (Moderate = RTT + 4 Ticks)
+                        var spectatorSettings = so.FindProperty("_spectatorMovementSettings");
+                        if (spectatorSettings != null)
+                        {
+                            var adaptiveProp = spectatorSettings.FindPropertyRelative("AdaptiveInterpolationValue");
+                            if (adaptiveProp != null)
+                                adaptiveProp.intValue = (int)AdaptiveInterpolationType.Moderate;
+
+                            var teleportProp = spectatorSettings.FindPropertyRelative("EnableTeleport");
+                            if (teleportProp != null)
+                                teleportProp.boolValue = true;
+
+                            var thresholdProp = spectatorSettings.FindPropertyRelative("TeleportThreshold");
+                            if (thresholdProp != null)
+                                thresholdProp.floatValue = 5f;
+                        }
+
+                        // FavorPredictionNetworkTransform deaktivieren (wir nutzen kein NetworkTransform)
+                        var favorProp = so.FindProperty("_favorPredictionNetworkTransform");
+                        if (favorProp != null)
+                            favorProp.boolValue = false;
+
+                        so.ApplyModifiedPropertiesWithoutUndo();
                     }
-
-                    // Adaptive Interpolation fuer Owner (Low = RTT + 3 Ticks)
-                    var controllerSettings = so.FindProperty("_controllerMovementSettings");
-                    if (controllerSettings != null)
-                    {
-                        var adaptiveProp = controllerSettings.FindPropertyRelative("AdaptiveInterpolationValue");
-                        if (adaptiveProp != null)
-                            adaptiveProp.intValue = (int)AdaptiveInterpolationType.Low;
-
-                        var teleportProp = controllerSettings.FindPropertyRelative("EnableTeleport");
-                        if (teleportProp != null)
-                            teleportProp.boolValue = true;
-
-                        var thresholdProp = controllerSettings.FindPropertyRelative("TeleportThreshold");
-                        if (thresholdProp != null)
-                            thresholdProp.floatValue = 5f;
-                    }
-
-                    // Adaptive Interpolation fuer Spectator (Moderate = RTT + 4 Ticks)
-                    var spectatorSettings = so.FindProperty("_spectatorMovementSettings");
-                    if (spectatorSettings != null)
-                    {
-                        var adaptiveProp = spectatorSettings.FindPropertyRelative("AdaptiveInterpolationValue");
-                        if (adaptiveProp != null)
-                            adaptiveProp.intValue = (int)AdaptiveInterpolationType.Moderate;
-
-                        var teleportProp = spectatorSettings.FindPropertyRelative("EnableTeleport");
-                        if (teleportProp != null)
-                            teleportProp.boolValue = true;
-
-                        var thresholdProp = spectatorSettings.FindPropertyRelative("TeleportThreshold");
-                        if (thresholdProp != null)
-                            thresholdProp.floatValue = 5f;
-                    }
-
-                    // FavorPredictionNetworkTransform deaktivieren (wir nutzen kein NetworkTransform)
-                    var favorProp = so.FindProperty("_favorPredictionNetworkTransform");
-                    if (favorProp != null)
-                        favorProp.boolValue = false;
-
-                    so.ApplyModifiedPropertiesWithoutUndo();
                 }
 
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
@@ -257,6 +280,30 @@ namespace Wiesenwischer.GameKit.Network.Editor
             AssetDatabase.SaveAssets();
 
             Debug.Log($"[NetworkSetupWizard] Prefab in DefaultPrefabObjects registriert: {path}");
+        }
+
+        /// <summary>
+        /// Findet das Visual-Child (erstes Kind mit Animator oder SkinnedMeshRenderer).
+        /// FishNet's NetworkTickSmoother braucht ein separates GraphicalTransform != TargetTransform.
+        /// </summary>
+        private static Transform FindVisualChild(GameObject root)
+        {
+            // Bevorzugt: Kind mit Animator (Arissa, etc.)
+            var animator = root.GetComponentInChildren<Animator>();
+            if (animator != null && animator.transform != root.transform)
+                return animator.transform;
+
+            // Fallback: Kind mit SkinnedMeshRenderer
+            var smr = root.GetComponentInChildren<SkinnedMeshRenderer>();
+            if (smr != null && smr.transform != root.transform)
+                return smr.transform;
+
+            // Fallback: Kind mit MeshRenderer
+            var mr = root.GetComponentInChildren<MeshRenderer>();
+            if (mr != null && mr.transform != root.transform)
+                return mr.transform;
+
+            return null;
         }
 
         private void DrawStatusLine(string label, bool present, bool isPrerequisite = false)

@@ -32,7 +32,16 @@ FishNet Tick-Flow:
 
 **Verworfene Ansaetze:** Eigener ReconcileSmoother (Goal-Queue + Offset-Decay, Velocity-Based, SmoothDamp, Dead Reckoning, Target-Tracking) — alle fuehrten zu sichtbarem Stutter (5-13:1 Ratio) und/oder Offset-Akkumulation (1.5-3.5m).
 
-**KRITISCH:** `_motor.Transform.SetPositionAndRotation(TransientPosition)` wird VOR jeder Simulation aufgerufen. FishNet's Smoother schreibt die visuelle Position auf transform — ohne den Sync wuerde der Motor von der visuellen statt der Simulations-Position starten.
+**KRITISCH — Zwei-Transform-Architektur:**
+```
+Player (Root)         ← TargetTransform (Motor, NetworkObject, NetworkCharacterDriver)
+  └── Arissa          ← GraphicalTransform (Animator, Mesh, NetworkTickSmoother)
+```
+FishNet setzt `GraphicalTransform = this.transform`. TargetTransform != GraphicalTransform ist PFLICHT.
+NetworkTickSmoother gehoert auf das Visual-Child, TargetTransform zeigt auf den Root.
+`DetachOnStart = true` trennt das Visual vom Root, damit es nicht mit-teleportiert.
+
+**KRITISCH — Motor-Sync:** `_motor.Transform.SetPositionAndRotation(TransientPosition)` wird VOR jeder Simulation aufgerufen. FishNet's Smoother schreibt die visuelle Position auf das Visual-Child — der Motor auf dem Root ist davon nicht betroffen.
 
 ## Relevante Spezifikationen
 
