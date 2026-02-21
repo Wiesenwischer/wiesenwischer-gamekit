@@ -12,24 +12,35 @@ Hard-Snap bei Server-Korrekturen durch Smooth Blending ersetzen. Error-Threshold
 
 ## Architektur
 
-**Correction-Offset-Pattern:** Nach Reconcile + Replay wird der Fehler (pre-reconcile Position vs. post-replay Position) als visueller Offset gespeichert und exponentiell abgebaut.
+**Goal-Queue Interpolation + Correction-Offset:** ReconcileSmoother ist das einzige System das `Transform.position` in LateUpdate schreibt. KCC-Interpolation (`CustomInterpolationUpdate`) ist deaktiviert (`CharacterMotorSystem.Settings.Interpolate = false`).
 
 ```
-Tick-Flow (FishNet OnTick):
-  PreSimulationInterpolationUpdate()    -> InitialTickPosition = TransientPosition
+Tick-Flow (FishNet OnTick/OnPostTick):
+  OnPreTick()                           -> Initialisierung (einmalig beim ersten Tick)
   PerformReconcile() [wenn Server-Daten] -> Snap zu Server-Position
   PerformReplicate(Replayed) x N        -> Replay aller Ticks
-  PerformReplicate(Ticked)              -> Aktueller Tick (HIER: Error berechnen)
-  PostSimulationInterpolationUpdate()   -> Timestamps fuer Frame-Interpolation
+  PerformReplicate(Ticked)              -> Aktueller Tick (HIER: OnReconcileComplete)
+  OnPostTick()                          -> Motor-Position in Goal-Queue pushen
 
-LateUpdate (CharacterMotorSystem, ExecOrder -100):
-  CustomInterpolationUpdate()           -> Lerp(InitialTickPos, TransientPos, factor)
-
-LateUpdate (ReconcileSmoother, ExecOrder 100):
-  DecayAndApplyCorrectionOffset()       -> transform.position += decayingOffset
+LateUpdate (ReconcileSmoother, ExecOrder 50):
+  Goal-Queue konsumieren                -> Lerp(_fromPos, _toPos, interpT)
+  Offset-Decay                          -> Exponentieller Abbau des Reconcile-Offsets
+  Final Visual                          -> transform.position = interpPos + offset
 ```
 
+**Goal-Queue Prinzip:**
+- Jeder Tick pusht die Motor-Position als Goal in eine FIFO-Queue
+- LateUpdate konsumiert Goals mit konstanter Rate (1 pro tickDelta)
+- Visual interpoliert per Lerp zwischen aufeinanderfolgenden Goals
+- Multi-Tick-Frames: Queue puffert, LateUpdate konsumiert normal
+- Tick-Luecken: Visual haelt bei letztem Goal (kein Overshoot)
+- Adaptive Catchup: Bei Queue-Wachstum leicht schnellere Consumption statt Hard-Drop
+
+**Correction-Offset:** Nach Reconcile + Replay wird der Fehler (pre-reconcile vs. post-replay) als visueller Offset gespeichert und exponentiell abgebaut. Gleichzeitig werden alle Interpolations-Punkte (from, to, Queue) um die Korrektur verschoben → Visual bleibt stabil, Offset decayed zur korrigierten Trajektorie.
+
 **Entscheidung:** Eigener ReconcileSmoother statt FishNet's NetworkTickSmoother, weil letzterer getrennte GameObjects (SimObj + VisualRoot) erfordert. Unser Motor trennt bereits TransientPosition (Simulation) von Transform.position (Visual) auf dem gleichen GameObject.
+
+**Verworfene Ansaetze:** Velocity-Based Movement (Extrapolation → Drift-Akkumulation bei unregelmaessigem Tick-Timing), Target-Tracking (MoveTowards/Exponential Smoothing → variable visuelle Geschwindigkeit), SmoothDamp, Dead Reckoning — alle fuehrten zu sichtbarem Stutter (5-13:1 Ratio).
 
 ## Relevante Spezifikationen
 
