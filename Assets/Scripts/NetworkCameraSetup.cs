@@ -26,6 +26,11 @@ public class NetworkCameraSetup : MonoBehaviour
         NetworkPlayer.OnLocalPlayerRemoved -= OnLocalPlayerRemoved;
     }
 
+    /// <summary>
+    /// playerTransform ist das Visual-Root (Animator-Child), NICHT der Netzwerk-Root.
+    /// NetworkPlayer uebergibt das Visual, damit die Kamera dem smooth-interpolierten
+    /// Mesh folgt statt dem springenden Simulations-Root (NetworkTickSmoother DetachOnStart).
+    /// </summary>
     private void OnLocalPlayerReady(Transform playerTransform)
     {
         if (_cameraBrain == null)
