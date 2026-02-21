@@ -89,6 +89,7 @@ namespace Wiesenwischer.GameKit.Network
         // --- State ---
         private bool _initialized;
         private float _tickDelta;
+        private bool _hadLateUpdateSincePostTick;
 
         // --- Diagnostics ---
         private int _diagFrameCount;
@@ -113,6 +114,16 @@ namespace Wiesenwischer.GameKit.Network
         /// <summary>
         /// Wird von NetworkCharacterDriver VOR dem Tick aufgerufen.
         /// Initialisiert den Smoother beim ersten Tick.
+        ///
+        /// Inter-Tick Advance (Multi-Tick Guard):
+        ///   Wenn mehrere Ticks in einem Frame feuern (ParrelSync, hohe Latenz),
+        ///   laeuft kein LateUpdate zwischen den Ticks. Ohne Advance faellt _smoothPos
+        ///   pro Extra-Tick um velocity*tickDelta zurueck → grosser Drift wird in Offset
+        ///   absorbiert → Offset-Decay moduliert visuelle Geschwindigkeit → Stutter.
+        ///
+        ///   Fix: Wenn kein LateUpdate seit dem letzten OnPostTick lief, _smoothPos um
+        ///   velocity*tickDelta voransetzen. So bleibt der Drift auf den normalen
+        ///   Frame-Timing-Error beschraenkt (velocity * (elapsed - tickDelta), typisch &lt;1cm).
         /// </summary>
         public void OnPreTick(Vector3 motorPos, Quaternion motorRot, float tickDelta)
         {
@@ -123,10 +134,21 @@ namespace Wiesenwischer.GameKit.Network
                 _smoothPos = motorPos;
                 _targetRot = _smoothRot = motorRot;
                 _velocity = Vector3.zero;
+                _hadLateUpdateSincePostTick = true;
                 _initialized = true;
 
                 if (_debugLog)
                     Debug.Log($"[Smoother] Initialized at {motorPos:F3}, tickDelta={tickDelta:F4}s");
+            }
+            else if (!_hadLateUpdateSincePostTick)
+            {
+                // Multi-Tick Frame: kein LateUpdate lief seit dem letzten OnPostTick.
+                // _smoothPos manuell um einen Tick voransetzen, damit der Drift in OnPostTick
+                // nur den normalen Frame-Timing-Error enthaelt, nicht den ganzen Tick-Abstand.
+                _smoothPos += _velocity * tickDelta;
+
+                if (_debugLog)
+                    Debug.Log($"[Smoother] InterTickAdvance: +{(_velocity * tickDelta):F4}");
             }
         }
 
@@ -164,6 +186,9 @@ namespace Wiesenwischer.GameKit.Network
                     _smoothPos + _positionOffset,
                     _smoothRot * Quaternion.Euler(0f, _rotationOffset, 0f));
             }
+
+            // Flag zuruecksetzen: naechstes OnPreTick kann pruefen ob LateUpdate dazwischen lief.
+            _hadLateUpdateSincePostTick = false;
 
             if (_debugLog)
             {
@@ -257,6 +282,7 @@ namespace Wiesenwischer.GameKit.Network
         {
             ClearOffset();
             _velocity = Vector3.zero;
+            _hadLateUpdateSincePostTick = true;
             _initialized = false;
         }
 
@@ -280,6 +306,7 @@ namespace Wiesenwischer.GameKit.Network
                     $"mode=VelocityBased");
             }
 
+            _hadLateUpdateSincePostTick = true;
             _diagFrameCount++;
             float dt = Time.deltaTime;
 

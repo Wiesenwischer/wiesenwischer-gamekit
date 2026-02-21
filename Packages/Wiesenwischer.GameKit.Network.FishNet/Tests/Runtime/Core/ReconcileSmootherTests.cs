@@ -25,13 +25,17 @@ namespace Wiesenwischer.GameKit.Network.Tests
         }
 
         /// <summary>
-        /// Helper: Initialisiert den Smoother mit einer Position.
-        /// Nach Aufruf: _initialized=true, _smoothPos=initPos, velocity=zero.
+        /// Helper: Initialisiert den Smoother mit einer Position und simuliert ein LateUpdate.
+        /// Danach: _initialized=true, _smoothPos=initPos, velocity=zero,
+        /// _hadLateUpdateSincePostTick=true (wie nach einem echten Frame).
         /// </summary>
         private void DoInit(Vector3 initPos)
         {
             _smoother.OnPreTick(initPos, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(initPos, Quaternion.identity, TickDelta, Vector3.zero);
+            // LateUpdate simulieren: setzt _hadLateUpdateSincePostTick = true.
+            // Bei dt=0 (EditMode) aendert sich _smoothPos nicht (velocity=zero, += 0).
+            _smoother.SendMessage("LateUpdate");
         }
 
         #region Initial State
@@ -171,7 +175,6 @@ namespace Wiesenwischer.GameKit.Network.Tests
             // _smoothPos shifts by correction, offset absorbs error → net visual = same.
             Vector3 initPos = new Vector3(5f, 0f, 0f);
             DoInit(initPos);
-            // _smoothPos = (5,0,0), offset = (0,0,0)
 
             // Get visual position before correction
             _smoother.OnPostTick(new Vector3(6f, 0f, 0f), Quaternion.identity, TickDelta, Vector3.zero);
@@ -296,16 +299,10 @@ namespace Wiesenwischer.GameKit.Network.Tests
                 new Vector3(5f, 1f, 3f), 0f,
                 new Vector3(4.9f, 1f, 3f), 0f);
 
-            // error = (0.1, 0, 0), correction = (-0.1, 0, 0)
-            // _smoothPos shifted: (5,1,3) + (-0.1,0,0) = (4.9, 1, 3)
-            // offset = (0.1, 0, 0)
-
             _go.transform.position = new Vector3(5.2f, 1f, 3.1f);
             _smoother.OnPostTick(new Vector3(5.2f, 1f, 3.1f), Quaternion.identity, TickDelta, Vector3.zero);
 
-            // drift = (4.9,1,3) - (5.2,1,3.1) = (-0.3, 0, -0.1)
-            // offset = (0.1,0,0) + (-0.3,0,-0.1) = (-0.2, 0, -0.1)
-            // visual = (5.2,1,3.1) + (-0.2,0,-0.1) = (5.0, 1.0, 3.0)
+            // visual = _smoothPos + offset preserves initPos + reconcile shift
             Assert.AreEqual(5.0f, _go.transform.position.x, 0.001f);
             Assert.AreEqual(1.0f, _go.transform.position.y, 0.001f);
             Assert.AreEqual(3.0f, _go.transform.position.z, 0.001f);
@@ -332,7 +329,6 @@ namespace Wiesenwischer.GameKit.Network.Tests
             DoInit(new Vector3(0f, 0f, 0f));
 
             // Motor moved to (1,0,0) but no LateUpdate ran → _smoothPos still at (0,0,0)
-            // Drift = (0,0,0) - (1,0,0) = (-1,0,0)
             _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta,
                                   new Vector3(30f, 0f, 0f));
 
@@ -348,80 +344,107 @@ namespace Wiesenwischer.GameKit.Network.Tests
         #region Velocity-Based Movement
 
         [Test]
-        public void OnPostTick_UpdatesTarget_VisualStaysAtSmoothPos()
+        public void OnPostTick_UpdatesTarget_VisualPreserved()
         {
             DoInit(Vector3.zero);
 
             // Motor moved to (1,0,0). Drift = (0) - (1) = -1 → offset = -1
-            // Visual = (1,0,0) + (-1,0,0) = (0,0,0) — unchanged
-            Vector3 newTarget = new Vector3(1f, 0f, 0f);
-            _smoother.OnPostTick(newTarget, Quaternion.identity, TickDelta, new Vector3(30f, 0f, 0f));
+            // Visual = 1 + (-1) = 0 — preserved
+            _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta,
+                                  new Vector3(30f, 0f, 0f));
 
             Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
         }
 
         [Test]
-        public void MultipleTicksSameFrame_DriftAccumulates()
+        public void SingleTick_VisualPreservedAcrossPostTick()
         {
-            // Multiple ticks in same frame without LateUpdate: drift accumulates in offset.
-            // Visual stays at initial position because no velocity*dt movement happened.
+            // Core invariant: Visual = _smoothPos + offset is preserved within OnPostTick.
             DoInit(Vector3.zero);
 
-            // 3 Ticks im selben Frame: Motor springt von 0 → 1 → 2 → 3
+            // Single tick (LateUpdate ran before, so no inter-tick advance)
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta,
                                   new Vector3(30f, 0f, 0f));
 
-            _smoother.OnPreTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta,
-                                  new Vector3(30f, 0f, 0f));
-
-            _smoother.OnPreTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta,
-                                  new Vector3(30f, 0f, 0f));
-
-            // Visual bleibt bei (0,0,0) — kein LateUpdate lief
+            // Visual preserved: smooth(1) + offset(-1) = 0
             Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
-            // Offset hat 3 Ticks Drift akkumuliert: -3
-            Assert.AreEqual(-3f, _smoother.CurrentOffset.x, 0.001f);
+            Assert.AreEqual(-1f, _smoother.CurrentOffset.x, 0.001f);
         }
 
         [Test]
-        public void VelocityBased_VisualPreservedOnEveryTick()
+        public void MultipleTicksSameFrame_InterTickAdvance_KeepsDriftSmall()
         {
-            // Core invariant: Visual = _smoothPos + offset is ALWAYS preserved across ticks.
-            // No jump, no stutter — just continuous velocity*dt movement in LateUpdate.
+            // With InterTickAdvance: on multi-tick frames, OnPreTick advances _smoothPos
+            // by velocity*tickDelta for each consecutive tick. This keeps drift per extra tick
+            // near zero instead of accumulating -V*tickDelta per tick.
+            float vel = 1f / TickDelta; // velocity that matches 1 unit per tick exactly
             DoInit(Vector3.zero);
+
+            // Tick 1 (first in frame — LateUpdate ran after DoInit, flag=true → no advance)
+            _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta,
+                                  new Vector3(vel, 0f, 0f));
+
+            // First tick: drift = 0 - 1 = -1 (normal, from LateUpdate timing gap)
+            Assert.AreEqual(-1f, _smoother.CurrentOffset.x, 0.01f);
+
+            // Tick 2 (no LateUpdate between → inter-tick advance fires!)
+            _smoother.OnPreTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta,
+                                  new Vector3(vel, 0f, 0f));
+
+            // With advance: _smoothPos advanced by vel*tickDelta = 1 before OnPostTick.
+            // Drift = (1+1) - 2 = 0. Offset stays at -1 (only first tick's drift).
+            Assert.AreEqual(-1f, _smoother.CurrentOffset.x, 0.01f);
+
+            // Tick 3 (no LateUpdate → advance again)
+            _smoother.OnPreTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta);
+            _smoother.OnPostTick(new Vector3(3f, 0f, 0f), Quaternion.identity, TickDelta,
+                                  new Vector3(vel, 0f, 0f));
+
+            // Offset still ~-1, NOT -3 as without the advance
+            Assert.AreEqual(-1f, _smoother.CurrentOffset.x, 0.01f);
+        }
+
+        [Test]
+        public void MultipleTicksSameFrame_WithoutMatchingVelocity_SmallExtraDrift()
+        {
+            // If velocity doesn't exactly match motor movement (e.g., acceleration),
+            // the inter-tick advance produces small residual drift per extra tick.
+            // This is MUCH smaller than without advance (0.01m vs 0.165m per tick).
+            DoInit(Vector3.zero);
+
+            float vel = 30f; // 30 m/s → 30*0.033 = 0.99m per tick, but motor moves 1.0m
 
             // Tick 1
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta,
-                                  new Vector3(30f, 0f, 0f));
-            Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
+                                  new Vector3(vel, 0f, 0f));
+            float offsetAfterTick1 = _smoother.CurrentOffset.x; // -1
 
-            // Tick 2
+            // Tick 2 (inter-tick advance: +0.99, but motor moves by 1.0 → tiny extra drift)
             _smoother.OnPreTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta,
-                                  new Vector3(30f, 0f, 0f));
-            Assert.AreEqual(0f, _go.transform.position.x, 0.001f);
+                                  new Vector3(vel, 0f, 0f));
+            float offsetAfterTick2 = _smoother.CurrentOffset.x;
+
+            // Extra drift from tick 2 should be tiny (0.99 - 1.0 = -0.01)
+            float extraDrift = offsetAfterTick2 - offsetAfterTick1;
+            Assert.Less(Mathf.Abs(extraDrift), 0.02f);
         }
 
         [Test]
         public void SnapReconcile_ResetsState()
         {
-            // Nach Snap: _smoothPos wird auf korrigierte Position gesetzt.
-            // Naechstes OnPostTick: drift = 0, visual an geSnapter Position.
             DoInit(Vector3.zero);
 
-            // Bewegung aufbauen
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta, Vector3.zero);
-            _smoother.OnPreTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta);
-            _smoother.OnPostTick(new Vector3(2f, 0f, 0f), Quaternion.identity, TickDelta, Vector3.zero);
 
             // Grosser Reconcile → Snap (Error > 2m Threshold)
             _smoother.OnReconcileComplete(
-                new Vector3(2f, 0f, 0f), 0f,
+                new Vector3(1f, 0f, 0f), 0f,
                 new Vector3(10f, 0f, 0f), 0f);
 
             Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
@@ -436,7 +459,6 @@ namespace Wiesenwischer.GameKit.Network.Tests
         {
             DoInit(Vector3.zero);
 
-            // Bewegung aufbauen
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta, Vector3.zero);
 
@@ -446,7 +468,7 @@ namespace Wiesenwischer.GameKit.Network.Tests
 
             Assert.AreEqual(Vector3.zero, _smoother.CurrentOffset);
 
-            // Visual an geSnapter Position (drift = _smoothPos(5) - motor(5) = 0)
+            // Visual an geSnapter Position
             _smoother.OnPostTick(new Vector3(5f, 0f, 0f), Quaternion.identity, TickDelta, Vector3.zero);
             Assert.AreEqual(5f, _go.transform.position.x, 0.001f);
         }
@@ -456,7 +478,6 @@ namespace Wiesenwischer.GameKit.Network.Tests
         {
             DoInit(Vector3.zero);
 
-            // Bewegung + Offset aufbauen
             _smoother.OnPreTick(Vector3.zero, Quaternion.identity, TickDelta);
             _smoother.OnPostTick(new Vector3(1f, 0f, 0f), Quaternion.identity, TickDelta,
                                   new Vector3(30f, 0f, 0f));
