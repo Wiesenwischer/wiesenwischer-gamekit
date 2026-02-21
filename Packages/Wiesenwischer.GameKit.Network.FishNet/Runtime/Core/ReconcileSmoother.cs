@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Wiesenwischer.GameKit.Network
@@ -6,29 +7,36 @@ namespace Wiesenwischer.GameKit.Network
     /// Einheitliches Visual-Smoothing fuer Netzwerk-Characters.
     /// Handhabt BEIDES: Tick-Interpolation UND Reconcile-Correction.
     ///
-    /// Verwendet Velocity-Based Movement:
-    /// - Jeden Frame: _smoothPos += _velocity * dt
-    /// - Visual bewegt sich mit KONSTANTER Geschwindigkeit aus der Motor-Simulation
-    /// - Kein Target-Tracking → kein Stutter durch diskrete Target-Spruenge
+    /// Verwendet Goal-Queue-basierte Interpolation:
+    /// - Jeder Tick pusht die Motor-Position in eine Queue
+    /// - LateUpdate konsumiert Goals mit konstanter Rate (1 pro tickDelta)
+    /// - Visual interpoliert per Lerp zwischen aufeinanderfolgenden Goals
+    /// - Kein Velocity-Extrapolation → kein Overshoot, kein Drift-Akkumulation
+    ///
+    /// Warum nicht Velocity-Based (vorheriger Ansatz):
+    ///   _smoothPos += velocity * dt extrapoliert voraus. Bei unregelmaessigem Tick-Timing
+    ///   (ParrelSync: 0-Tick + Multi-Tick Frames) akkumuliert Drift → riesige Offset-Spikes
+    ///   (1.5m+) → sichtbarer Stutter mit 6-13:1 Ratio.
+    ///   Root Cause: Wenn keine Ticks feuern, rast _smoothPos per velocity*dt voraus.
+    ///   Wenn dann Ticks kommen, wird der komplette Drift in einem Frame absorbiert.
     ///
     /// Warum nicht Target-Tracking (MoveTowards, Exponential Smoothing):
-    ///   Alle Target-Tracking-Ansaetze reagieren auf diskrete _targetPos Spruenge:
-    ///   - Auf Tick-Frames: Target springt → groessere Distanz → groesseres Delta
-    ///   - Auf Non-Tick-Frames: kein Sprung → kleinere Distanz → kleineres Delta
-    ///   - Ergebnis: 5:1 bis 10:1 Stutter-Ratio zwischen Tick- und Non-Tick-Frames
-    ///   Da OnPostTick und LateUpdate im SELBEN Unity-Frame laufen, ist das unloesbar.
+    ///   Target springt auf Tick-Frames diskret → variable visuelle Geschwindigkeit.
+    ///   Da OnPostTick und LateUpdate im SELBEN Unity-Frame laufen: 5-10:1 Stutter.
     ///
-    /// Velocity-Based Movement vermeidet das:
-    ///   Delta pro Frame = velocity * dt. Gleich ob Tick oder nicht.
-    ///   Drift (Differenz zur Motor-Position) wird pro Tick in den Offset absorbiert
-    ///   und exponentiell gedecayed → selbstkorrigierend.
+    /// Goal-Queue vermeidet beides:
+    ///   - Goals werden mit konstanter Rate konsumiert → gleichmaessige visuelle Geschwindigkeit
+    ///   - Multi-Tick-Frames: Queue puffert, LateUpdate konsumiert normal
+    ///   - Tick-Luecken: Visual haelt bei letztem Goal, kein Overshoot
+    ///   - Drift ist strukturell unmoeglich (kein Extrapolation)
     ///
     /// Architektur:
-    ///   _velocity       = Geschwindigkeit aus Motor-Simulation (wird jeden Tick aktualisiert)
-    ///   _smoothPos      = aktuelle visuelle Position (velocity-driven)
-    ///   _positionOffset = Reconcile-Correction + Drift Offset (exponentieller Decay)
+    ///   _goalQueue      = Motor-Positionen pro Tick (FIFO)
+    ///   _fromPos/_toPos = aktuelles Interpolations-Segment
+    ///   _interpT        = Fortschritt im Segment (0=from, 1=to)
+    ///   _positionOffset = Reconcile-Correction Offset (exponentieller Decay)
     ///
-    /// Visual = _smoothPos + _positionOffset
+    /// Visual = Lerp(_fromPos, _toPos, _interpT) + _positionOffset
     ///
     /// Ersetzt die KCC-eigene CustomInterpolationUpdate (CharacterMotorSystem.Settings.Interpolate = false).
     /// Damit gibt es nur EIN System das Transform.position in LateUpdate schreibt — kein Kaempfen.
@@ -36,9 +44,9 @@ namespace Wiesenwischer.GameKit.Network
     /// Flow:
     /// 1. OnPreTick(): Initialisierung (einmalig beim ersten Tick)
     /// 2. [Replicate]: Simulation laeuft, TransientPosition aendert sich
-    /// 3. OnReconcileComplete(): Bei Reconcile — Error zum Offset addieren, _smoothPos shiften
-    /// 4. OnPostTick(): Drift absorbieren, _smoothPos snappen, Velocity aktualisieren
-    /// 5. LateUpdate (Order 50): _smoothPos += velocity * dt, Offset-Decay
+    /// 3. OnReconcileComplete(): Bei Reconcile — Error zum Offset, Queue/Endpoints shiften
+    /// 4. OnPostTick(): Goal in Queue pushen
+    /// 5. LateUpdate (Order 50): Queue konsumieren, Lerp, Offset-Decay
     ///    → Laeuft VOR CameraBrain (100) und GroundingSmoother (100)
     /// </summary>
     [DefaultExecutionOrder(50)]
@@ -72,24 +80,24 @@ namespace Wiesenwischer.GameKit.Network
         [Tooltip("Loggt Corrections die groesser als MinCorrectionThreshold sind.")]
         [SerializeField] private bool _debugLog;
 
-        // --- Velocity (from motor simulation per tick) ---
-        private Vector3 _velocity;
-
-        // --- Visual (velocity-driven position) ---
-        private Vector3 _smoothPos;
+        // --- Goal Queue ---
+        private const int MaxQueueSize = 4;
+        private readonly Queue<Vector3> _goalQueue = new Queue<Vector3>();
+        private Vector3 _fromPos;        // Interpolation start (previous consumed goal)
+        private Vector3 _toPos;          // Interpolation end (current goal)
+        private float _interpT;          // Progress: 0=from, 1=to
 
         // --- Rotation (exponential smoothing toward target) ---
         private Quaternion _targetRot;
         private Quaternion _smoothRot;
 
-        // --- Correction Offset (Reconcile + Drift) ---
+        // --- Correction Offset (Reconcile + Spectator) ---
         private Vector3 _positionOffset;
         private float _rotationOffset;
 
         // --- State ---
         private bool _initialized;
         private float _tickDelta;
-        private bool _hadLateUpdateSincePostTick;
 
         // --- Diagnostics ---
         private int _diagFrameCount;
@@ -109,21 +117,17 @@ namespace Wiesenwischer.GameKit.Network
         /// <summary>Ob der Smoother aktiv interpoliert.</summary>
         public bool IsActive => _initialized;
 
+        /// <summary>Anzahl gepufferter Goals (fuer Debug/Tests).</summary>
+        public int QueueCount => _goalQueue.Count;
+
+        /// <summary>Aktueller Interpolations-Fortschritt (fuer Tests).</summary>
+        public float InterpolationT => _interpT;
+
         #region Tick Lifecycle
 
         /// <summary>
         /// Wird von NetworkCharacterDriver VOR dem Tick aufgerufen.
         /// Initialisiert den Smoother beim ersten Tick.
-        ///
-        /// Inter-Tick Advance (Multi-Tick Guard):
-        ///   Wenn mehrere Ticks in einem Frame feuern (ParrelSync, hohe Latenz),
-        ///   laeuft kein LateUpdate zwischen den Ticks. Ohne Advance faellt _smoothPos
-        ///   pro Extra-Tick um velocity*tickDelta zurueck → grosser Drift wird in Offset
-        ///   absorbiert → Offset-Decay moduliert visuelle Geschwindigkeit → Stutter.
-        ///
-        ///   Fix: Wenn kein LateUpdate seit dem letzten OnPostTick lief, _smoothPos um
-        ///   velocity*tickDelta voransetzen. So bleibt der Drift auf den normalen
-        ///   Frame-Timing-Error beschraenkt (velocity * (elapsed - tickDelta), typisch &lt;1cm).
         /// </summary>
         public void OnPreTick(Vector3 motorPos, Quaternion motorRot, float tickDelta)
         {
@@ -131,68 +135,46 @@ namespace Wiesenwischer.GameKit.Network
 
             if (!_initialized)
             {
-                _smoothPos = motorPos;
+                _fromPos = _toPos = motorPos;
                 _targetRot = _smoothRot = motorRot;
-                _velocity = Vector3.zero;
-                _hadLateUpdateSincePostTick = true;
+                _interpT = 1f; // Vollstaendig bei _toPos — bereit fuer erstes Goal
                 _initialized = true;
 
                 if (_debugLog)
                     Debug.Log($"[Smoother] Initialized at {motorPos:F3}, tickDelta={tickDelta:F4}s");
             }
-            else if (!_hadLateUpdateSincePostTick)
-            {
-                // Multi-Tick Frame: kein LateUpdate lief seit dem letzten OnPostTick.
-                // _smoothPos manuell um einen Tick voransetzen, damit der Drift in OnPostTick
-                // nur den normalen Frame-Timing-Error enthaelt, nicht den ganzen Tick-Abstand.
-                _smoothPos += _velocity * tickDelta;
-
-                if (_debugLog)
-                    Debug.Log($"[Smoother] InterTickAdvance: +{(_velocity * tickDelta):F4}");
-            }
         }
 
         /// <summary>
         /// Wird von NetworkCharacterDriver NACH dem Tick aufgerufen.
+        /// Pusht die Motor-Position als Goal in die Queue.
         ///
-        /// Velocity-Based Snap+Absorb:
-        /// 1. Drift berechnen: _smoothPos hat sich seit dem letzten Tick per velocity*dt bewegt,
-        ///    motorPos ist die echte Simulation. Differenz = Drift.
-        /// 2. Drift in Offset absorbieren (wird exponentiell gedecayed).
-        /// 3. _smoothPos auf motorPos snappen (kein visueller Sprung da Offset kompensiert).
-        /// 4. Velocity aktualisieren.
-        ///
-        /// Ergebnis: Visual = _smoothPos + _positionOffset bleibt EXAKT gleich.
-        ///           In den folgenden Frames gleitet das Visual zur korrekten Trajektorie.
+        /// Die Queue puffert Goals und LateUpdate konsumiert sie mit konstanter Rate.
+        /// Bei Multi-Tick-Frames werden mehrere Goals gepuffert → smooth abgearbeitet.
+        /// Bei Tick-Luecken ist die Queue leer → Visual haelt bei letztem Goal.
         /// </summary>
-        public void OnPostTick(Vector3 motorPos, Quaternion motorRot, float tickDelta, Vector3 velocity)
+        public void OnPostTick(Vector3 motorPos, Quaternion motorRot, float tickDelta)
         {
             _tickDelta = tickDelta;
             _targetRot = motorRot;
 
             if (_initialized)
             {
-                // Drift = wie weit sich _smoothPos von der echten Motor-Position entfernt hat.
-                // Ensteht durch: Velocity-Extrapolation != exakte Motor-Bewegung (Beschleunigung, Collision, etc.)
-                Vector3 drift = _smoothPos - motorPos;
-                _positionOffset += drift;
-                _smoothPos = motorPos;
-                _velocity = velocity;
+                _goalQueue.Enqueue(motorPos);
 
-                // Transform sofort auf visuelle Position setzen.
-                // Verhindert dass Animator, IK oder andere Systeme zwischen OnPostTick und LateUpdate
-                // die rohe Simulations-Position sehen.
+                // Transform auf aktuelle visuelle Position setzen.
+                // Goal ist noch nicht konsumiert — Visual bleibt am aktuellen Interpolationspunkt.
+                // Wichtig fuer Systeme die zwischen OnPostTick und LateUpdate Transform lesen.
+                float t = Mathf.Clamp01(_interpT);
+                Vector3 interpPos = Vector3.Lerp(_fromPos, _toPos, t);
                 transform.SetPositionAndRotation(
-                    _smoothPos + _positionOffset,
+                    interpPos + _positionOffset,
                     _smoothRot * Quaternion.Euler(0f, _rotationOffset, 0f));
             }
 
-            // Flag zuruecksetzen: naechstes OnPreTick kann pruefen ob LateUpdate dazwischen lief.
-            _hadLateUpdateSincePostTick = false;
-
             if (_debugLog)
             {
-                Debug.Log($"[Smoother] OnPostTick: vel={velocity:F3} |vel|={velocity.magnitude:F3}m/s " +
+                Debug.Log($"[Smoother] OnPostTick: goal={motorPos:F3} queueSize={_goalQueue.Count} " +
                     $"offset={_positionOffset:F4} |offset|={_positionOffset.magnitude:F4}m");
             }
         }
@@ -203,12 +185,12 @@ namespace Wiesenwischer.GameKit.Network
 
         /// <summary>
         /// Wird nach Owner-Reconcile+Replay aufgerufen (in PerformReplicate, ContainsTicked).
-        /// Berechnet Error, akkumuliert Offset, und shiftet _smoothPos.
+        /// Berechnet Error, akkumuliert Offset, und shiftet Queue + Endpoints.
         ///
         /// Visual-Stabilitaet:
-        ///   _smoothPos += correction (gleiche Richtung wie Korrektur)
-        ///   _positionOffset += error (Gegenrichtung)
-        ///   → Visual bleibt EXAKT gleich: (smoothPos + correction) + (offset + error) = smoothPos + offset
+        ///   Alle Interpolations-Punkte (from, to, queue) werden um die Korrektur verschoben.
+        ///   Offset absorbiert den Fehler (Gegenrichtung).
+        ///   → Visual = Lerp(shifted_from, shifted_to, t) + (offset + error) = unveraendert.
         ///   → Beim Decay des Offsets gleitet das Visual zur korrigierten Trajektorie.
         /// </summary>
         public void OnReconcileComplete(Vector3 preReconcilePos, float preReconcileRotY,
@@ -220,17 +202,24 @@ namespace Wiesenwischer.GameKit.Network
             if (posError.sqrMagnitude > _snapThreshold * _snapThreshold)
             {
                 // Hard snap: Visual auf korrigierte Position setzen
-                _smoothPos = correctedPos;
+                _fromPos = _toPos = correctedPos;
+                _goalQueue.Clear();
+                _interpT = 1f;
                 Quaternion corrRot = Quaternion.Euler(0f, correctedRotY, 0f);
                 _targetRot = _smoothRot = corrRot;
                 ClearOffset();
             }
             else
             {
-                // Smooth correction: _smoothPos shiften + Offset akkumulieren.
-                // correction = corrected - preReconcile (Richtung von alt zu neu)
+                // Smooth correction: Endpoints + Queue um Korrektur shiften, Error zum Offset.
                 Vector3 correction = correctedPos - preReconcilePos;
-                _smoothPos += correction;
+                _fromPos += correction;
+                _toPos += correction;
+
+                // Queue-Eintraege shiften (Dequeue + shifted Enqueue)
+                int count = _goalQueue.Count;
+                for (int i = 0; i < count; i++)
+                    _goalQueue.Enqueue(_goalQueue.Dequeue() + correction);
 
                 // Rotation: _smoothRot um Korrektur drehen
                 Quaternion rotCorrection = Quaternion.Euler(0f, -rotError, 0f);
@@ -246,7 +235,7 @@ namespace Wiesenwischer.GameKit.Network
 
         /// <summary>
         /// Wird nach Spectator-Correction aufgerufen (nach Simulation mit neuem autoritativem Input).
-        /// Gleiche Logik wie OnReconcileComplete.
+        /// Gleiche Logik wie OnReconcileComplete: Endpoints + Queue shiften, Error zum Offset.
         /// </summary>
         public void OnSpectatorCorrection(Vector3 prePos, Vector3 postPos, Quaternion postRot)
         {
@@ -254,14 +243,21 @@ namespace Wiesenwischer.GameKit.Network
 
             if (error.sqrMagnitude > _snapThreshold * _snapThreshold)
             {
-                _smoothPos = postPos;
+                _fromPos = _toPos = postPos;
+                _goalQueue.Clear();
+                _interpT = 1f;
                 _targetRot = _smoothRot = postRot;
                 ClearOffset();
             }
             else
             {
                 Vector3 correction = postPos - prePos;
-                _smoothPos += correction;
+                _fromPos += correction;
+                _toPos += correction;
+
+                int count = _goalQueue.Count;
+                for (int i = 0; i < count; i++)
+                    _goalQueue.Enqueue(_goalQueue.Dequeue() + correction);
 
                 _positionOffset += error;
             }
@@ -281,8 +277,9 @@ namespace Wiesenwischer.GameKit.Network
         public void Reset()
         {
             ClearOffset();
-            _velocity = Vector3.zero;
-            _hadLateUpdateSincePostTick = true;
+            _goalQueue.Clear();
+            _fromPos = _toPos = Vector3.zero;
+            _interpT = 0f;
             _initialized = false;
         }
 
@@ -303,23 +300,46 @@ namespace Wiesenwischer.GameKit.Network
                 Debug.Log($"[Smoother] ACTIVE on {gameObject.name} | " +
                     $"snapThreshold={_snapThreshold}m " +
                     $"correctionRate={_correctionRate} " +
-                    $"mode=VelocityBased");
+                    $"mode=GoalQueue");
             }
 
-            _hadLateUpdateSincePostTick = true;
             _diagFrameCount++;
             float dt = Time.deltaTime;
 
-            // 1. Velocity-Based Movement: konstante Geschwindigkeit aus Motor-Simulation.
-            //    Delta pro Frame = velocity * dt — GLEICH ob ein Tick feuert oder nicht.
-            //    Kein Target-Tracking, kein diskreter Sprung, kein Stutter.
-            _smoothPos += _velocity * dt;
+            // 1. Goal-Queue Interpolation:
+            //    _interpT schreitet mit 1/tickDelta pro Sekunde voran.
+            //    Bei _interpT >= 1 und vorhandenen Goals: naechstes Goal konsumieren.
+            //    Bei leerer Queue und _interpT >= 1: halten (kein Overshoot).
+            bool canAdvance = _interpT < 1f || _goalQueue.Count > 0;
+            if (canAdvance && _tickDelta > 0f)
+                _interpT += dt / _tickDelta;
+
+            // Goals konsumieren wenn Tick-Grenze ueberschritten
+            while (_interpT >= 1f && _goalQueue.Count > 0)
+            {
+                _fromPos = _toPos;
+                _toPos = _goalQueue.Dequeue();
+                _interpT -= 1f;
+            }
+
+            // Clampen: wenn Queue leer und am Ende, nicht ueber 1 hinaus
+            _interpT = Mathf.Min(_interpT, 1f);
+
+            // Safety: Queue-Ueberlauf verhindern (z.B. nach langer Pause mit Tick-Burst)
+            while (_goalQueue.Count > MaxQueueSize)
+            {
+                _fromPos = _toPos;
+                _toPos = _goalQueue.Dequeue();
+            }
+
+            float t = _interpT;
+            Vector3 interpPos = Vector3.Lerp(_fromPos, _toPos, t);
 
             // 2. Rotation: Exponential Smoothing (Stutter bei Rotation weniger sichtbar)
             float rotAlpha = 1f - Mathf.Exp(-dt / _rotSmoothTime);
             _smoothRot = Quaternion.Slerp(_smoothRot, _targetRot, rotAlpha);
 
-            // 3. Offset-Decay (Reconcile Correction + Drift Absorption)
+            // 3. Offset-Decay (Reconcile Correction + Spectator Correction)
             bool hasPosition = _positionOffset.sqrMagnitude > _minCorrectionThreshold * _minCorrectionThreshold;
             bool hasRotation = Mathf.Abs(_rotationOffset) > _minCorrectionThreshold;
 
@@ -340,8 +360,8 @@ namespace Wiesenwischer.GameKit.Network
                     _rotationOffset = 0f;
             }
 
-            // 4. Final Visual = Velocity-Driven Position + Correction/Drift Offset
-            Vector3 finalPos = _smoothPos + _positionOffset;
+            // 4. Final Visual = Interpolated Position + Correction Offset
+            Vector3 finalPos = interpPos + _positionOffset;
             Quaternion finalRot = _smoothRot * Quaternion.Euler(0f, _rotationOffset, 0f);
 
             transform.SetPositionAndRotation(finalPos, finalRot);
@@ -362,8 +382,9 @@ namespace Wiesenwischer.GameKit.Network
                     {
                         Debug.LogWarning($"[Smoother] STUTTER! delta={delta.magnitude:F4}m " +
                             $"prevDelta={_diagLastDelta.magnitude:F4}m ratio={ratio:F2} " +
-                            $"dt={dt:F4}s vel={_velocity.magnitude:F3}m/s " +
+                            $"dt={dt:F4}s " +
                             $"offset={_positionOffset.magnitude:F4}m " +
+                            $"queue={_goalQueue.Count} t={_interpT:F3} " +
                             $"frame={_diagFrameCount}");
                     }
                 }
@@ -372,8 +393,8 @@ namespace Wiesenwischer.GameKit.Network
                 if (_diagFrameCount % 120 == 0)
                 {
                     Debug.Log($"[Smoother] Status frame={_diagFrameCount}: " +
-                        $"pos={finalPos:F3} smooth={_smoothPos:F3} " +
-                        $"vel={_velocity.magnitude:F3}m/s " +
+                        $"pos={finalPos:F3} from={_fromPos:F3} to={_toPos:F3} " +
+                        $"t={_interpT:F3} queue={_goalQueue.Count} " +
                         $"offset={_positionOffset:F4} |offset|={_positionOffset.magnitude:F4}m " +
                         $"fps={1f / dt:F0}");
                 }
