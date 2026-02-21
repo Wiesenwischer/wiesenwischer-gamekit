@@ -1,3 +1,4 @@
+using FishNet.Component.Transforming.Beta;
 using FishNet.Managing;
 using FishNet.Managing.Object;
 using FishNet.Object;
@@ -74,14 +75,14 @@ namespace Wiesenwischer.GameKit.Network.Editor
             bool hasNetworkPlayer = _playerPrefab.GetComponent<NetworkPlayer>() != null;
             bool hasNetworkCharacterDriver = _playerPrefab.GetComponent<NetworkCharacterDriver>() != null;
             bool hasNetworkAnimationSync = _playerPrefab.GetComponent<NetworkAnimationSync>() != null;
-            bool hasReconcileSmoother = _playerPrefab.GetComponent<ReconcileSmoother>() != null;
+            bool hasNetworkTickSmoother = _playerPrefab.GetComponent<NetworkTickSmoother>() != null;
 
             DrawStatusLine("PlayerController", hasPlayerController, true);
             DrawStatusLine("NetworkObject", hasNetworkObject);
             DrawStatusLine("NetworkPlayer", hasNetworkPlayer);
             DrawStatusLine("NetworkCharacterDriver", hasNetworkCharacterDriver);
             DrawStatusLine("NetworkAnimationSync", hasNetworkAnimationSync);
-            DrawStatusLine("ReconcileSmoother", hasReconcileSmoother);
+            DrawStatusLine("NetworkTickSmoother", hasNetworkTickSmoother);
 
             if (!hasPlayerController)
             {
@@ -93,7 +94,7 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 return;
             }
 
-            bool allPresent = hasNetworkObject && hasNetworkPlayer && hasNetworkCharacterDriver && hasNetworkAnimationSync && hasReconcileSmoother;
+            bool allPresent = hasNetworkObject && hasNetworkPlayer && hasNetworkCharacterDriver && hasNetworkAnimationSync && hasNetworkTickSmoother;
 
             if (allPresent)
             {
@@ -148,9 +149,62 @@ namespace Wiesenwischer.GameKit.Network.Editor
             if (prefabRoot.GetComponent<NetworkAnimationSync>() == null)
                 prefabRoot.AddComponent<NetworkAnimationSync>();
 
-            // 5. ReconcileSmoother (visuelles Smoothing fuer Reconciliation)
-            if (prefabRoot.GetComponent<ReconcileSmoother>() == null)
-                prefabRoot.AddComponent<ReconcileSmoother>();
+            // 5. NetworkTickSmoother (FishNet's eingebautes visuelles Smoothing)
+            if (prefabRoot.GetComponent<NetworkTickSmoother>() == null)
+            {
+                var smoother = prefabRoot.AddComponent<NetworkTickSmoother>();
+
+                // TargetTransform = root (das Objekt das sich jeden Tick bewegt)
+                var smootherSo = new SerializedObject(smoother);
+                var initSettings = smootherSo.FindProperty("_initializationSettings");
+                if (initSettings != null)
+                {
+                    var targetProp = initSettings.FindPropertyRelative("TargetTransform");
+                    if (targetProp != null)
+                        targetProp.objectReferenceValue = prefabRoot.transform;
+                }
+
+                // Adaptive Interpolation fuer Owner (Low = RTT + 3 Ticks)
+                var controllerSettings = smootherSo.FindProperty("_controllerMovementSettings");
+                if (controllerSettings != null)
+                {
+                    var adaptiveProp = controllerSettings.FindPropertyRelative("AdaptiveInterpolationValue");
+                    if (adaptiveProp != null)
+                        adaptiveProp.intValue = (int)AdaptiveInterpolationType.Low;
+
+                    var teleportProp = controllerSettings.FindPropertyRelative("EnableTeleport");
+                    if (teleportProp != null)
+                        teleportProp.boolValue = true;
+
+                    var thresholdProp = controllerSettings.FindPropertyRelative("TeleportThreshold");
+                    if (thresholdProp != null)
+                        thresholdProp.floatValue = 5f;
+                }
+
+                // Adaptive Interpolation fuer Spectator (Moderate = RTT + 4 Ticks)
+                var spectatorSettings = smootherSo.FindProperty("_spectatorMovementSettings");
+                if (spectatorSettings != null)
+                {
+                    var adaptiveProp = spectatorSettings.FindPropertyRelative("AdaptiveInterpolationValue");
+                    if (adaptiveProp != null)
+                        adaptiveProp.intValue = (int)AdaptiveInterpolationType.Moderate;
+
+                    var teleportProp = spectatorSettings.FindPropertyRelative("EnableTeleport");
+                    if (teleportProp != null)
+                        teleportProp.boolValue = true;
+
+                    var thresholdProp = spectatorSettings.FindPropertyRelative("TeleportThreshold");
+                    if (thresholdProp != null)
+                        thresholdProp.floatValue = 5f;
+                }
+
+                // FavorPredictionNetworkTransform deaktivieren (wir nutzen kein NetworkTransform)
+                var favorProp = smootherSo.FindProperty("_favorPredictionNetworkTransform");
+                if (favorProp != null)
+                    favorProp.boolValue = false;
+
+                smootherSo.ApplyModifiedProperties();
+            }
 
             PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
             PrefabUtility.UnloadPrefabContents(prefabRoot);

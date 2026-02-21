@@ -13,12 +13,18 @@ namespace Wiesenwischer.GameKit.Network
     /// Treibt die Character-Simulation ueber FishNet's TimeManager.OnTick.
     /// Ersetzt NetworkInputSync + NetworkStateSync durch native [Replicate]/[Reconcile].
     ///
-    /// Tick-Flow (One-Tick-Behind):
-    /// OnTick:     Smoother.OnPreTick (Buffer-Shift) → BuildInput → [Replicate](SimulateTick + Motor.Simulate)
-    /// OnPostTick: CreateReconcile → Smoother.OnPostTick (speichert Pending fuer naechsten Tick)
+    /// Tick-Flow:
+    /// OnTick:     BuildInput → [Replicate](SimulateTick + Motor.Simulate)
+    /// OnPostTick: CreateReconcile
     ///
     /// KCC-Interpolation ist deaktiviert (Settings.Interpolate = false).
-    /// ReconcileSmoother handhabt Tick-Interpolation UND Reconcile-Smoothing in einem System.
+    /// FishNet's NetworkTickSmoother handhabt Tick-Interpolation UND Reconcile-Smoothing.
+    /// Kein custom Smoother noetig — FishNet subscribed auf OnPreTick, OnPostTick,
+    /// OnUpdate und OnPostReplicateReplay automatisch.
+    ///
+    /// KRITISCH: _motor.Transform.SetPositionAndRotation() wird VOR jeder Simulation
+    /// aufgerufen, damit der Motor immer von der Simulations-Position startet
+    /// (nicht von der visuellen Position die der Smoother gesetzt hat).
     /// </summary>
     [RequireComponent(typeof(PlayerController))]
     public class NetworkCharacterDriver : TickNetworkBehaviour, ISimulationDriver
@@ -27,7 +33,6 @@ namespace Wiesenwischer.GameKit.Network
         private PlayerController _player;
         private CharacterMotor _motor;
         private NetworkAnimationSync _animSync;
-        private ReconcileSmoother _smoother;
         private readonly List<CharacterMotor> _motorList = new(1);
 
         // --- ISimulationDriver ---
@@ -45,11 +50,6 @@ namespace Wiesenwischer.GameKit.Network
         [SerializeField] private int _spectatorMaxPredictTicks = 4;
         private MoveReplicateData _lastTickedReplicateData;
 
-        // --- Reconcile Smoothing ---
-        private bool _didReconcile;
-        private Vector3 _preReconcilePosition;
-        private float _preReconcileRotation;
-
         // --- Diagnose ---
         [SerializeField] private bool _debugLog;
 
@@ -62,7 +62,6 @@ namespace Wiesenwischer.GameKit.Network
             _player = GetComponent<PlayerController>();
             _motor = GetComponent<CharacterMotor>();
             _animSync = GetComponent<NetworkAnimationSync>();
-            _smoother = GetComponent<ReconcileSmoother>();
 
             // Cache motor list (vermeidet GC-Alloc pro Tick)
             _motorList.Clear();
@@ -73,16 +72,9 @@ namespace Wiesenwischer.GameKit.Network
             // Korrekt fuer MMO (alle Spieler netzwerk-getrieben).
             CharacterMotorSystem.Settings.AutoSimulation = false;
 
-            // KCC-Interpolation deaktivieren — ReconcileSmoother uebernimmt.
+            // KCC-Interpolation deaktivieren — FishNet's NetworkTickSmoother uebernimmt.
             // CustomInterpolationUpdate kaempft sonst gegen den Smoother (Doppel-Korrektur).
             CharacterMotorSystem.Settings.Interpolate = false;
-
-            // Dedicated Server braucht kein Visual-Smoothing (kein Rendering).
-            // Host (Server+Client) braucht es fuer lokale Visuals.
-            // _smoother = null verhindert alle Smoother-Aufrufe in OnTick/OnPostTick/Reconcile.
-            // LateUpdate im Smoother returned sofort (_initialized bleibt false).
-            if (IsServerStarted && !IsClientStarted)
-                _smoother = null;
 
             if (_debugLog)
             {
@@ -90,26 +82,17 @@ namespace Wiesenwischer.GameKit.Network
                 Debug.Log($"[Driver] OnStartNetwork: {gameObject.name} | " +
                     $"isOwner={base.Owner.IsLocalClient} isServer={base.IsServerStarted} " +
                     $"isDedicatedServer={isDedicatedServer} " +
-                    $"smoother={(_smoother != null ? "OK" : isDedicatedServer ? "SKIPPED (server)" : "MISSING!")} " +
                     $"motor={(_motor != null ? "OK" : "MISSING!")} " +
                     $"tickRate={TimeManager.TickRate}Hz " +
                     $"tickDelta={TimeManager.TickDelta:F4}s " +
                     $"AutoSim={CharacterMotorSystem.Settings.AutoSimulation} " +
                     $"KCC-Interp={CharacterMotorSystem.Settings.Interpolate}");
-
-                if (_smoother == null && !isDedicatedServer)
-                    Debug.LogError($"[Driver] ReconcileSmoother NICHT GEFUNDEN auf {gameObject.name}! " +
-                        "Tick-Interpolation ist deaktiviert — Character wird mit Tick-Rate statt Frame-Rate gerendert!");
             }
         }
 
         public override void OnStopNetwork()
         {
             base.OnStopNetwork();
-
-            // Smoother zuruecksetzen
-            if (_smoother != null)
-                _smoother.Reset();
 
             // Zurueck zum Offline-Modus (KCC handhabt alles selbst)
             CharacterMotorSystem.Settings.AutoSimulation = true;
@@ -141,34 +124,12 @@ namespace Wiesenwischer.GameKit.Network
 
         protected override void TimeManager_OnTick()
         {
-            // 1. Buffer-Shift + Interpolations-Timing (One-Tick-Behind)
-            if (_smoother != null && _motor != null)
-            {
-                _smoother.OnPreTick(_motor.TransientPosition, _motor.TransientRotation,
-                                    (float)TimeManager.TickDelta);
-
-                if (_debugLog)
-                    Debug.Log($"[Driver] OnTick: PreTick pos={_motor.TransientPosition:F3} transform={transform.position:F3} isOwner={IsOwner} isServer={IsServerStarted}");
-            }
-
-            // 2. Input sammeln + Replicate aufrufen
             BuildAndReplicate();
         }
 
         protected override void TimeManager_OnPostTick()
         {
-            // 3. Reconcile-Daten erstellen und senden
             CreateReconcile();
-
-            // 4. Motor-Position an Smoother uebergeben (Goal-Queue fuer Interpolation)
-            if (_smoother != null && _motor != null)
-            {
-                _smoother.OnPostTick(_motor.TransientPosition, _motor.TransientRotation,
-                                     (float)TimeManager.TickDelta);
-
-                if (_debugLog)
-                    Debug.Log($"[Driver] OnPostTick: pos={_motor.TransientPosition:F3}");
-            }
         }
 
         #endregion
@@ -223,32 +184,9 @@ namespace Wiesenwischer.GameKit.Network
         [Replicate]
         private void PerformReplicate(MoveReplicateData input, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
         {
-            // --- Reconcile Correction (Owner + Non-Owner) ---
-            // FishNet reconciled ALLE predicted Objects via ReconcileToStates.
-            // state.ContainsTicked() = erster nicht-replayed Tick → alle Replays sind durch.
-            // TransientPosition enthaelt jetzt die korrigierte Prediction (Reconcile + Replays).
-            // NICHT auf dem Server/Host: Server ist autoritaet, Reconcile-Error ist nur FP-Noise.
-            if (_didReconcile && !IsServerStarted && state.ContainsTicked() && _smoother != null)
-            {
-                if (_debugLog)
-                {
-                    Vector3 error = _preReconcilePosition - _motor.TransientPosition;
-                    Debug.Log($"[Driver] Reconcile: prePos={_preReconcilePosition:F3} correctedPos={_motor.TransientPosition:F3} error={error.magnitude:F4}m");
-                }
-
-                _smoother.OnReconcileComplete(
-                    _preReconcilePosition, _preReconcileRotation,
-                    _motor.TransientPosition, _motor.TransientRotation.eulerAngles.y);
-                _didReconcile = false;
-            }
-
             // --- Spectator Prediction (Non-Owner) ---
             // FishNet reconciled Non-Owner-Objekte ebenfalls via ReconcileToStates.
-            // Reconcile-Corrections werden via OnReconcileComplete gehandhabt (gleicher Pfad wie Owner).
-            // KEIN separater Spectator-Correction-Offset:
-            //   OnSpectatorCorrection erfasste prePos-postPos = -movement (nicht den Reconcile-Error).
-            //   → Jeder Tick addierte -movement zum Offset → persistenter 1.5-2.5m Offset + Stutter.
-            //   Die Goal-Queue interpoliert natuerlich zur korrekten Position.
+            // FishNet's NetworkTickSmoother handhabt Corrections visuell (OnPostReplicateReplay).
             if (!IsServerStarted && !IsOwner)
             {
                 if (state.ContainsTicked())
@@ -292,7 +230,7 @@ namespace Wiesenwischer.GameKit.Network
             if (_motor != null)
             {
                 // KRITISCH: CharacterMotor.UpdatePhase1() liest _transientPosition = transform.position.
-                // ReconcileSmoother schreibt die visuelle Position (interpoliert + Offset) auf transform.
+                // FishNet's NetworkTickSmoother schreibt die visuelle Position auf transform.
                 // Ohne diesen Sync startet der Motor von der visuellen statt der Simulations-Position
                 // → falsche Collision/Ground-Queries → Server korrigiert → ewiger Jitter.
                 _motor.Transform.SetPositionAndRotation(_motor.TransientPosition, _motor.TransientRotation);
@@ -356,11 +294,6 @@ namespace Wiesenwischer.GameKit.Network
         [Reconcile]
         private void PerformReconcile(CharacterReconcileData data, Channel channel = Channel.Unreliable)
         {
-            // Pre-Reconcile Position speichern (fuer Correction-Offset Berechnung)
-            _preReconcilePosition = _motor.TransientPosition;
-            _preReconcileRotation = _motor.TransientRotation.eulerAngles.y;
-            _didReconcile = true;
-
             // Position/Rotation auf Motor setzen (Physik-State)
             _motor.SetPositionAndRotation(
                 data.Position,
