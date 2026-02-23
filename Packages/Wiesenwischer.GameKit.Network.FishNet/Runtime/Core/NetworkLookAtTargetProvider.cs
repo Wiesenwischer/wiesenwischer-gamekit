@@ -33,7 +33,7 @@ namespace Wiesenwischer.GameKit.Network
         {
             base.OnStartNetwork();
 
-            if (IsOwner)
+            if (Owner.IsLocalClient)
             {
                 // Owner: Lokalen Provider finden (z.B. CameraTargetProvider)
                 var providers = GetComponentsInChildren<IIKTargetProvider>();
@@ -90,14 +90,14 @@ namespace Wiesenwischer.GameKit.Network
                 _interpolationSpeed * Time.deltaTime);
         }
 
-        [ServerRpc(Channel = Channel.Unreliable)]
-        private void ServerRpcSyncLookTarget(bool hasTarget, Vector3 target)
+        [ServerRpc]
+        private void ServerRpcSyncLookTarget(bool hasTarget, Vector3 target, Channel channel = Channel.Unreliable)
         {
-            ObserversRpcSyncLookTarget(hasTarget, target);
+            ObserversRpcSyncLookTarget(hasTarget, target, channel);
         }
 
-        [ObserversRpc(ExcludeOwner = true, Channel = Channel.Unreliable)]
-        private void ObserversRpcSyncLookTarget(bool hasTarget, Vector3 target)
+        [ObserversRpc(ExcludeOwner = true)]
+        private void ObserversRpcSyncLookTarget(bool hasTarget, Vector3 target, Channel channel = Channel.Unreliable)
         {
             _hasTarget = hasTarget;
             _targetPosition = target;
