@@ -281,6 +281,13 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.veriorpies.parrelsync": {
+      "version": "https://github.com/VeriorPies/ParRelSync.git?path=/ParrelSync",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "610157ad762084380380148ba8ce14e266a6da97"
+    },
     "wiesenwischer.gamekit.abilities.core": {
       "version": "file:Wiesenwischer.GameKit.Abilities.Core",
       "depth": 0,
@@ -341,6 +348,14 @@
     },
     "wiesenwischer.gamekit.charactercontroller.ik": {
       "version": "file:Wiesenwischer.GameKit.CharacterController.IK",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "wiesenwischer.gamekit.charactercontroller.core": "0.1.0"
+      }
+    },
+    "wiesenwischer.gamekit.network.fishnet": {
+      "version": "file:Wiesenwischer.GameKit.Network.FishNet",
       "depth": 0,
       "source": "embedded",
       "dependencies": {
