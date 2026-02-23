@@ -6,6 +6,7 @@ using UnityEngine;
 using Wiesenwischer.GameKit.CharacterController.Core;
 using Wiesenwischer.GameKit.CharacterController.Core.Motor;
 using Wiesenwischer.GameKit.CharacterController.Core.Prediction;
+using Wiesenwischer.GameKit.CharacterController.Core.Visual;
 
 namespace Wiesenwischer.GameKit.Network
 {
@@ -76,6 +77,14 @@ namespace Wiesenwischer.GameKit.Network
             // CustomInterpolationUpdate kaempft sonst gegen den Smoother (Doppel-Korrektur).
             CharacterMotorSystem.Settings.Interpolate = false;
 
+            // GroundingSmoother deaktivieren — kaempft mit NetworkTickSmoother.
+            // GroundingSmoother setzt localPosition auf dem Visual-Child, das nach
+            // DetachOnStart kein Child mehr ist → localPosition = worldPosition → kaputt.
+            // NetworkTickSmoother interpoliert Step-Ups bereits smooth.
+            var groundingSmoother = GetComponent<GroundingSmoother>();
+            if (groundingSmoother != null)
+                groundingSmoother.enabled = false;
+
             if (_debugLog)
             {
                 bool isDedicatedServer = IsServerStarted && !IsClientStarted;
@@ -97,6 +106,11 @@ namespace Wiesenwischer.GameKit.Network
             // Zurueck zum Offline-Modus (KCC handhabt alles selbst)
             CharacterMotorSystem.Settings.AutoSimulation = true;
             CharacterMotorSystem.Settings.Interpolate = true;
+
+            // GroundingSmoother reaktivieren (Offline-Modus)
+            var groundingSmoother = GetComponent<GroundingSmoother>();
+            if (groundingSmoother != null)
+                groundingSmoother.enabled = true;
         }
 
         #endregion
