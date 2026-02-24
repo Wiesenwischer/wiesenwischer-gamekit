@@ -13,7 +13,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
     /// Basiert auf dem Genshin Impact Pattern:
     /// - Zentraler Zugriffspunkt für alle Komponenten
     /// - Verwendet PlayerMovementStateMachine mit ReusableData
-    /// - CSP (Client-Side Prediction) kompatibel für MMO-Nutzung
+    /// - Network-Only Architektur: Simulation wird immer vom NetworkCharacterDriver getrieben
     /// Ground-State kommt direkt vom Motor (keine Events, direkte Abfrage).
     /// </summary>
     [RequireComponent(typeof(CharacterMotor))]
@@ -63,7 +63,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Das Ability System (optional).</summary>
         public IAbilitySystem AbilitySystem { get; private set; }
 
-        /// <summary>Netzwerk-Rolle (Owner/Server/Client). Default: Offline.</summary>
+        /// <summary>Netzwerk-Rolle (Owner/Server/Client).</summary>
         public INetworkRole NetworkRole { get; private set; }
 
         #endregion
@@ -91,18 +91,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// NetworkCharacterDriver setzt dies aus dem CameraYaw des Inputs.
         /// </summary>
         private Vector3? _lookDirectionOverride;
-
-        #endregion
-
-        #region Simulation Driver
-
-        private ISimulationDriver _simulationDriver;
-
-        /// <summary>
-        /// Externer SimulationDriver (z.B. NetworkCharacterDriver).
-        /// Null im Offline-Modus.
-        /// </summary>
-        public ISimulationDriver SimulationDriver => _simulationDriver;
 
         #endregion
 
@@ -165,47 +153,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             InitializeStateMachine();
         }
 
-        private void Start()
-        {
-            // Offline-Modus: Providers und Input sofort auflösen.
-            // Online: NetworkPlayer.EnableLocalPlayer() ruft ResolveProviders() auf
-            // NACHDEM die Kamera eingerichtet ist (OnLocalPlayerReady → NetworkCameraSetup).
-            if (!NetworkRole.IsNetworkActive)
-            {
-                ResolveProviders();
-                if (InputProvider == null)
-                    InputProvider = FindObjectOfType<PlayerInputProvider>();
-            }
-        }
-
-        private void Update()
-        {
-            // Im Netzwerk-Modus handhabt der Driver den Input.
-            // KRITISCH: InputProvider-Properties wie JumpPressed sind consume-on-read.
-            // Wenn UpdateInput() sie konsumiert, sieht der NetworkCharacterDriver sie nie.
-            if (_simulationDriver != null && _simulationDriver.IsActive) return;
-
-            // Nur der Owner simuliert Input.
-            // Im Offline-Modus: OfflineNetworkRole.IsOwner == true → alles läuft wie bisher.
-            if (!NetworkRole.IsOwner) return;
-
-            // Input wird immer in Update() gesammelt (Frame-Rate).
-            // Simulation laeuft in FixedUpdate() oder ueber externen Driver.
-            UpdateInput();
-        }
-
-        private void FixedUpdate()
-        {
-            // Nur simulieren wenn KEIN externer Driver aktiv ist.
-            // Im Netzwerk-Modus treibt NetworkCharacterDriver die Simulation.
-            if (_simulationDriver != null && _simulationDriver.IsActive)
-                return;
-
-            // Nur der Owner simuliert.
-            if (!NetworkRole.IsOwner) return;
-
-            SimulateTick(Time.fixedDeltaTime);
-        }
+        // Network-Only: Kein Start/Update/FixedUpdate.
+        // Simulation wird vom NetworkCharacterDriver getrieben.
+        // Input-Akkumulation laeuft im NetworkCharacterDriver.Update().
+        // Provider-Aufloesung erfolgt in NetworkPlayer.EnableLocalPlayer().
 
         private void OnDrawGizmos()
         {
@@ -286,11 +237,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             // Optional: Ability System (kann fehlen)
             AbilitySystem = GetComponent<IAbilitySystem>();
 
-            // Network Role (falls NetworkPlayer vorhanden, sonst Offline-Default)
-            NetworkRole = GetComponent<INetworkRole>() ?? OfflineNetworkRole.Instance;
-
-            // SimulationDriver suchen (optional, nur im Netzwerk-Modus vorhanden)
-            _simulationDriver = GetComponent<ISimulationDriver>();
+            // Network Role (NetworkPlayer, Pflicht in Network-Only Architektur)
+            NetworkRole = GetComponent<INetworkRole>();
+            if (NetworkRole == null)
+                Debug.LogError($"[PlayerController] FEHLER auf '{gameObject.name}': " +
+                    "INetworkRole (NetworkPlayer) fehlt! Network-Only Architektur erfordert NetworkPlayer.");
         }
 
         private void InitializeStateMachine()
@@ -301,34 +252,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         #endregion
 
-        #region Update Loop
-
-        /// <summary>
-        /// Liest Input und schreibt in ReusableData.
-        /// </summary>
-        private void UpdateInput()
-        {
-            if (InputProvider == null || ReusableData == null) return;
-
-            ReusableData.MoveInput = InputProvider.MoveInput;
-            ReusableData.JumpPressed = InputProvider.JumpPressed;
-            ReusableData.JumpHeld = InputProvider.JumpHeld;
-            ReusableData.SprintHeld = InputProvider.SprintHeld;
-            ReusableData.DashPressed = InputProvider.DashPressed;
-            ReusableData.CrouchTogglePressed = InputProvider.CrouchTogglePressed;
-
-            // Walk Toggle (MMO-Style: Taste drücken → Walk ein/aus)
-            if (InputProvider.WalkTogglePressed)
-            {
-                ReusableData.ShouldWalk = !ReusableData.ShouldWalk;
-            }
-
-            // Sprint deaktiviert Walk automatisch
-            if (ReusableData.SprintHeld && ReusableData.ShouldWalk)
-            {
-                ReusableData.ShouldWalk = false;
-            }
-        }
+        #region Simulation
 
         /// <summary>
         /// Leitet One-Shot Events von ReusableData an Locomotion weiter.
@@ -463,7 +387,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         /// <summary>
         /// Fuehrt einen vollstaendigen Simulations-Tick aus.
-        /// Wird von ISimulationDriver (online) oder FixedUpdate (offline, ab 30.3) aufgerufen.
+        /// Wird vom NetworkCharacterDriver aufgerufen.
         /// Kombiniert State-Machine-Logik, Events, Physics und Bewegung in einem Tick.
         /// </summary>
         public void SimulateTick(float deltaTime)
