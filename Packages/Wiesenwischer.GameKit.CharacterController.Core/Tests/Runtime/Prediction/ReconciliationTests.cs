@@ -2,6 +2,8 @@ using NUnit.Framework;
 using UnityEngine;
 using Wiesenwischer.GameKit.CharacterController.Core.Prediction;
 
+#pragma warning disable CS0612 // Obsolete types — Tests fuer Legacy-Prediction-Code
+
 namespace Wiesenwischer.GameKit.CharacterController.Core.Tests
 {
     [TestFixture]

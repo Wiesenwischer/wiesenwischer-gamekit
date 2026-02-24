@@ -52,7 +52,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             }
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
             // === Slope Sliding Check (VOR Fall-Detection) ===
             // Muss vor Fall-Detection stehen, damit Character auf steiler Slope
@@ -103,7 +103,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
                     ReusableData.LastGroundedY = currentY;
                 }
 
-                ReusableData.TimeSinceGrounded += Time.deltaTime;
+                ReusableData.TimeSinceGrounded += deltaTime;
 
                 float fallDistance = ReusableData.LastGroundedY - currentY;
 

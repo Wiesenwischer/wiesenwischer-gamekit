@@ -4,7 +4,6 @@ using Wiesenwischer.GameKit.CharacterController.Core.Data;
 using Wiesenwischer.GameKit.CharacterController.Core.Input;
 using Wiesenwischer.GameKit.CharacterController.Core.Locomotion;
 using Wiesenwischer.GameKit.CharacterController.Core.Motor;
-using Wiesenwischer.GameKit.CharacterController.Core.Prediction;
 using Wiesenwischer.GameKit.CharacterController.Core.StateMachine;
 
 namespace Wiesenwischer.GameKit.CharacterController.Core
@@ -58,6 +57,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Der Animation Controller (optional, auf Child-Object).</summary>
         public IAnimationController AnimationController { get; private set; }
 
+        // Gespeicherter AnimationController waehrend Replay-Suppression
+        private IAnimationController _suppressedAnimController;
+
         /// <summary>Das Ability System (optional).</summary>
         public IAbilitySystem AbilitySystem { get; private set; }
 
@@ -84,14 +86,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         private IOrientationProvider _orientationProvider;
         private IFacingProvider _facingProvider;
 
+        /// <summary>
+        /// Override fuer LookDirection im Netzwerk-Modus.
+        /// NetworkCharacterDriver setzt dies aus dem CameraYaw des Inputs.
+        /// </summary>
+        private Vector3? _lookDirectionOverride;
+
         #endregion
 
-        #region Tick System
+        #region Simulation Driver
 
-        private TickSystem _tickSystem;
+        private ISimulationDriver _simulationDriver;
 
-        /// <summary>Das Tick-System.</summary>
-        public TickSystem TickSystem => _tickSystem;
+        /// <summary>
+        /// Externer SimulationDriver (z.B. NetworkCharacterDriver).
+        /// Null im Offline-Modus.
+        /// </summary>
+        public ISimulationDriver SimulationDriver => _simulationDriver;
 
         #endregion
 
@@ -115,11 +126,33 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Die aktuelle Geschwindigkeit.</summary>
         public Vector3 Velocity => ReusableData?.Velocity ?? Vector3.zero;
 
-        /// <summary>Aktueller Tick.</summary>
-        public int CurrentTick => _tickSystem?.CurrentTick ?? 0;
+        /// <summary>Aktueller Tick (einfacher Counter, im Netzwerk-Modus vom Driver gesetzt).</summary>
+        private int _currentTick;
+        public int CurrentTick => _currentTick;
+
+        /// <summary>Tick-Delta fuer die Simulation (FixedUpdate-Intervall).</summary>
+        public float TickDelta => Time.fixedDeltaTime;
 
         /// <summary>Ground-Informationen vom Motor.</summary>
         public GroundInfo GroundInfo => Locomotion?.GroundInfo ?? GroundInfo.Empty;
+
+        /// <summary>
+        /// Aktueller CameraYaw in Grad (fuer MoveReplicateData).
+        /// Liest den Yaw der Hauptkamera oder Fallback auf Character-Rotation.
+        /// </summary>
+        public float CameraYaw
+        {
+            get
+            {
+                var mainCamera = Camera.main;
+                return mainCamera != null ? mainCamera.transform.eulerAngles.y : transform.eulerAngles.y;
+            }
+        }
+
+        /// <summary>
+        /// Index des aktuellen Movement-States fuer Reconcile-Serialisierung.
+        /// </summary>
+        public byte CurrentMovementStateIndex => _movementStateMachine?.CurrentStateIndex ?? 0;
 
         #endregion
 
@@ -128,48 +161,50 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         private void Awake()
         {
             InitializeComponents();
-            InitializeTickSystem();
             InitializeSystems();
             InitializeStateMachine();
         }
 
         private void Start()
         {
-            // Provider nach Awake auflösen (CameraBrain muss zuerst initialisiert sein)
-            ResolveProviders();
+            // Offline-Modus: Providers und Input sofort auflösen.
+            // Online: NetworkPlayer.EnableLocalPlayer() ruft ResolveProviders() auf
+            // NACHDEM die Kamera eingerichtet ist (OnLocalPlayerReady → NetworkCameraSetup).
+            if (!NetworkRole.IsNetworkActive)
+            {
+                ResolveProviders();
+                if (InputProvider == null)
+                    InputProvider = FindObjectOfType<PlayerInputProvider>();
+            }
         }
 
         private void Update()
         {
-            // Nur der Owner simuliert Input + Prediction.
+            // Im Netzwerk-Modus handhabt der Driver den Input.
+            // KRITISCH: InputProvider-Properties wie JumpPressed sind consume-on-read.
+            // Wenn UpdateInput() sie konsumiert, sieht der NetworkCharacterDriver sie nie.
+            if (_simulationDriver != null && _simulationDriver.IsActive) return;
+
+            // Nur der Owner simuliert Input.
             // Im Offline-Modus: OfflineNetworkRole.IsOwner == true → alles läuft wie bisher.
             if (!NetworkRole.IsOwner) return;
 
-            // 1. Input lesen und in ReusableData schreiben
+            // Input wird immer in Update() gesammelt (Frame-Rate).
+            // Simulation laeuft in FixedUpdate() oder ueber externen Driver.
             UpdateInput();
-
-            // 2. State Machine Update (HandleInput + Update)
-            _movementStateMachine?.Update();
-
-            // 2b. Ability System Tick (nach State Machine, reagiert auf aktuellen State)
-            AbilitySystem?.Tick(Time.deltaTime);
-
-            // 3. Events direkt an Locomotion weiterleiten (vor TickSystem).
-            // Events sind One-Shot und dürfen nicht durch den TickSystem-Bottleneck,
-            // weil Simulate() per Overwrite arbeitet (latest-value-wins für kontinuierliche Daten).
-            // RequestXxx() setzt intern ein Flag das bis zum nächsten Motor FixedUpdate bleibt.
-            ConsumeMovementEvents();
-
-            // 4. Tick System aktualisieren (nur kontinuierlicher Input)
-            _tickSystem?.Update(Time.deltaTime);
         }
 
-        private void OnDestroy()
+        private void FixedUpdate()
         {
-            if (_tickSystem != null)
-            {
-                _tickSystem.OnTick -= OnFixedTick;
-            }
+            // Nur simulieren wenn KEIN externer Driver aktiv ist.
+            // Im Netzwerk-Modus treibt NetworkCharacterDriver die Simulation.
+            if (_simulationDriver != null && _simulationDriver.IsActive)
+                return;
+
+            // Nur der Owner simuliert.
+            if (!NetworkRole.IsOwner) return;
+
+            SimulateTick(Time.fixedDeltaTime);
         }
 
         private void OnDrawGizmos()
@@ -200,18 +235,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 return;
             }
 
-            // Find Input Provider
+            // Input Provider: Serialisierte Referenz oder GetComponent (fuer NPCs mit AIInputProvider).
+            // Spieler-Input kommt von aussen via SetInputProvider() (NetworkPlayer oder Offline-Discovery).
             if (_inputProviderComponent != null)
-            {
                 InputProvider = _inputProviderComponent as IMovementInputProvider;
-            }
             InputProvider ??= GetComponent<IMovementInputProvider>();
-
-            if (InputProvider == null)
-            {
-                Debug.LogWarning($"[PlayerController] WARNUNG auf '{gameObject.name}': " +
-                    "Kein Input Provider gefunden.");
-            }
 
             // Validate config
             if (_config == null)
@@ -246,12 +274,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 Debug.LogWarning("[PlayerController] WARNUNG: GroundLayers ist leer.");
         }
 
-        private void InitializeTickSystem()
-        {
-            _tickSystem = new TickSystem(TickSystem.DefaultTickRate);
-            _tickSystem.OnTick += OnFixedTick;
-        }
-
         private void InitializeSystems()
         {
             if (_config == null || CharacterMotor == null) return;
@@ -266,6 +288,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             // Network Role (falls NetworkPlayer vorhanden, sonst Offline-Default)
             NetworkRole = GetComponent<INetworkRole>() ?? OfflineNetworkRole.Instance;
+
+            // SimulationDriver suchen (optional, nur im Netzwerk-Modus vorhanden)
+            _simulationDriver = GetComponent<ISimulationDriver>();
         }
 
         private void InitializeStateMachine()
@@ -306,34 +331,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         }
 
         /// <summary>
-        /// Fixed Tick - Physics Update.
-        /// </summary>
-        private void OnFixedTick(int tick, float deltaTime)
-        {
-            if (ReusableData == null) return;
-
-            // Update Tick in ReusableData
-            ReusableData.CurrentTick = tick;
-
-            // Ground-State wird NICHT in ReusableData synchronisiert.
-            // States befragen Locomotion direkt (Player.Locomotion.IsGrounded etc.)
-
-            // State Machine Physics Update
-            _movementStateMachine?.PhysicsUpdate(deltaTime);
-
-            // === PHASE 2: Movement ===
-            ApplyMovement(deltaTime);
-
-            // === PHASE 3: Sync Motor State zurück ===
-            // Nach ApplyMovement() hat der Motor den aktuellen Ground-State
-            // Diesen für den NÄCHSTEN Frame verfügbar machen
-            // (Wird am Anfang des nächsten Ticks gelesen)
-        }
-
-        /// <summary>
         /// Leitet One-Shot Events von ReusableData an Locomotion weiter.
-        /// Wird in Update() aufgerufen (vor TickSystem), damit Events nicht
-        /// durch den TickSystem/Simulate()-Bottleneck verloren gehen.
+        /// Wird innerhalb von SimulateTick() aufgerufen.
         /// </summary>
         private void ConsumeMovementEvents()
         {
@@ -365,9 +364,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             if (Locomotion == null || ReusableData == null) return;
 
             // Frame-Space: Worin wird WASD interpretiert?
-            Vector3 lookDir = _orientationProvider != null
-                ? _orientationProvider.GetMovementForward()
-                : GetCameraForward(); // Fallback auf Legacy
+            // Im Netzwerk-Modus kann die LookDirection per Override gesetzt werden (CameraYaw).
+            Vector3 lookDir;
+            if (_lookDirectionOverride.HasValue)
+            {
+                lookDir = _lookDirectionOverride.Value;
+            }
+            else
+            {
+                lookDir = _orientationProvider != null
+                    ? _orientationProvider.GetMovementForward()
+                    : GetCameraForward(); // Fallback auf Legacy
+            }
 
             // Facing: Wie soll Character rotieren?
             FacingMode facingMode = _facingProvider?.GetFacingMode()
@@ -419,8 +427,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// Löst Orientation-, Facing- und OrbitProvider auf.
         /// IOrientationProvider/IFacingProvider sind die bevorzugten Interfaces (Phase 29).
         /// ICameraOrbitProvider bleibt als Fallback für IsSteerMode.
+        ///
+        /// Im Netzwerk-Modus wird dies von NetworkPlayer.EnableLocalPlayer() aufgerufen,
+        /// NACHDEM die Kamera eingerichtet ist (OnLocalPlayerReady → NetworkCameraSetup).
         /// </summary>
-        private void ResolveProviders()
+        public void ResolveProviders()
         {
             var mainCamera = Camera.main;
             if (mainCamera == null) return;
@@ -443,11 +454,65 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         #region Public Methods
 
         /// <summary>
+        /// Setzt den Input Provider von aussen (z.B. NetworkPlayer fuer Owner, Scene-Discovery fuer Offline).
+        /// </summary>
+        public void SetInputProvider(IMovementInputProvider provider)
+        {
+            InputProvider = provider;
+        }
+
+        /// <summary>
+        /// Fuehrt einen vollstaendigen Simulations-Tick aus.
+        /// Wird von ISimulationDriver (online) oder FixedUpdate (offline, ab 30.3) aufgerufen.
+        /// Kombiniert State-Machine-Logik, Events, Physics und Bewegung in einem Tick.
+        /// </summary>
+        public void SimulateTick(float deltaTime)
+        {
+            if (ReusableData == null) return;
+
+            // 1. StateMachine Update (HandleInput + Update)
+            _movementStateMachine?.Update(deltaTime);
+
+            // 2. Movement Events konsumieren (Jump, etc.)
+            ConsumeMovementEvents();
+
+            // 3. StateMachine Physics Update
+            _movementStateMachine?.PhysicsUpdate(deltaTime);
+
+            // 4. Bewegung anwenden
+            ApplyMovement(deltaTime);
+
+            // 5. AbilitySystem Tick
+            AbilitySystem?.Tick(deltaTime);
+
+            // 6. Tick-Counter inkrementieren
+            _currentTick++;
+        }
+
+        /// <summary>
         /// Setzt den Character auf eine Position.
         /// </summary>
         public void SetPosition(Vector3 position)
         {
             Locomotion?.Motor?.SetPosition(position);
+        }
+
+        /// <summary>
+        /// Stellt einen Movement-State aus dem Reconcile-Snapshot wieder her.
+        /// </summary>
+        public void RestoreMovementState(byte stateIndex)
+        {
+            _movementStateMachine?.RestoreState(stateIndex);
+        }
+
+        /// <summary>
+        /// Setzt eine LookDirection-Override fuer den Netzwerk-Modus.
+        /// Wenn gesetzt, wird diese statt der Kamera-Richtung in ApplyMovement verwendet.
+        /// Null zum Zuruecksetzen.
+        /// </summary>
+        public void SetLookDirectionOverride(Vector3? direction)
+        {
+            _lookDirectionOverride = direction;
         }
 
         /// <summary>
@@ -460,44 +525,24 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         }
 
         /// <summary>
-        /// Wendet einen ControllerInput an und simuliert einen Tick.
-        /// Wird vom Server (über NetworkInputSync) und bei Client-Resimulation
-        /// (Reconciliation Rollback) aufgerufen.
-        /// Nutzt CameraYaw aus dem Input statt der lokalen Kamera,
-        /// da die lokale Kamera einem anderen Spieler gehören kann.
+        /// Unterdrueckt den AnimationController (null-safe PlayState Aufrufe via ?. werden zu no-ops).
+        /// Fuer Reconcile-Replays: verhindert dass PlayState() den Animator durch CrossFade-Zyklen jagt.
         /// </summary>
-        public void ApplyNetworkInput(ControllerInput input, float tickDelta)
+        public void SuppressAnimationController()
         {
-            if (ReusableData == null || Locomotion == null) return;
+            if (AnimationController == null) return;
+            _suppressedAnimController = AnimationController;
+            AnimationController = null;
+        }
 
-            ReusableData.MoveInput = input.MoveDirection;
-            ReusableData.JumpPressed = input.Jump;
-            ReusableData.SprintHeld = input.Sprint;
-            ReusableData.CrouchTogglePressed = input.Crouch;
-
-            _movementStateMachine?.Update();
-            ConsumeMovementEvents();
-
-            // Bewegungsrichtung aus Client-CameraYaw ableiten statt lokaler Kamera.
-            // Auf dem Server gehört Camera.main dem Host, nicht dem Remote-Client.
-            Vector3 lookDir = Quaternion.Euler(0f, input.CameraYaw, 0f) * Vector3.forward;
-
-            var locomotionInput = new LocomotionInput
-            {
-                MoveDirection = ReusableData.MoveInput,
-                LookDirection = lookDir,
-                SpeedModifier = ReusableData.MovementSpeedModifier,
-                StepDetectionEnabled = ReusableData.StepDetectionEnabled,
-                DecelerationOverride = ReusableData.DecelerationOverride,
-                IsSteerMode = false,
-                FacingMode = FacingMode.MovementDirection,
-                FacingDirection = Vector3.zero,
-            };
-
-            Locomotion.Simulate(locomotionInput, tickDelta);
-
-            ReusableData.HorizontalVelocity = Locomotion.HorizontalVelocity;
-            ReusableData.VerticalVelocity = Locomotion.VerticalVelocity;
+        /// <summary>
+        /// Stellt den AnimationController nach SuppressAnimationController wieder her.
+        /// </summary>
+        public void RestoreAnimationController()
+        {
+            if (_suppressedAnimController == null) return;
+            AnimationController = _suppressedAnimController;
+            _suppressedAnimController = null;
         }
 
         #endregion

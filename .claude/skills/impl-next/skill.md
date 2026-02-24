@@ -80,6 +80,21 @@ Lies die Dokumentation für den nächsten offenen Schritt:
 - `docs/implementation/phase-X-*/X.Y-step-name.md`
 - Verstehe Ziel, Anforderungen, erwartetes Ergebnis
 
+### 5a. Schritt-spezifische Spezifikationen lesen (PFLICHT)
+
+Prüfe ob die Schritt-Dokumentation einen `## Relevante Spezifikationen` Abschnitt enthält.
+
+**Falls vorhanden:**
+1. Lies **ALLE** dort verlinkten Spezifikationen vollständig
+2. Achte besonders auf die genannten Sektionen/Kapitel
+3. Verstehe die Hintergründe, Architektur-Entscheidungen und Begründungen
+4. Diese Spezifikationen sind **bindend** für die Implementierung dieses Schritts
+
+**Warum dieser Schritt existiert:**
+Manche Phasen (z.B. Netzwerk, Character Platform) haben umfangreiche Spezifikations-Dokumente die kritisches Detailwissen enthalten. Die Schritt-Dokumentation allein reicht nicht — die Specs liefern den Kontext für **warum** etwas so gebaut wird und welche Fallstricke zu vermeiden sind.
+
+**Falls kein `## Relevante Spezifikationen` Abschnitt vorhanden:** Weiter mit Schritt 5b.
+
 ### 5b. Impact Notes prüfen
 
 Prüfe ob die Phase-README einen `## Impact Notes` Abschnitt enthält.

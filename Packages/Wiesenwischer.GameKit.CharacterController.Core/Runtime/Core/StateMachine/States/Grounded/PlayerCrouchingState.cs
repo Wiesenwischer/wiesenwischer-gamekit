@@ -46,9 +46,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             }
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
-            base.OnUpdate();
+            base.OnUpdate(deltaTime);
             UpdateSpeedModifier();
         }
 

@@ -116,6 +116,7 @@ Teile die Spec in sinnvolle Phasen auf. Dabei gelten folgende Regeln:
 - Ziel (1-2 Sätze)
 - Vorläufige Schritte (als Checkbox-Liste)
 - Referenz auf relevante Spec-Kapitel
+- **Spec-Zuordnung pro Schritt** (vorläufig): Für jeden vorläufigen Schritt notieren, welche Spec-Kapitel/Sektionen besonders relevant sind. Diese Zuordnung wird von `/plan-phase` in Schritt 5d verfeinert und als `## Relevante Spezifikationen` in die Schritt-Dateien eingetragen.
 
 ### 4. Vorschlag dem User präsentieren
 

@@ -10,8 +10,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
     /// </summary>
     public class PlayerSlidingState : PlayerMovementState
     {
-        private float _slideStartTime;
-
         public override string StateName => "Sliding";
 
         public PlayerSlidingState(PlayerMovementStateMachine stateMachine)
@@ -19,8 +17,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
         protected override void OnEnter()
         {
-            _slideStartTime = Time.time;
-
             // Slide-Intent aktivieren
             Player.Locomotion.SetSliding(true);
 
@@ -29,8 +25,8 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
 
             Player.AnimationController?.PlayState(CharacterAnimationState.Slide);
 
-            // Rotation in Rutsch-Richtung
-            UpdateRotationToSlideDirection();
+            // Initiale Rotation in Rutsch-Richtung (sofortige Snap-Rotation)
+            SnapRotationToSlideDirection();
         }
 
         protected override void OnExit()
@@ -59,9 +55,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             }
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
-            float timeInSlide = Time.time - _slideStartTime;
+            float timeInSlide = stateTime;
 
             // MinSlideTime einhalten (Flacker-Schutz)
             if (timeInSlide < Config.MinSlideTime)
@@ -73,7 +69,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         protected override void OnPhysicsUpdate(float deltaTime)
         {
             // Rotation Richtung Hangabwärts (smooth)
-            UpdateRotationToSlideDirection();
+            UpdateRotationToSlideDirection(deltaTime);
         }
 
         private void CheckExitConditions()
@@ -110,7 +106,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             }
         }
 
-        private void UpdateRotationToSlideDirection()
+        private void SnapRotationToSlideDirection()
+        {
+            var groundNormal = Player.Locomotion.GroundInfo.Normal;
+            Vector3 slideDirection = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
+
+            if (slideDirection.sqrMagnitude < 0.001f)
+                return;
+
+            Player.transform.rotation = Quaternion.LookRotation(slideDirection, Vector3.up);
+        }
+
+        private void UpdateRotationToSlideDirection(float deltaTime)
         {
             var groundNormal = Player.Locomotion.GroundInfo.Normal;
             Vector3 slideDirection = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
@@ -122,7 +129,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             Player.transform.rotation = Quaternion.RotateTowards(
                 Player.transform.rotation,
                 targetRotation,
-                Config.RotationSpeed * Time.deltaTime);
+                Config.RotationSpeed * deltaTime);
         }
     }
 }

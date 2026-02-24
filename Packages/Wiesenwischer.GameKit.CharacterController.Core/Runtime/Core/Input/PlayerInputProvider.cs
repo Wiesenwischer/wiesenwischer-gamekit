@@ -4,19 +4,23 @@ using UnityEngine.InputSystem;
 namespace Wiesenwischer.GameKit.CharacterController.Core.Input
 {
     /// <summary>
-    /// Input Provider für Spieler-Input.
+    /// Input Provider fuer Spieler-Input.
     /// Arbeitet direkt mit dem InputActionAsset — ohne PlayerInput-Component.
-    /// Volle Kontrolle über ActionMap-Lifecycle (Enable/Disable).
+    ///
+    /// WICHTIG: Klont das InputActionAsset zur Laufzeit (Instantiate).
+    /// Jede Instanz arbeitet auf ihrem eigenen Klon — Enable()/Disable()
+    /// betrifft nur diese Instanz. Kein Shared-State zwischen Spielern.
     /// </summary>
     public class PlayerInputProvider : MonoBehaviour, IMovementInputProvider
     {
-        [Header("Input Settings")]
-        [SerializeField] private bool _isActive = true;
-
         [Header("Input Actions")]
         [SerializeField] private InputActionAsset _inputActions;
         [SerializeField] private string _actionMapName = "Player";
 
+        /// <summary>Per-Instanz Klon des InputActionAsset. Wird in OnEnable erstellt, in OnDestroy zerstoert.</summary>
+        private InputActionAsset _runtimeActions;
+
+        private bool _isActive;
         private InputActionMap _actionMap;
         private InputAction _moveAction;
         private InputAction _lookAction;
@@ -106,7 +110,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
                 return;
             }
 
-            _actionMap = _inputActions.FindActionMap(_actionMapName);
+            // Per-Instanz Klon: Jede Instanz bekommt eigenes Asset.
+            // Enable()/Disable() betrifft nur diesen Klon — kein Shared-State.
+            _runtimeActions = Instantiate(_inputActions);
+
+            _actionMap = _runtimeActions.FindActionMap(_actionMapName);
             if (_actionMap == null)
             {
                 Debug.LogError($"[PlayerInputProvider] ActionMap '{_actionMapName}' nicht gefunden!");
@@ -131,16 +139,26 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
             if (_crouchToggleAction != null) _crouchToggleAction.started += OnCrouchToggleStarted;
 
             _actionMap.Enable();
+            _isActive = true;
         }
 
         private void OnDisable()
         {
+            _isActive = false;
+
             if (_jumpAction != null) _jumpAction.started -= OnJumpStarted;
             if (_dashAction != null) _dashAction.started -= OnDashStarted;
             if (_walkToggleAction != null) _walkToggleAction.started -= OnWalkToggleStarted;
             if (_crouchToggleAction != null) _crouchToggleAction.started -= OnCrouchToggleStarted;
 
             _actionMap?.Disable();
+            ResetInput();
+        }
+
+        private void OnDestroy()
+        {
+            if (_runtimeActions != null)
+                Destroy(_runtimeActions);
         }
 
         #endregion
@@ -170,12 +188,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Input
         #endregion
 
         #region Public Methods
-
-        public void SetActive(bool active)
-        {
-            _isActive = active;
-            if (!active) ResetInput();
-        }
 
         public InputSnapshot CreateSnapshot(int tick)
         {

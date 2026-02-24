@@ -48,10 +48,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             // Movement-Input wird vom InputSystem automatisch in ReusableData geschrieben.
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
             // Fall-Detection beibehalten (Character könnte über Kante rollen)
-            base.OnUpdate();
+            base.OnUpdate(deltaTime);
 
             // Prüfe ob Animation fertig ist (AllowExit Event oder IsAnimationComplete)
             var anim = Player.AnimationController;

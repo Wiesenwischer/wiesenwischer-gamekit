@@ -37,9 +37,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             Player.AnimationController?.PlayState(GetAnimationState());
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
-            base.OnUpdate();
+            base.OnUpdate(deltaTime);
 
             // Unterbrechbar durch Movement-Input
             if (HasMovementInput())

@@ -29,13 +29,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
             Player.AnimationController?.PlayState(CharacterAnimationState.Locomotion);
         }
 
-        protected override void OnUpdate()
+        protected override void OnUpdate(float deltaTime)
         {
-            base.OnUpdate();
+            base.OnUpdate(deltaTime);
 
             if (!HasMovementInput())
             {
-                _noInputTimer += Time.deltaTime;
+                _noInputTimer += deltaTime;
                 if (_noInputTimer >= InputGracePeriod)
                 {
                     ChangeState(GetStoppingState());

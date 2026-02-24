@@ -21,11 +21,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         [SerializeField] private AnimationTransitionConfig _transitionConfig;
 
         [Header("Smoothing")]
-        [Tooltip("Wie schnell der Speed-Parameter sich dem Zielwert annähert.")]
-        [SerializeField] private float _speedDampTime = 0.1f;
+        [Tooltip("Wie schnell der Speed-Parameter sich dem Zielwert annähert. " +
+                 "Höhere Werte verstecken Tick-Rate-Stepping besser (0.15 für 30Hz Ticks).")]
+        [SerializeField] private float _speedDampTime = 0.15f;
 
         [Tooltip("Wie schnell der VerticalVelocity-Parameter sich annähert.")]
-        [SerializeField] private float _verticalVelocityDampTime = 0.05f;
+        [SerializeField] private float _verticalVelocityDampTime = 0.1f;
 
         [Header("Stair Animation")]
         [Tooltip("Zusätzlicher Speed-Multiplikator auf Treppen. Kompensiert dass die Walk-Animation " +
@@ -39,11 +40,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private bool _isValid;
         private int _currentAnimStateHash;
         private bool _canExitAnimation;
-        private float _currentNormalizedSpeed;
+            private float _currentNormalizedSpeed;
         private float _currentVerticalVelocity;
         private float _targetSpeed;
         private float _targetVerticalVelocity;
         private bool _isRemoteMode;
+
+        // Pre-Smoothing: SmoothDamp vor dem Animator versteckt Tick-Rate-Steps (30Hz→60fps)
+        private float _smoothedSpeed;
+        private float _smoothedSpeedVelocity;
+        private float _smoothedVertVel;
+        private float _smoothedVertVelVelocity;
+
+        // Visual-Velocity: Leitet Geschwindigkeit aus der geglätteten Visual-Position ab
+        // statt aus rohen Motor-Daten. Verhindert Animation-Stutter bei Reconciliation.
+        private bool _useVisualVelocity;
+        private Vector3 _lastVisualPos;
+        private bool _hasLastVisualPos;
 
         /// <summary>
         /// Im Remote-Modus berechnet die Bridge keine eigenen Parameter-Werte.
@@ -53,6 +66,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         {
             get => _isRemoteMode;
             set => _isRemoteMode = value;
+        }
+
+        /// <summary>
+        /// Wenn aktiv, wird die Geschwindigkeit aus der Visual-Position abgeleitet
+        /// statt aus den rohen Motor-Daten. Verhindert Animation-Stutter bei
+        /// Netzwerk-Reconciliation (Motor-Velocity springt, Visual-Position ist geglättet).
+        /// Wird vom Network-Package gesetzt.
+        /// </summary>
+        public bool UseVisualVelocity
+        {
+            get => _useVisualVelocity;
+            set => _useVisualVelocity = value;
         }
 
 #if UNITY_EDITOR
@@ -117,47 +142,84 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
 
             var config = _playerController.LocomotionConfig;
 
-            // Speed: Normalisiert auf RunSpeed (0=Idle, 0.5=Walk, 1.0=Run, 1.5=Sprint)
-            float movementSpeed = data.HorizontalVelocity.magnitude;
-            float horizontalSpeed = movementSpeed;
+            float movementSpeed;
+            float horizontalSpeed;
+            float verticalVelocity;
 
-            // Treppen-Kompensation: StairSpeedReduction verlangsamt den Motor auf Treppen
-            // (Gameplay-Entscheidung), aber visuell bewegt sich der Character durch die
-            // Step-Up-Teleportationen mit annähernd normaler Geschwindigkeit. Ohne Kompensation
-            // läuft die Walk-Animation deutlich langsamer als die sichtbare Körperbewegung.
-            if (_playerController.IsGrounded && _playerController.Locomotion.IsOnStairs)
+            if (_useVisualVelocity)
             {
-                float reduction = config.StairSpeedReduction;
-                if (reduction > 0f && reduction < 1f)
+                // Netzwerk-Modus: Geschwindigkeit aus geglätteter Visual-Position ableiten.
+                // Motor-Velocity springt bei Reconciliation, Visual-Position ist smooth
+                // (NetworkTickSmoother). Abgeleitete Velocity → smooth Animation.
+                Vector3 currentPos = transform.position;
+                if (!_hasLastVisualPos)
                 {
-                    movementSpeed /= (1f - reduction);
+                    _lastVisualPos = currentPos;
+                    _hasLastVisualPos = true;
+                    movementSpeed = 0f;
+                    verticalVelocity = 0f;
                 }
-                movementSpeed *= _stairAnimSpeedMultiplier;
+                else
+                {
+                    float dt = Time.deltaTime;
+                    if (dt > 0.0001f)
+                    {
+                        Vector3 delta = currentPos - _lastVisualPos;
+                        movementSpeed = new Vector3(delta.x, 0f, delta.z).magnitude / dt;
+                        verticalVelocity = delta.y / dt;
+                    }
+                    else
+                    {
+                        movementSpeed = 0f;
+                        verticalVelocity = 0f;
+                    }
+                    _lastVisualPos = currentPos;
+                }
+                horizontalSpeed = movementSpeed;
+            }
+            else
+            {
+                // Offline/Host-Modus: Direkt aus Motor-Daten (kein Reconciliation-Jitter)
+                movementSpeed = data.HorizontalVelocity.magnitude;
+                horizontalSpeed = movementSpeed;
+                verticalVelocity = data.VerticalVelocity;
+
+                // Treppen-Kompensation: StairSpeedReduction verlangsamt den Motor auf Treppen
+                // (Gameplay-Entscheidung), aber visuell bewegt sich der Character durch die
+                // Step-Up-Teleportationen mit annähernd normaler Geschwindigkeit. Ohne Kompensation
+                // läuft die Walk-Animation deutlich langsamer als die sichtbare Körperbewegung.
+                if (_playerController.IsGrounded && _playerController.Locomotion.IsOnStairs)
+                {
+                    float reduction = config.StairSpeedReduction;
+                    if (reduction > 0f && reduction < 1f)
+                    {
+                        movementSpeed /= (1f - reduction);
+                    }
+                    movementSpeed *= _stairAnimSpeedMultiplier;
+                }
+
+                // Terrain-Kompensation: Auf Treppen/Slopes wird die physische Geschwindigkeit
+                // reduziert, aber die Animation soll im "Flachboden-Tempo" laufen.
+                float terrainMultiplier = _playerController.Locomotion?.CurrentTerrainSpeedMultiplier ?? 1f;
+                if (terrainMultiplier > 0.01f && terrainMultiplier < 1f)
+                {
+                    if (config.FullAnimSpeedOnTerrain)
+                    {
+                        float speed3D = Mathf.Sqrt(horizontalSpeed * horizontalSpeed +
+                                                   verticalVelocity * verticalVelocity);
+                        movementSpeed = config.RunSpeed > 0f ? speed3D / config.RunSpeed * config.RunSpeed : 0f;
+                        movementSpeed /= terrainMultiplier;
+                    }
+                    else
+                    {
+                        movementSpeed /= terrainMultiplier;
+                    }
+                }
             }
 
             float normalizedSpeed = config.RunSpeed > 0f
                 ? movementSpeed / config.RunSpeed
                 : 0f;
-
-            // Terrain-Kompensation: Auf Treppen/Slopes wird die physische Geschwindigkeit
-            // reduziert, aber die Animation soll im "Flachboden-Tempo" laufen.
-            float terrainMultiplier = _playerController.Locomotion?.CurrentTerrainSpeedMultiplier ?? 1f;
-            if (terrainMultiplier > 0.01f && terrainMultiplier < 1f)
-            {
-                if (config.FullAnimSpeedOnTerrain)
-                {
-                    // 3D-Geschwindigkeit: kompensiert sowohl Terrain-Penalty als auch
-                    // geometrische cos(angle)-Reduktion der horizontalen Geschwindigkeit.
-                    float speed3D = Mathf.Sqrt(horizontalSpeed * horizontalSpeed +
-                                               data.VerticalVelocity * data.VerticalVelocity);
-                    normalizedSpeed = config.RunSpeed > 0f ? speed3D / config.RunSpeed : 0f;
-                    normalizedSpeed /= terrainMultiplier;
-                }
-                else
-                {
-                    normalizedSpeed /= terrainMultiplier;
-                }
-            }
 
             // Minimum Animation Speed: Wenn der Character sich physisch bewegt, muss
             // der Speed-Parameter hoch genug sein um sichtbare Bein-Animation im Blend Tree
@@ -168,20 +230,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 normalizedSpeed = 0.35f;
             }
 
-            _currentNormalizedSpeed = normalizedSpeed;
-            _currentVerticalVelocity = data.VerticalVelocity;
+            // Pre-Smoothing: SmoothDamp versteckt Tick-Rate-Steps (30Hz→60fps).
+            // Ohne Pre-Smooth springt der Zielwert bei jedem Tick, und Animator.SetFloat
+            // dampTime kann den Step nicht vollstaendig verstecken.
+            // SmoothDamp produziert eine glatte Kurve auch bei Step-Inputs.
+            _smoothedSpeed = Mathf.SmoothDamp(
+                _smoothedSpeed, normalizedSpeed,
+                ref _smoothedSpeedVelocity, _speedDampTime);
+            _smoothedVertVel = Mathf.SmoothDamp(
+                _smoothedVertVel, verticalVelocity,
+                ref _smoothedVertVelVelocity, _verticalVelocityDampTime);
 
-            _animator.SetFloat(
-                AnimationParameters.SpeedHash,
-                normalizedSpeed,
-                _speedDampTime,
-                Time.deltaTime);
+            _currentNormalizedSpeed = _smoothedSpeed;
+            _currentVerticalVelocity = _smoothedVertVel;
 
-            _animator.SetFloat(
-                AnimationParameters.VerticalVelocityHash,
-                data.VerticalVelocity,
-                _verticalVelocityDampTime,
-                Time.deltaTime);
+            // SetFloat OHNE dampTime — Pre-Smoothing uebernimmt das Glaetten
+            _animator.SetFloat(AnimationParameters.SpeedHash, _smoothedSpeed);
+            _animator.SetFloat(AnimationParameters.VerticalVelocityHash, _smoothedVertVel);
 
 
 #if UNITY_EDITOR
@@ -215,26 +280,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         {
             if (_isRemoteMode)
             {
-                // Remote: Sanft zum Zielwert dampen
-                _currentNormalizedSpeed = Mathf.MoveTowards(
+                // Remote: SmoothDamp zum Zielwert (besser als MoveTowards bei Packet-Loss)
+                _currentNormalizedSpeed = Mathf.SmoothDamp(
                     _currentNormalizedSpeed, _targetSpeed,
-                    Time.deltaTime * 10f);
-                _currentVerticalVelocity = Mathf.MoveTowards(
+                    ref _smoothedSpeedVelocity, _speedDampTime);
+                _currentVerticalVelocity = Mathf.SmoothDamp(
                     _currentVerticalVelocity, _targetVerticalVelocity,
-                    Time.deltaTime * 50f);
+                    ref _smoothedVertVelVelocity, _verticalVelocityDampTime);
             }
 
-            _animator.SetFloat(
-                AnimationParameters.SpeedHash,
-                _currentNormalizedSpeed,
-                _speedDampTime,
-                Time.deltaTime);
-
-            _animator.SetFloat(
-                AnimationParameters.VerticalVelocityHash,
-                _currentVerticalVelocity,
-                _verticalVelocityDampTime,
-                Time.deltaTime);
+            // SetFloat OHNE dampTime — SmoothDamp uebernimmt das Glaetten
+            _animator.SetFloat(AnimationParameters.SpeedHash, _currentNormalizedSpeed);
+            _animator.SetFloat(AnimationParameters.VerticalVelocityHash, _currentVerticalVelocity);
         }
 
         #region IAnimationController
@@ -297,6 +354,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             _currentAnimStateHash = hash;
             _canExitAnimation = false;
             _animator.CrossFade(hash, transitionDuration);
+
+#if UNITY_EDITOR
+            Debug.Log($"[AnimBridge] CrossFade → {state} (dur={transitionDuration:F3}s)");
+#endif
 
             // Network: State-Wechsel melden
             _networkSync?.OnLocalStateChanged(state);

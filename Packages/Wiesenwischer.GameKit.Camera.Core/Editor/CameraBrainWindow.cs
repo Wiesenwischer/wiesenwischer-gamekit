@@ -88,9 +88,10 @@ namespace Wiesenwischer.GameKit.Camera.Editor
         {
             EditorGUILayout.HelpBox(
                 "Kein CameraBrain gefunden.\n\n" +
-                "1. Platziere einen Player in der Szene\n" +
-                "2. Wähle ein Camera-Preset\n" +
-                "3. Klicke 'Setup Camera Brain'",
+                "1. Wähle ein Camera-Preset\n" +
+                "2. Klicke 'Setup Camera Brain'\n\n" +
+                "Hinweis: Im Netzwerk-Modus wird das Kamera-Target " +
+                "zur Laufzeit durch NetworkCameraSetup gesetzt.",
                 MessageType.Info);
 
             EditorGUILayout.Space(4);

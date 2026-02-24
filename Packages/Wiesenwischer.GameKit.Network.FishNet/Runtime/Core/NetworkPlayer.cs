@@ -21,17 +21,37 @@ namespace Wiesenwischer.GameKit.Network
         public static event System.Action OnLocalPlayerRemoved;
 
         private PlayerController _playerController;
+        private NetworkCharacterDriver _characterDriver;
+
+        /// <summary>
+        /// Visual-Root (Animator-Child). Wird in OnStartNetwork() gecached, BEVOR
+        /// NetworkTickSmoother.OnStartClient() das Child via DetachOnStart trennt.
+        /// Danach ist GetComponentInChildren nicht mehr zuverlaessig.
+        /// </summary>
+        public Transform VisualRoot => _visualRoot;
+        private Transform _visualRoot;
 
         // INetworkRole Implementation — delegates to FishNet NetworkBehaviour
         bool INetworkRole.IsOwner => base.IsOwner;
         public bool IsServer => base.IsServerStarted;
         public bool IsClient => base.IsClientStarted;
-        public bool IsNetworkActive => true;
+        public bool IsNetworkActive => IsSpawned;
+
+        /// <summary>Der NetworkCharacterDriver (falls vorhanden).</summary>
+        public NetworkCharacterDriver CharacterDriver => _characterDriver;
 
         public override void OnStartNetwork()
         {
             base.OnStartNetwork();
             _playerController = GetComponent<PlayerController>();
+            _characterDriver = GetComponent<NetworkCharacterDriver>();
+
+            // Visual-Root cachen BEVOR NetworkTickSmoother.OnStartClient() DetachOnStart ausfuehrt.
+            // FishNet ruft Callbacks in Hierarchie-Reihenfolge: Root-NBs vor Child-NBs.
+            var animator = GetComponentInChildren<Animator>();
+            _visualRoot = (animator != null && animator.transform != transform)
+                ? animator.transform
+                : transform;
         }
 
         public override void OnStartClient()
@@ -39,13 +59,9 @@ namespace Wiesenwischer.GameKit.Network
             base.OnStartClient();
 
             if (IsOwner)
-            {
                 EnableLocalPlayer();
-            }
             else
-            {
-                DisableRemotePlayerInput();
-            }
+                ConfigureRemotePlayer();
         }
 
         public override void OnStopClient()
@@ -57,38 +73,51 @@ namespace Wiesenwischer.GameKit.Network
 
         private void EnableLocalPlayer()
         {
-            Debug.Log("[NetworkPlayer] Lokaler Spieler initialisiert.");
-            OnLocalPlayerReady?.Invoke(transform);
+            // Scene-InputProvider mit diesem Player verbinden.
+            // PlayerInputProvider liegt in der Scene (nicht auf dem Prefab).
+            var sceneInput = FindObjectOfType<PlayerInputProvider>();
+            if (sceneInput != null)
+                _playerController.SetInputProvider(sceneInput);
+
+            // Animation Bridge: Visual-Velocity aktivieren.
+            // Motor-Velocity springt bei Reconciliation, Visual-Position ist smooth
+            // (NetworkTickSmoother). Abgeleitete Velocity → smooth Animation.
+            var animBridge = _visualRoot != null
+                ? _visualRoot.GetComponent<AnimatorParameterBridge>()
+                : GetComponentInChildren<AnimatorParameterBridge>();
+            if (animBridge != null)
+                animBridge.UseVisualVelocity = true;
+
+            // Event feuern → NetworkCameraSetup richtet Kamera ein (synchron).
+            // Visual-Root uebergeben (nicht Root!), damit die Kamera dem smooth-interpolierten
+            // Visual folgt statt dem springenden Simulations-Root.
+            OnLocalPlayerReady?.Invoke(_visualRoot);
+
+            // NACH Kamera-Setup: Orientation/Facing-Provider auflösen.
+            // In Start() wird dies im Netzwerk-Modus übersprungen, weil die Kamera
+            // erst hier (via OnLocalPlayerReady → CameraBrain.SetTarget) eingerichtet wird.
+            _playerController.ResolveProviders();
         }
 
-        private void DisableRemotePlayerInput()
+        private void ConfigureRemotePlayer()
         {
-            // Input immer deaktivieren für Remote-Player
-            var inputProvider = GetComponent<IMovementInputProvider>();
-            if (inputProvider is MonoBehaviour inputMono)
-                inputMono.enabled = false;
-
-            // Motor nur auf reinen Clients deaktivieren (Interpolator übernimmt Position).
-            // Auf dem Server muss der Motor aktiv bleiben für serverseitige Simulation.
-            if (!IsServerStarted)
-            {
-                var motor = GetComponent<CharacterController.Core.Motor.CharacterMotor>();
-                if (motor != null)
-                    motor.enabled = false;
-            }
+            // _visualRoot wurde in OnStartNetwork() gecached (vor DetachOnStart).
+            // GetComponentInChildren wuerde nach Detach fehlschlagen.
 
             // Animation Bridge in Remote-Modus setzen
-            var animBridge = GetComponentInChildren<AnimatorParameterBridge>();
+            var animBridge = _visualRoot != null
+                ? _visualRoot.GetComponent<AnimatorParameterBridge>()
+                : GetComponentInChildren<AnimatorParameterBridge>();
             if (animBridge != null)
                 animBridge.IsRemoteMode = true;
 
             // LookAt IK: Provider auf Network umstellen
-            var lookAtIK = GetComponentInChildren<LookAtIK>();
+            var lookAtIK = _visualRoot != null
+                ? _visualRoot.GetComponentInChildren<LookAtIK>()
+                : GetComponentInChildren<LookAtIK>();
             var networkProvider = GetComponent<NetworkLookAtTargetProvider>();
             if (lookAtIK != null && networkProvider != null)
                 lookAtIK.SetTargetProvider(networkProvider);
-
-            Debug.Log($"[NetworkPlayer] Remote Spieler — Input deaktiviert, Motor={(!IsServerStarted ? "deaktiviert" : "aktiv (Server)")}");
         }
     }
 }

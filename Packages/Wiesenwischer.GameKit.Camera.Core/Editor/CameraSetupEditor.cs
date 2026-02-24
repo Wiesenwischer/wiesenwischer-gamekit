@@ -22,20 +22,10 @@ namespace Wiesenwischer.GameKit.Camera.Editor
         /// </summary>
         public static void SetupCameraBrain(CameraPreset preset = null)
         {
-            // --- 1. Player finden ---
+            // --- 1. Player finden (optional — im Netzwerk-Modus wird Target zur Laufzeit gesetzt) ---
             var player = GameObject.FindGameObjectWithTag("Player");
             if (player == null)
                 player = GameObject.Find("Player");
-
-            if (player == null)
-            {
-                EditorUtility.DisplayDialog(
-                    "Kein Player gefunden",
-                    "In der aktuellen Szene wurde kein Player gefunden.\n\n" +
-                    "Bitte zuerst einen Player in die Szene platzieren.",
-                    "OK");
-                return;
-            }
 
             // --- 2. Camera Root finden (re-run-sicher) ---
             var cameraRoot = FindCameraRoot();
@@ -50,7 +40,15 @@ namespace Wiesenwischer.GameKit.Camera.Editor
 
             // --- 5. Core-Komponenten ---
             var anchor = EnsureComponent<CameraAnchor>(cameraRoot);
-            anchor.FollowTarget = player.transform;
+            if (player != null)
+            {
+                anchor.FollowTarget = player.transform;
+            }
+            else
+            {
+                Debug.Log("[CameraSetup] Kein Player in der Szene — FollowTarget wird zur Laufzeit gesetzt " +
+                    "(z.B. durch NetworkCameraSetup).");
+            }
 
             var inputPipeline = EnsureComponent<CameraInputPipeline>(cameraRoot);
             ConfigureInputPipeline(inputPipeline);

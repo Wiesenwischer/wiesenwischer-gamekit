@@ -1,0 +1,30 @@
+services:
+  gameserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wiesenwischer-gameserver
+    ports:
+      - "7770:7770/udp"
+    environment:
+      - PORT=7770
+      - MAX_PLAYERS=100
+      - ADDRESS=0.0.0.0
+    volumes:
+      - server-data:/app/data
+    restart: unless-stopped
+    # Prüft ob der Prozess noch läuft (Unity Server hat keinen HTTP-Endpoint)
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -x GameKit_HDRP || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+volumes:
+  server-data:
+    driver: local

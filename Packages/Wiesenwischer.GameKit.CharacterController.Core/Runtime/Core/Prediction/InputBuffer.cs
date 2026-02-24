@@ -8,6 +8,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
     /// Speichert Inputs nach Tick für CSP-Zwecke.
     /// </summary>
     /// <typeparam name="T">Der Input-Typ (muss Tick-Property haben).</typeparam>
+    [System.Obsolete("Ersetzt durch FishNet Native Prediction (Phase 30). FishNet verwaltet den Input-Buffer intern. Wird in einer zukuenftigen Phase entfernt.")]
     public class InputBuffer<T> where T : struct
     {
         private readonly T[] _buffer;

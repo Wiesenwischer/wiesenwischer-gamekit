@@ -1,5 +1,6 @@
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using UnityEngine;
 using Wiesenwischer.GameKit.Abilities.Core;
 using Wiesenwischer.GameKit.CharacterController.Core.Animation;
 
@@ -17,14 +18,15 @@ namespace Wiesenwischer.GameKit.Network
         private AbilitySystem _abilitySystem;
         private IAnimationController _animController;
 
-        [SyncVar(OnChange = nameof(OnAbilityLayerWeightChanged))]
-        private float _abilityLayerWeight;
+        private readonly SyncVar<float> _abilityLayerWeight = new();
+        private readonly SyncVar<string> _abilityAnimStateName = new("");
+        private readonly SyncVar<float> _abilityTransitionDuration = new();
 
-        [SyncVar(OnChange = nameof(OnAbilityAnimChanged))]
-        private string _abilityAnimStateName = "";
-
-        [SyncVar]
-        private float _abilityTransitionDuration;
+        private void Awake()
+        {
+            _abilityLayerWeight.OnChange += OnAbilityLayerWeightChanged;
+            _abilityAnimStateName.OnChange += OnAbilityAnimChanged;
+        }
 
         public override void OnStartNetwork()
         {
@@ -32,7 +34,7 @@ namespace Wiesenwischer.GameKit.Network
             _abilitySystem = GetComponent<AbilitySystem>();
             _animController = GetComponentInChildren<IAnimationController>();
 
-            if (IsOwner && _abilitySystem != null)
+            if (Owner.IsLocalClient && _abilitySystem != null)
             {
                 _abilitySystem.OnAbilityActivated += OnAbilityActivated;
                 _abilitySystem.OnAbilityDeactivated += OnAbilityDeactivated;
@@ -62,9 +64,9 @@ namespace Wiesenwischer.GameKit.Network
 
             if (IsServerStarted)
             {
-                _abilityLayerWeight = 1f;
-                _abilityAnimStateName = animState ?? "";
-                _abilityTransitionDuration = duration;
+                _abilityLayerWeight.Value = 1f;
+                _abilityAnimStateName.Value = animState ?? "";
+                _abilityTransitionDuration.Value = duration;
             }
             else
             {
@@ -78,8 +80,8 @@ namespace Wiesenwischer.GameKit.Network
 
             if (IsServerStarted)
             {
-                _abilityLayerWeight = 0f;
-                _abilityAnimStateName = "";
+                _abilityLayerWeight.Value = 0f;
+                _abilityAnimStateName.Value = "";
             }
             else
             {
@@ -93,8 +95,8 @@ namespace Wiesenwischer.GameKit.Network
 
             if (IsServerStarted)
             {
-                _abilityLayerWeight = 0f;
-                _abilityAnimStateName = "";
+                _abilityLayerWeight.Value = 0f;
+                _abilityAnimStateName.Value = "";
             }
             else
             {
@@ -109,16 +111,16 @@ namespace Wiesenwischer.GameKit.Network
         [ServerRpc]
         private void ServerRpcAbilityActivated(string animStateName, float transitionDuration)
         {
-            _abilityLayerWeight = 1f;
-            _abilityAnimStateName = animStateName;
-            _abilityTransitionDuration = transitionDuration;
+            _abilityLayerWeight.Value = 1f;
+            _abilityAnimStateName.Value = animStateName;
+            _abilityTransitionDuration.Value = transitionDuration;
         }
 
         [ServerRpc]
         private void ServerRpcAbilityDeactivated()
         {
-            _abilityLayerWeight = 0f;
-            _abilityAnimStateName = "";
+            _abilityLayerWeight.Value = 0f;
+            _abilityAnimStateName.Value = "";
         }
 
         #endregion
@@ -136,7 +138,7 @@ namespace Wiesenwischer.GameKit.Network
             if (IsOwner) return;
             if (!string.IsNullOrEmpty(next))
             {
-                _animController?.PlayAbilityAnimation(next, _abilityTransitionDuration);
+                _animController?.PlayAbilityAnimation(next, _abilityTransitionDuration.Value);
             }
         }
 

@@ -7,6 +7,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
     /// Interface für das Client-Side Prediction System.
     /// Verwaltet Input-Buffer, State-History und Server-Reconciliation.
     /// </summary>
+    [System.Obsolete("Ersetzt durch FishNet Native Prediction (Phase 30). [Replicate]/[Reconcile] ersetzen dieses Interface. Wird in einer zukuenftigen Phase entfernt.")]
     public interface IPredictionSystem
     {
         /// <summary>
@@ -80,6 +81,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Prediction
     /// <summary>
     /// Interface für Objekte, die Prediction-fähig sind.
     /// </summary>
+    [System.Obsolete("Ersetzt durch FishNet Native Prediction (Phase 30). Wird in einer zukuenftigen Phase entfernt.")]
     public interface IPredictable
     {
         /// <summary>
