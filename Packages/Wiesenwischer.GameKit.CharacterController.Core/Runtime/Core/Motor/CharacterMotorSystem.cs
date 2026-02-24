@@ -194,18 +194,22 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.Motor
     }
 
     /// <summary>
-    /// Settings for the CharacterMotorSystem
+    /// Settings for the CharacterMotorSystem.
+    /// Network-Only Architektur: AutoSimulation und Interpolate sind per Default false.
+    /// NetworkCharacterDriver treibt die Simulation, NetworkTickSmoother interpoliert.
     /// </summary>
     public class CharacterMotorSettings : ScriptableObject
     {
         /// <summary>
-        /// If true, the system will automatically simulate motors in FixedUpdate
+        /// If true, the system will automatically simulate motors in FixedUpdate.
+        /// Default false: NetworkCharacterDriver steuert Simulation via TimeManager.OnTick.
         /// </summary>
-        public bool AutoSimulation = true;
+        public bool AutoSimulation = false;
 
         /// <summary>
-        /// If true, the system will interpolate motor positions in LateUpdate
+        /// If true, the system will interpolate motor positions in LateUpdate.
+        /// Default false: FishNet's NetworkTickSmoother uebernimmt Interpolation.
         /// </summary>
-        public bool Interpolate = true;
+        public bool Interpolate = false;
     }
 }
