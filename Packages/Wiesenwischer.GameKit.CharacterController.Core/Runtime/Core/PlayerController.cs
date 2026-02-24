@@ -180,6 +180,11 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         private void Update()
         {
+            // Im Netzwerk-Modus handhabt der Driver den Input.
+            // KRITISCH: InputProvider-Properties wie JumpPressed sind consume-on-read.
+            // Wenn UpdateInput() sie konsumiert, sieht der NetworkCharacterDriver sie nie.
+            if (_simulationDriver != null && _simulationDriver.IsActive) return;
+
             // Nur der Owner simuliert Input.
             // Im Offline-Modus: OfflineNetworkRole.IsOwner == true → alles läuft wie bisher.
             if (!NetworkRole.IsOwner) return;

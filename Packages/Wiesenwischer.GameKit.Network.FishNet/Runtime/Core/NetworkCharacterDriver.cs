@@ -42,10 +42,14 @@ namespace Wiesenwischer.GameKit.Network
         public uint CurrentTick => TimeManager.Tick;
 
         // --- One-Shot Input Akkumulation ---
+        // KRITISCH: InputProvider-Properties sind consume-on-read (JumpPressed, CrouchTogglePressed, etc.).
+        // Wir akkumulieren in Update() damit kein Input zwischen Ticks verloren geht.
         private bool _jumpRequested;
         private bool _jumpCutRequested;
         private bool _resetVerticalRequested;
         private bool _lastJumpHeld;
+        private bool _crouchToggleRequested;
+        private bool _walkToggleRequested;
 
         // --- Spectator Prediction ---
         [SerializeField] private int _spectatorMaxPredictTicks = 4;
@@ -124,11 +128,20 @@ namespace Wiesenwischer.GameKit.Network
             var input = _player.InputProvider;
             if (input == null) return;
 
-            // One-Shot Inputs akkumulieren (gehen nicht verloren zwischen Ticks)
+            // ALLE One-Shot Inputs akkumulieren (gehen nicht verloren zwischen Ticks).
+            // PlayerController.Update() ist deaktiviert wenn der Driver aktiv ist,
+            // daher ist der Driver der einzige Consumer der consume-on-read Properties.
             if (input.JumpPressed) _jumpRequested = true;
+            if (input.CrouchTogglePressed) _crouchToggleRequested = true;
+            if (input.WalkTogglePressed) _walkToggleRequested = true;
 
             // JumpCut: Jump wurde gehalten und jetzt losgelassen
-            if (_lastJumpHeld && !input.JumpHeld) _jumpCutRequested = true;
+            if (_lastJumpHeld && !input.JumpHeld)
+            {
+                _jumpCutRequested = true;
+                if (_debugLog)
+                    Debug.Log($"[Driver] JumpCut detected in Update | jumpReq={_jumpRequested} state={_player.CurrentStateName}");
+            }
             _lastJumpHeld = input.JumpHeld;
         }
 
@@ -157,10 +170,18 @@ namespace Wiesenwischer.GameKit.Network
             if (IsOwner)
             {
                 input = BuildReplicateData();
+
+                // Same-Tick Guard: Jump und JumpCut im gleichen Tick = JumpCut unterdruecken.
+                // Passiert wenn Button-Press und Release in derselben Tick-Periode akkumulieren.
+                if (input.JumpRequested && input.JumpCutRequested)
+                    input.JumpCutRequested = false;
+
                 // One-Shot Flags zuruecksetzen nach Einlesen
                 _jumpRequested = false;
                 _jumpCutRequested = false;
                 _resetVerticalRequested = false;
+                _crouchToggleRequested = false;
+                _walkToggleRequested = false;
             }
 
             PerformReplicate(input);
@@ -189,7 +210,19 @@ namespace Wiesenwischer.GameKit.Network
             var input = _player.InputProvider;
 
             if (input.SprintHeld) buttons |= ControllerButtons.Sprint;
-            if (input.CrouchTogglePressed) buttons |= ControllerButtons.Crouch;
+            if (input.JumpHeld) buttons |= ControllerButtons.Jump;
+
+            // Akkumulierte One-Shot Flags (consume-on-read bereits in Update() verarbeitet)
+            if (_crouchToggleRequested) buttons |= ControllerButtons.Crouch;
+
+            // WalkToggle: Verarbeiten wie PlayerController.UpdateInput() es tut
+            if (_walkToggleRequested)
+                _player.ReusableData.ShouldWalk = !_player.ReusableData.ShouldWalk;
+
+            // Sprint deaktiviert Walk automatisch
+            if (input.SprintHeld && _player.ReusableData.ShouldWalk)
+                _player.ReusableData.ShouldWalk = false;
+
             if (_player.ReusableData.ShouldWalk) buttons |= ControllerButtons.Walk;
 
             return buttons;
@@ -252,6 +285,15 @@ namespace Wiesenwischer.GameKit.Network
                 CharacterMotorSystem.Simulate((float)TimeManager.TickDelta, _motorList);
             }
 
+            // Diagnose: Zustand nach Simulation loggen (nur aktueller Tick, nicht Replay)
+            if (_debugLog && !isReplay && state.ContainsTicked())
+            {
+                Debug.Log($"[Driver] Tick: state={_player.CurrentStateName} " +
+                    $"grounded={_player.IsGrounded} overEdge={_player.Locomotion.IsOverEdge} " +
+                    $"motorStable={_motor.GroundingStatus.IsStableOnGround} " +
+                    $"jump={input.JumpRequested} pos.y={_motor.TransientPosition.y:F3}");
+            }
+
             // Replay-Guard zuruecksetzen
             if (isReplay)
                 _player.RestoreAnimationController();
@@ -271,15 +313,28 @@ namespace Wiesenwischer.GameKit.Network
             Vector3 lookDir = Quaternion.Euler(0f, input.CameraYaw, 0f) * Vector3.forward;
             _player.SetLookDirectionOverride(lookDir);
 
-            // One-Shot Events
-            if (input.JumpRequested) reusable.JumpPressed = true;
-            if (input.JumpCutRequested) reusable.JumpCutRequested = true;
-            if (input.ResetVerticalRequested) reusable.ResetVerticalRequested = true;
+            // One-Shot Events: MUSS unconditional gesetzt werden (= statt if+set).
+            // Ohne explizites false bleibt JumpPressed nach dem ersten Jump ewig true,
+            // weil UpdateInput() im Netzwerk-Modus nicht laeuft und es nie zuruecksetzt.
+            reusable.JumpPressed = input.JumpRequested;
 
-            // Button-States
+            // JumpCutRequested und ResetVerticalRequested werden NICHT aus Replikationsdaten gesetzt.
+            // Die StateMachine (JumpingState.OnHandleInput) setzt JumpCut selbst basierend auf
+            // !JumpHeld mit Guards (_jumpImpulseConfirmed, VerticalVelocity > 0).
+            // Direktes Setzen aus dem Driver umgeht diese Guards → vorzeitiger JumpCut
+            // wenn Jump-Press und JumpHeld-Release im gleichen Tick-Intervall akkumulieren.
+            // ResetVerticalRequested wird nur von JumpingState bei Ceiling-Collision gesetzt.
+            reusable.JumpCutRequested = false;
+            reusable.ResetVerticalRequested = false;
+
+            // Button-States (kontinuierlich)
             reusable.SprintHeld = input.Buttons.HasFlag(ControllerButtons.Sprint);
             reusable.ShouldWalk = input.Buttons.HasFlag(ControllerButtons.Walk);
             reusable.CrouchTogglePressed = input.Buttons.HasFlag(ControllerButtons.Crouch);
+
+            // JumpHeld: Noetig fuer JumpWasReleased-Tracking in AirborneState.
+            // Ohne JumpHeld ist JumpWasReleased immer true → CanJump() immer true → Endlos-Jump.
+            reusable.JumpHeld = input.Buttons.HasFlag(ControllerButtons.Jump);
         }
 
         #endregion
@@ -314,13 +369,41 @@ namespace Wiesenwischer.GameKit.Network
                 Quaternion.Euler(0f, data.Rotation, 0f)
             );
 
+            // KRITISCH: Motor-Grounding-Cache aus Reconcile-Daten setzen.
+            // Ohne diesen Fix hat der Motor nach Position-Restore stale GroundingStatus-Werte
+            // (vom letzten lokalen Simulate VOR dem Reconcile). Die FallDetectionStrategy
+            // liest IsStableOnGround → stale IsOverEdge=true → GroundedState transitioniert
+            // faelschlich zu Falling → Animation oszilliert zwischen Idle und Fall.
+            if (data.IsGrounded)
+            {
+                _motor.GroundingStatus.IsStableOnGround = true;
+                _motor.GroundingStatus.SnappingPrevented = false;
+                _motor.GroundingStatus.FoundAnyGround = true;
+            }
+            else
+            {
+                _motor.GroundingStatus.IsStableOnGround = false;
+            }
+
+            // Strategies re-evaluieren (IsOverEdge, IsGrounded) damit der erste
+            // Replay-Tick korrekte Werte sieht, BEVOR Motor.Simulate() laeuft.
+            _player.Locomotion.PostGroundingUpdate(0f);
+
             // Character-State wiederherstellen
             var reusable = _player.ReusableData;
             reusable.HorizontalVelocity = data.Velocity;
             reusable.VerticalVelocity = data.VerticalVelocity;
-            // IsGrounded wird vom Motor bei der naechsten Simulation recalculated
             reusable.IsCrouching = data.IsCrouching;
             reusable.ShouldWalk = data.ShouldWalk;
+
+            // Fall-Detection-Daten resetten wenn Server bestaetigt dass Character grounded ist.
+            // Verhindert dass TimeSinceGrounded ueber Reconcile-Grenzen akkumuliert und
+            // dass LastGroundedY auf die Client-Prediction-Position zeigt.
+            if (data.IsGrounded)
+            {
+                reusable.TimeSinceGrounded = 0f;
+                reusable.LastGroundedY = data.Position.y;
+            }
 
             // StateMachine State wiederherstellen.
             // AnimationController unterdruecken: RestoreState ruft Enter() auf,
@@ -328,6 +411,14 @@ namespace Wiesenwischer.GameKit.Network
             _player.SuppressAnimationController();
             _player.RestoreMovementState(data.MovementStateIndex);
             _player.RestoreAnimationController();
+
+            if (_debugLog)
+            {
+                Debug.Log($"[Driver] Reconcile: pos=({data.Position.x:F2},{data.Position.y:F2},{data.Position.z:F2}) " +
+                    $"grounded={data.IsGrounded} stateIdx={data.MovementStateIndex} " +
+                    $"motorGround={_motor.GroundingStatus.IsStableOnGround} " +
+                    $"isOverEdge={_player.Locomotion.IsOverEdge}");
+            }
         }
 
         #endregion
