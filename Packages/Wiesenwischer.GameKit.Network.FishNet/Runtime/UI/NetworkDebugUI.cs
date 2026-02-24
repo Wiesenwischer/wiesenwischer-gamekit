@@ -31,6 +31,9 @@ namespace Wiesenwischer.GameKit.Network
 
         private void Update()
         {
+            // Headless Server: Kein Input, kein GUI — nichts zu tun
+            if (Application.isBatchMode) return;
+
             if (_manager == null)
                 _manager = GetComponent<GameNetworkManager>() ?? FindObjectOfType<GameNetworkManager>();
             if (_manager == null) return;
