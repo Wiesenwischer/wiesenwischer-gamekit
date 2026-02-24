@@ -52,6 +52,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private float _smoothedVertVel;
         private float _smoothedVertVelVelocity;
 
+        // Visual-Velocity: Leitet Geschwindigkeit aus der geglätteten Visual-Position ab
+        // statt aus rohen Motor-Daten. Verhindert Animation-Stutter bei Reconciliation.
+        private bool _useVisualVelocity;
+        private Vector3 _lastVisualPos;
+        private bool _hasLastVisualPos;
+
         /// <summary>
         /// Im Remote-Modus berechnet die Bridge keine eigenen Parameter-Werte.
         /// Stattdessen werden Werte extern gesetzt (via Network Sync).
@@ -60,6 +66,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         {
             get => _isRemoteMode;
             set => _isRemoteMode = value;
+        }
+
+        /// <summary>
+        /// Wenn aktiv, wird die Geschwindigkeit aus der Visual-Position abgeleitet
+        /// statt aus den rohen Motor-Daten. Verhindert Animation-Stutter bei
+        /// Netzwerk-Reconciliation (Motor-Velocity springt, Visual-Position ist geglättet).
+        /// Wird vom Network-Package gesetzt.
+        /// </summary>
+        public bool UseVisualVelocity
+        {
+            get => _useVisualVelocity;
+            set => _useVisualVelocity = value;
         }
 
 #if UNITY_EDITOR
@@ -124,47 +142,84 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
 
             var config = _playerController.LocomotionConfig;
 
-            // Speed: Normalisiert auf RunSpeed (0=Idle, 0.5=Walk, 1.0=Run, 1.5=Sprint)
-            float movementSpeed = data.HorizontalVelocity.magnitude;
-            float horizontalSpeed = movementSpeed;
+            float movementSpeed;
+            float horizontalSpeed;
+            float verticalVelocity;
 
-            // Treppen-Kompensation: StairSpeedReduction verlangsamt den Motor auf Treppen
-            // (Gameplay-Entscheidung), aber visuell bewegt sich der Character durch die
-            // Step-Up-Teleportationen mit annähernd normaler Geschwindigkeit. Ohne Kompensation
-            // läuft die Walk-Animation deutlich langsamer als die sichtbare Körperbewegung.
-            if (_playerController.IsGrounded && _playerController.Locomotion.IsOnStairs)
+            if (_useVisualVelocity)
             {
-                float reduction = config.StairSpeedReduction;
-                if (reduction > 0f && reduction < 1f)
+                // Netzwerk-Modus: Geschwindigkeit aus geglätteter Visual-Position ableiten.
+                // Motor-Velocity springt bei Reconciliation, Visual-Position ist smooth
+                // (NetworkTickSmoother). Abgeleitete Velocity → smooth Animation.
+                Vector3 currentPos = transform.position;
+                if (!_hasLastVisualPos)
                 {
-                    movementSpeed /= (1f - reduction);
+                    _lastVisualPos = currentPos;
+                    _hasLastVisualPos = true;
+                    movementSpeed = 0f;
+                    verticalVelocity = 0f;
                 }
-                movementSpeed *= _stairAnimSpeedMultiplier;
+                else
+                {
+                    float dt = Time.deltaTime;
+                    if (dt > 0.0001f)
+                    {
+                        Vector3 delta = currentPos - _lastVisualPos;
+                        movementSpeed = new Vector3(delta.x, 0f, delta.z).magnitude / dt;
+                        verticalVelocity = delta.y / dt;
+                    }
+                    else
+                    {
+                        movementSpeed = 0f;
+                        verticalVelocity = 0f;
+                    }
+                    _lastVisualPos = currentPos;
+                }
+                horizontalSpeed = movementSpeed;
+            }
+            else
+            {
+                // Offline/Host-Modus: Direkt aus Motor-Daten (kein Reconciliation-Jitter)
+                movementSpeed = data.HorizontalVelocity.magnitude;
+                horizontalSpeed = movementSpeed;
+                verticalVelocity = data.VerticalVelocity;
+
+                // Treppen-Kompensation: StairSpeedReduction verlangsamt den Motor auf Treppen
+                // (Gameplay-Entscheidung), aber visuell bewegt sich der Character durch die
+                // Step-Up-Teleportationen mit annähernd normaler Geschwindigkeit. Ohne Kompensation
+                // läuft die Walk-Animation deutlich langsamer als die sichtbare Körperbewegung.
+                if (_playerController.IsGrounded && _playerController.Locomotion.IsOnStairs)
+                {
+                    float reduction = config.StairSpeedReduction;
+                    if (reduction > 0f && reduction < 1f)
+                    {
+                        movementSpeed /= (1f - reduction);
+                    }
+                    movementSpeed *= _stairAnimSpeedMultiplier;
+                }
+
+                // Terrain-Kompensation: Auf Treppen/Slopes wird die physische Geschwindigkeit
+                // reduziert, aber die Animation soll im "Flachboden-Tempo" laufen.
+                float terrainMultiplier = _playerController.Locomotion?.CurrentTerrainSpeedMultiplier ?? 1f;
+                if (terrainMultiplier > 0.01f && terrainMultiplier < 1f)
+                {
+                    if (config.FullAnimSpeedOnTerrain)
+                    {
+                        float speed3D = Mathf.Sqrt(horizontalSpeed * horizontalSpeed +
+                                                   verticalVelocity * verticalVelocity);
+                        movementSpeed = config.RunSpeed > 0f ? speed3D / config.RunSpeed * config.RunSpeed : 0f;
+                        movementSpeed /= terrainMultiplier;
+                    }
+                    else
+                    {
+                        movementSpeed /= terrainMultiplier;
+                    }
+                }
             }
 
             float normalizedSpeed = config.RunSpeed > 0f
                 ? movementSpeed / config.RunSpeed
                 : 0f;
-
-            // Terrain-Kompensation: Auf Treppen/Slopes wird die physische Geschwindigkeit
-            // reduziert, aber die Animation soll im "Flachboden-Tempo" laufen.
-            float terrainMultiplier = _playerController.Locomotion?.CurrentTerrainSpeedMultiplier ?? 1f;
-            if (terrainMultiplier > 0.01f && terrainMultiplier < 1f)
-            {
-                if (config.FullAnimSpeedOnTerrain)
-                {
-                    // 3D-Geschwindigkeit: kompensiert sowohl Terrain-Penalty als auch
-                    // geometrische cos(angle)-Reduktion der horizontalen Geschwindigkeit.
-                    float speed3D = Mathf.Sqrt(horizontalSpeed * horizontalSpeed +
-                                               data.VerticalVelocity * data.VerticalVelocity);
-                    normalizedSpeed = config.RunSpeed > 0f ? speed3D / config.RunSpeed : 0f;
-                    normalizedSpeed /= terrainMultiplier;
-                }
-                else
-                {
-                    normalizedSpeed /= terrainMultiplier;
-                }
-            }
 
             // Minimum Animation Speed: Wenn der Character sich physisch bewegt, muss
             // der Speed-Parameter hoch genug sein um sichtbare Bein-Animation im Blend Tree
@@ -183,7 +238,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 _smoothedSpeed, normalizedSpeed,
                 ref _smoothedSpeedVelocity, _speedDampTime);
             _smoothedVertVel = Mathf.SmoothDamp(
-                _smoothedVertVel, data.VerticalVelocity,
+                _smoothedVertVel, verticalVelocity,
                 ref _smoothedVertVelVelocity, _verticalVelocityDampTime);
 
             _currentNormalizedSpeed = _smoothedSpeed;

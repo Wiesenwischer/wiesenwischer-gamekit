@@ -79,6 +79,15 @@ namespace Wiesenwischer.GameKit.Network
             if (sceneInput != null)
                 _playerController.SetInputProvider(sceneInput);
 
+            // Animation Bridge: Visual-Velocity aktivieren.
+            // Motor-Velocity springt bei Reconciliation, Visual-Position ist smooth
+            // (NetworkTickSmoother). Abgeleitete Velocity → smooth Animation.
+            var animBridge = _visualRoot != null
+                ? _visualRoot.GetComponent<AnimatorParameterBridge>()
+                : GetComponentInChildren<AnimatorParameterBridge>();
+            if (animBridge != null)
+                animBridge.UseVisualVelocity = true;
+
             // Event feuern → NetworkCameraSetup richtet Kamera ein (synchron).
             // Visual-Root uebergeben (nicht Root!), damit die Kamera dem smooth-interpolierten
             // Visual folgt statt dem springenden Simulations-Root.
