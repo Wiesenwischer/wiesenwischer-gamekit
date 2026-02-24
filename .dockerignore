@@ -1,0 +1,4 @@
+# Alles ignorieren ausser Server-Build-Output
+*
+!Builds/Server/
+!Builds/Server/**
