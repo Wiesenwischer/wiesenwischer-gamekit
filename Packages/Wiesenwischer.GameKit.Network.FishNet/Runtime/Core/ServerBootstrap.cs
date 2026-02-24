@@ -7,9 +7,11 @@ using UnityEngine;
 namespace Wiesenwischer.GameKit.Network
 {
     /// <summary>
-    /// Dedicated Server Bootstrap: Parst Kommandozeilen-Argumente und startet
-    /// automatisch den Server wenn im Headless/BatchMode.
-    /// Im Client-Modus (kein BatchMode, kein --server Flag) passiert nichts.
+    /// Server Bootstrap: Startet automatisch im passenden Modus.
+    /// - BatchMode / --server Flag: Dedicated Server
+    /// - --client Flag: Kein Auto-Start (manuell via NetworkDebugUI)
+    /// - Sonst: Auto-Host (lokaler Host fuer Singleplayer/Editor-Testing)
+    /// Network-Only Architektur: Netzwerk ist immer aktiv.
     /// </summary>
     public class ServerBootstrap : MonoBehaviour
     {
@@ -31,31 +33,54 @@ namespace Wiesenwischer.GameKit.Network
 
         private void Start()
         {
-            if (!Application.isBatchMode && !HasArgument("--server"))
+            if (_gameNetworkManager == null)
+            {
+                LogError("Kein GameNetworkManager — kann nicht starten.");
+                if (Application.isBatchMode)
+                    Application.Quit(1);
                 return;
+            }
 
             // Graceful Shutdown: Unity ruft OnApplicationQuit bei SIGTERM (docker stop)
             Application.quitting += OnServerShutdown;
 
-            if (_gameNetworkManager == null)
+            if (Application.isBatchMode || HasArgument("--server"))
             {
-                LogError("Kein GameNetworkManager — Server kann nicht starten.");
-                Application.Quit(1);
-                return;
+                // Dedicated Server Modus
+                Log("Dedicated Server Bootstrap gestartet");
+                ConfigureTransport();
+                StartCoroutine(StartDelayed(server: true));
             }
-
-            Log("Dedicated Server Bootstrap gestartet");
-            ConfigureTransport();
-            StartCoroutine(StartServerDelayed());
+            else if (HasArgument("--client"))
+            {
+                // Expliziter Client-Modus: Kein Auto-Start.
+                // User verbindet manuell via NetworkDebugUI (F6).
+                Log("Client-Modus — kein Auto-Start");
+            }
+            else
+            {
+                // Auto-Host: Lokaler Host fuer Singleplayer/Editor-Testing.
+                // Network-Only Architektur: Netzwerk ist immer aktiv.
+                Log("Auto-Host Modus");
+                StartCoroutine(StartDelayed(server: false));
+            }
         }
 
-        private IEnumerator StartServerDelayed()
+        private IEnumerator StartDelayed(bool server)
         {
             // Ein Frame warten damit GameNetworkManager.Start() abgeschlossen ist
             yield return null;
 
-            _gameNetworkManager.StartServer();
-            Log("Server gestartet.");
+            if (server)
+            {
+                _gameNetworkManager.StartServer();
+                Log("Dedicated Server gestartet.");
+            }
+            else
+            {
+                _gameNetworkManager.StartHost();
+                Log("Auto-Host gestartet (localhost).");
+            }
         }
 
         private void ConfigureTransport()
