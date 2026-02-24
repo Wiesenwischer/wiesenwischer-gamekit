@@ -102,6 +102,9 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 EditorGUILayout.Space(4);
                 EditorGUILayout.HelpBox("Alle Network-Komponenten sind vorhanden.", MessageType.Info);
 
+                if (GUILayout.Button("Settings aktualisieren (Smoother, Prediction)", GUILayout.Height(28)))
+                    UpdatePrefabSettings();
+
                 if (GUILayout.Button("In DefaultPrefabObjects registrieren"))
                     RegisterInDefaultPrefabObjects(_playerPrefab.GetComponent<NetworkObject>());
             }
@@ -129,16 +132,7 @@ namespace Wiesenwischer.GameKit.Network.Editor
                     prefabRoot.AddComponent<NetworkObject>();
 
                 // 1b. Prediction aktivieren (Voraussetzung fuer [Replicate]/[Reconcile])
-                var nob = prefabRoot.GetComponent<NetworkObject>();
-                if (nob != null)
-                {
-                    var nobSo = new SerializedObject(nob);
-                    var predProp = nobSo.FindProperty("_enablePrediction");
-                    if (predProp != null) predProp.boolValue = true;
-                    var fwdProp = nobSo.FindProperty("_enableStateForwarding");
-                    if (fwdProp != null) fwdProp.boolValue = true;
-                    nobSo.ApplyModifiedPropertiesWithoutUndo();
-                }
+                ConfigureNetworkObject(prefabRoot);
 
                 // 2. NetworkPlayer
                 if (prefabRoot.GetComponent<NetworkPlayer>() == null)
@@ -152,91 +146,8 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 if (prefabRoot.GetComponent<NetworkAnimationSync>() == null)
                     prefabRoot.AddComponent<NetworkAnimationSync>();
 
-                // 5. NetworkTickSmoother auf Visual-Child (NICHT Root!)
-                // FishNet setzt GraphicalTransform = this.transform.
-                // TargetTransform (Root/Motor) und GraphicalTransform MUESSEN verschieden sein.
-                // → Smoother gehoert auf das Visual-Child (Animator/Mesh).
-                var visualChild = FindVisualChild(prefabRoot);
-                if (visualChild == null)
-                {
-                    Debug.LogError("[NetworkSetupWizard] Kein Visual-Child mit Animator gefunden! " +
-                                   "NetworkTickSmoother braucht ein separates Child-GameObject fuer das Mesh.");
-                }
-                else
-                {
-                    var visualGo = visualChild.gameObject;
-
-                    if (visualGo.GetComponent<NetworkTickSmoother>() == null)
-                        visualGo.AddComponent<NetworkTickSmoother>();
-
-                    // Alten Smoother auf Root entfernen falls vorhanden (Migration)
-                    var rootSmoother = prefabRoot.GetComponent<NetworkTickSmoother>();
-                    if (rootSmoother != null)
-                        Object.DestroyImmediate(rootSmoother);
-
-                    var smoother = visualGo.GetComponent<NetworkTickSmoother>();
-                    if (smoother != null)
-                    {
-                        var so = new SerializedObject(smoother);
-
-                        // TargetTransform = root (Motor, springt jeden Tick)
-                        // GraphicalTransform = this.transform (Visual-Child, wird automatisch gesetzt)
-                        var initSettings = so.FindProperty("_initializationSettings");
-                        if (initSettings != null)
-                        {
-                            var targetProp = initSettings.FindPropertyRelative("TargetTransform");
-                            if (targetProp != null)
-                                targetProp.objectReferenceValue = prefabRoot.transform;
-
-                            // DetachOnStart = true → Visual wird bei Start vom Root getrennt,
-                            // damit es nicht mit dem Root teleportiert wenn der Motor springt
-                            var detachProp = initSettings.FindPropertyRelative("DetachOnStart");
-                            if (detachProp != null)
-                                detachProp.boolValue = true;
-                        }
-
-                        // Adaptive Interpolation fuer Owner (Low = RTT + 3 Ticks)
-                        var controllerSettings = so.FindProperty("_controllerMovementSettings");
-                        if (controllerSettings != null)
-                        {
-                            var adaptiveProp = controllerSettings.FindPropertyRelative("AdaptiveInterpolationValue");
-                            if (adaptiveProp != null)
-                                adaptiveProp.intValue = (int)AdaptiveInterpolationType.Low;
-
-                            var teleportProp = controllerSettings.FindPropertyRelative("EnableTeleport");
-                            if (teleportProp != null)
-                                teleportProp.boolValue = true;
-
-                            var thresholdProp = controllerSettings.FindPropertyRelative("TeleportThreshold");
-                            if (thresholdProp != null)
-                                thresholdProp.floatValue = 5f;
-                        }
-
-                        // Adaptive Interpolation fuer Spectator (Moderate = RTT + 4 Ticks)
-                        var spectatorSettings = so.FindProperty("_spectatorMovementSettings");
-                        if (spectatorSettings != null)
-                        {
-                            var adaptiveProp = spectatorSettings.FindPropertyRelative("AdaptiveInterpolationValue");
-                            if (adaptiveProp != null)
-                                adaptiveProp.intValue = (int)AdaptiveInterpolationType.Moderate;
-
-                            var teleportProp = spectatorSettings.FindPropertyRelative("EnableTeleport");
-                            if (teleportProp != null)
-                                teleportProp.boolValue = true;
-
-                            var thresholdProp = spectatorSettings.FindPropertyRelative("TeleportThreshold");
-                            if (thresholdProp != null)
-                                thresholdProp.floatValue = 5f;
-                        }
-
-                        // FavorPredictionNetworkTransform deaktivieren (wir nutzen kein NetworkTransform)
-                        var favorProp = so.FindProperty("_favorPredictionNetworkTransform");
-                        if (favorProp != null)
-                            favorProp.boolValue = false;
-
-                        so.ApplyModifiedPropertiesWithoutUndo();
-                    }
-                }
+                // 5. NetworkTickSmoother auf Visual-Child
+                EnsureAndConfigureSmoother(prefabRoot);
 
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
             }
@@ -254,6 +165,153 @@ namespace Wiesenwischer.GameKit.Network.Editor
                 RegisterInDefaultPrefabObjects(networkObject);
 
             Debug.Log("[NetworkSetupWizard] Network-Komponenten erfolgreich hinzugefuegt.");
+        }
+
+        /// <summary>
+        /// Aktualisiert Settings auf einem bereits eingerichteten Prefab
+        /// (NetworkObject, NetworkTickSmoother) ohne Komponenten neu zu erstellen.
+        /// </summary>
+        private void UpdatePrefabSettings()
+        {
+            string prefabPath = AssetDatabase.GetAssetPath(_playerPrefab);
+            var prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
+
+            try
+            {
+                ConfigureNetworkObject(prefabRoot);
+                ConfigureSmoother(prefabRoot);
+                PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+
+            _playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Debug.Log("[NetworkSetupWizard] Settings aktualisiert (Prediction, Smoother).");
+        }
+
+        private static void ConfigureNetworkObject(GameObject prefabRoot)
+        {
+            var nob = prefabRoot.GetComponent<NetworkObject>();
+            if (nob == null) return;
+
+            var nobSo = new SerializedObject(nob);
+            var predProp = nobSo.FindProperty("_enablePrediction");
+            if (predProp != null) predProp.boolValue = true;
+            var fwdProp = nobSo.FindProperty("_enableStateForwarding");
+            if (fwdProp != null) fwdProp.boolValue = true;
+            nobSo.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// Stellt sicher dass ein NetworkTickSmoother auf dem Visual-Child existiert und konfiguriert ihn.
+        /// </summary>
+        private static void EnsureAndConfigureSmoother(GameObject prefabRoot)
+        {
+            // NetworkTickSmoother auf Visual-Child (NICHT Root!)
+            // FishNet setzt GraphicalTransform = this.transform.
+            // TargetTransform (Root/Motor) und GraphicalTransform MUESSEN verschieden sein.
+            var visualChild = FindVisualChild(prefabRoot);
+            if (visualChild == null)
+            {
+                Debug.LogError("[NetworkSetupWizard] Kein Visual-Child mit Animator gefunden! " +
+                               "NetworkTickSmoother braucht ein separates Child-GameObject fuer das Mesh.");
+                return;
+            }
+
+            var visualGo = visualChild.gameObject;
+
+            if (visualGo.GetComponent<NetworkTickSmoother>() == null)
+                visualGo.AddComponent<NetworkTickSmoother>();
+
+            // Alten Smoother auf Root entfernen falls vorhanden (Migration)
+            var rootSmoother = prefabRoot.GetComponent<NetworkTickSmoother>();
+            if (rootSmoother != null)
+                Object.DestroyImmediate(rootSmoother);
+
+            ConfigureSmoother(prefabRoot);
+        }
+
+        /// <summary>
+        /// Konfiguriert den bestehenden NetworkTickSmoother mit den korrekten Settings.
+        /// Kann jederzeit erneut aufgerufen werden um Settings zu aktualisieren.
+        /// </summary>
+        private static void ConfigureSmoother(GameObject prefabRoot)
+        {
+            var smoother = prefabRoot.GetComponentInChildren<NetworkTickSmoother>();
+            if (smoother == null)
+            {
+                Debug.LogWarning("[NetworkSetupWizard] Kein NetworkTickSmoother gefunden.");
+                return;
+            }
+
+            var so = new SerializedObject(smoother);
+
+            // TargetTransform = root (Motor, springt jeden Tick)
+            // GraphicalTransform = this.transform (Visual-Child, wird automatisch gesetzt)
+            var initSettings = so.FindProperty("_initializationSettings");
+            if (initSettings != null)
+            {
+                var targetProp = initSettings.FindPropertyRelative("TargetTransform");
+                if (targetProp != null)
+                    targetProp.objectReferenceValue = prefabRoot.transform;
+
+                // DetachOnStart = true → Visual wird bei Start vom Root getrennt,
+                // damit es nicht mit dem Root teleportiert wenn der Motor springt
+                var detachProp = initSettings.FindPropertyRelative("DetachOnStart");
+                if (detachProp != null)
+                    detachProp.boolValue = true;
+            }
+
+            // Interpolation fuer Owner/Controller:
+            // Off = fester Wert statt adaptiv (kein RTT-basiertes Berechnen).
+            // InterpolationValue = 2 (FishNet Default) = guter Kompromiss aus Lag und Smoothness.
+            // Bei 40-60fps und 30Hz Ticks braucht der Smoother mindestens 2 Ticks Buffer
+            // um gleichmaessig ueber die Frames zu verteilen. 1 Tick = zu wenig Frames.
+            var controllerSettings = so.FindProperty("_controllerMovementSettings");
+            if (controllerSettings != null)
+            {
+                var adaptiveProp = controllerSettings.FindPropertyRelative("AdaptiveInterpolationValue");
+                if (adaptiveProp != null)
+                    adaptiveProp.intValue = (int)AdaptiveInterpolationType.Off;
+
+                var interpValueProp = controllerSettings.FindPropertyRelative("InterpolationValue");
+                if (interpValueProp != null)
+                    interpValueProp.intValue = 2;
+
+                var teleportProp = controllerSettings.FindPropertyRelative("EnableTeleport");
+                if (teleportProp != null)
+                    teleportProp.boolValue = true;
+
+                var thresholdProp = controllerSettings.FindPropertyRelative("TeleportThreshold");
+                if (thresholdProp != null)
+                    thresholdProp.floatValue = 5f;
+            }
+
+            // Adaptive Interpolation fuer Spectator (Moderate = RTT + 4 Ticks)
+            var spectatorSettings = so.FindProperty("_spectatorMovementSettings");
+            if (spectatorSettings != null)
+            {
+                var adaptiveProp = spectatorSettings.FindPropertyRelative("AdaptiveInterpolationValue");
+                if (adaptiveProp != null)
+                    adaptiveProp.intValue = (int)AdaptiveInterpolationType.Moderate;
+
+                var teleportProp = spectatorSettings.FindPropertyRelative("EnableTeleport");
+                if (teleportProp != null)
+                    teleportProp.boolValue = true;
+
+                var thresholdProp = spectatorSettings.FindPropertyRelative("TeleportThreshold");
+                if (thresholdProp != null)
+                    thresholdProp.floatValue = 5f;
+            }
+
+            // FavorPredictionNetworkTransform deaktivieren (wir nutzen kein NetworkTransform)
+            var favorProp = so.FindProperty("_favorPredictionNetworkTransform");
+            if (favorProp != null)
+                favorProp.boolValue = false;
+
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private void RegisterInDefaultPrefabObjects(NetworkObject networkObject)

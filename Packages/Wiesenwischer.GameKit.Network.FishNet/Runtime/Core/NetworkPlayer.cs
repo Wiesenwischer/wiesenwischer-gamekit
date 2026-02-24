@@ -28,6 +28,7 @@ namespace Wiesenwischer.GameKit.Network
         /// NetworkTickSmoother.OnStartClient() das Child via DetachOnStart trennt.
         /// Danach ist GetComponentInChildren nicht mehr zuverlaessig.
         /// </summary>
+        public Transform VisualRoot => _visualRoot;
         private Transform _visualRoot;
 
         // INetworkRole Implementation — delegates to FishNet NetworkBehaviour
