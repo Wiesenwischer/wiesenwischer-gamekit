@@ -21,11 +21,12 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         [SerializeField] private AnimationTransitionConfig _transitionConfig;
 
         [Header("Smoothing")]
-        [Tooltip("Wie schnell der Speed-Parameter sich dem Zielwert annähert.")]
-        [SerializeField] private float _speedDampTime = 0.1f;
+        [Tooltip("Wie schnell der Speed-Parameter sich dem Zielwert annähert. " +
+                 "Höhere Werte verstecken Tick-Rate-Stepping besser (0.15 für 30Hz Ticks).")]
+        [SerializeField] private float _speedDampTime = 0.15f;
 
         [Tooltip("Wie schnell der VerticalVelocity-Parameter sich annähert.")]
-        [SerializeField] private float _verticalVelocityDampTime = 0.05f;
+        [SerializeField] private float _verticalVelocityDampTime = 0.1f;
 
         [Header("Stair Animation")]
         [Tooltip("Zusätzlicher Speed-Multiplikator auf Treppen. Kompensiert dass die Walk-Animation " +
@@ -39,11 +40,17 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         private bool _isValid;
         private int _currentAnimStateHash;
         private bool _canExitAnimation;
-        private float _currentNormalizedSpeed;
+            private float _currentNormalizedSpeed;
         private float _currentVerticalVelocity;
         private float _targetSpeed;
         private float _targetVerticalVelocity;
         private bool _isRemoteMode;
+
+        // Pre-Smoothing: SmoothDamp vor dem Animator versteckt Tick-Rate-Steps (30Hz→60fps)
+        private float _smoothedSpeed;
+        private float _smoothedSpeedVelocity;
+        private float _smoothedVertVel;
+        private float _smoothedVertVelVelocity;
 
         /// <summary>
         /// Im Remote-Modus berechnet die Bridge keine eigenen Parameter-Werte.
@@ -168,20 +175,23 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
                 normalizedSpeed = 0.35f;
             }
 
-            _currentNormalizedSpeed = normalizedSpeed;
-            _currentVerticalVelocity = data.VerticalVelocity;
+            // Pre-Smoothing: SmoothDamp versteckt Tick-Rate-Steps (30Hz→60fps).
+            // Ohne Pre-Smooth springt der Zielwert bei jedem Tick, und Animator.SetFloat
+            // dampTime kann den Step nicht vollstaendig verstecken.
+            // SmoothDamp produziert eine glatte Kurve auch bei Step-Inputs.
+            _smoothedSpeed = Mathf.SmoothDamp(
+                _smoothedSpeed, normalizedSpeed,
+                ref _smoothedSpeedVelocity, _speedDampTime);
+            _smoothedVertVel = Mathf.SmoothDamp(
+                _smoothedVertVel, data.VerticalVelocity,
+                ref _smoothedVertVelVelocity, _verticalVelocityDampTime);
 
-            _animator.SetFloat(
-                AnimationParameters.SpeedHash,
-                normalizedSpeed,
-                _speedDampTime,
-                Time.deltaTime);
+            _currentNormalizedSpeed = _smoothedSpeed;
+            _currentVerticalVelocity = _smoothedVertVel;
 
-            _animator.SetFloat(
-                AnimationParameters.VerticalVelocityHash,
-                data.VerticalVelocity,
-                _verticalVelocityDampTime,
-                Time.deltaTime);
+            // SetFloat OHNE dampTime — Pre-Smoothing uebernimmt das Glaetten
+            _animator.SetFloat(AnimationParameters.SpeedHash, _smoothedSpeed);
+            _animator.SetFloat(AnimationParameters.VerticalVelocityHash, _smoothedVertVel);
 
 
 #if UNITY_EDITOR
@@ -215,26 +225,18 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
         {
             if (_isRemoteMode)
             {
-                // Remote: Sanft zum Zielwert dampen
-                _currentNormalizedSpeed = Mathf.MoveTowards(
+                // Remote: SmoothDamp zum Zielwert (besser als MoveTowards bei Packet-Loss)
+                _currentNormalizedSpeed = Mathf.SmoothDamp(
                     _currentNormalizedSpeed, _targetSpeed,
-                    Time.deltaTime * 10f);
-                _currentVerticalVelocity = Mathf.MoveTowards(
+                    ref _smoothedSpeedVelocity, _speedDampTime);
+                _currentVerticalVelocity = Mathf.SmoothDamp(
                     _currentVerticalVelocity, _targetVerticalVelocity,
-                    Time.deltaTime * 50f);
+                    ref _smoothedVertVelVelocity, _verticalVelocityDampTime);
             }
 
-            _animator.SetFloat(
-                AnimationParameters.SpeedHash,
-                _currentNormalizedSpeed,
-                _speedDampTime,
-                Time.deltaTime);
-
-            _animator.SetFloat(
-                AnimationParameters.VerticalVelocityHash,
-                _currentVerticalVelocity,
-                _verticalVelocityDampTime,
-                Time.deltaTime);
+            // SetFloat OHNE dampTime — SmoothDamp uebernimmt das Glaetten
+            _animator.SetFloat(AnimationParameters.SpeedHash, _currentNormalizedSpeed);
+            _animator.SetFloat(AnimationParameters.VerticalVelocityHash, _currentVerticalVelocity);
         }
 
         #region IAnimationController
@@ -297,6 +299,10 @@ namespace Wiesenwischer.GameKit.CharacterController.Animation
             _currentAnimStateHash = hash;
             _canExitAnimation = false;
             _animator.CrossFade(hash, transitionDuration);
+
+#if UNITY_EDITOR
+            Debug.Log($"[AnimBridge] CrossFade → {state} (dur={transitionDuration:F3}s)");
+#endif
 
             // Network: State-Wechsel melden
             _networkSync?.OnLocalStateChanged(state);
