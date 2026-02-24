@@ -2167,7 +2167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21adcbcc6051a844680d533d03345f03, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _playerPrefab: {fileID: 7649100981896036512, guid: 02d7b424e9e2dde4ca3f143e4eb5de5d, type: 3}
+  _playerPrefab: {fileID: 1451132715118849710, guid: 02d7b424e9e2dde4ca3f143e4eb5de5d, type: 3}
   _port: 7770
   _address: localhost
 --- !u!114 &652061002
@@ -3773,6 +3773,8 @@ GameObject:
   - component: {fileID: 1184844893}
   - component: {fileID: 1184844892}
   - component: {fileID: 1184844905}
+  - component: {fileID: 1184844907}
+  - component: {fileID: 1184844906}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: Untagged
@@ -4213,6 +4215,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33bcc8a76bfd9094fa9d29e95d516aae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1184844906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1184844885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d255b272794a044c96711c3f0529ede, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _settings: {fileID: 0}
+  _toggleKey: 283
+--- !u!114 &1184844907
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1184844885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585f9a9e3e102664c9f4ff5282c0b942, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _brain: {fileID: 1184844901}
+  _presets:
+  - {fileID: 11400000, guid: b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3, type: 2}
+  - {fileID: 11400000, guid: c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4, type: 2}
+  _cycleKey: 282
+  _showHud: 1
 --- !u!1 &1187002480
 GameObject:
   m_ObjectHideFlags: 0
