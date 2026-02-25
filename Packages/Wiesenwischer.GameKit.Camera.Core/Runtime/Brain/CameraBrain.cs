@@ -1,17 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Wiesenwischer.GameKit.CharacterController.Core;
-
 namespace Wiesenwischer.GameKit.Camera
 {
     /// <summary>
     /// Zentraler Camera-Orchestrator. Koordiniert Input, Anchor, Intents, Behaviours und PivotRig.
     /// Enthält keine eigene Kamera-Logik — alles läuft über ICameraIntent[] und ICameraBehaviour[].
-    /// Implementiert ICameraOrbitProvider für Character Controller Integration.
     /// </summary>
     [RequireComponent(typeof(PivotRig))]
     [DefaultExecutionOrder(100)] // Nach Animator und Character-Scripts ausführen
-    public class CameraBrain : MonoBehaviour, ICameraOrbitProvider
+    public class CameraBrain : MonoBehaviour
     {
         [Header("References")]
         [SerializeField] private CameraAnchor _anchor;

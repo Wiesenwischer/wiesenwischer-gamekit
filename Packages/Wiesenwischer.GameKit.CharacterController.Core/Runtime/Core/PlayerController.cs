@@ -63,9 +63,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         /// <summary>Das Ability System (optional).</summary>
         public IAbilitySystem AbilitySystem { get; private set; }
 
-        /// <summary>Netzwerk-Rolle (Owner/Server/Client).</summary>
-        public INetworkRole NetworkRole { get; private set; }
-
         #endregion
 
         #region State Machine
@@ -82,7 +79,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
         #region Camera Integration
 
-        private ICameraOrbitProvider _orbitProvider;
         private IOrientationProvider _orientationProvider;
         private IFacingProvider _facingProvider;
 
@@ -236,12 +232,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
 
             // Optional: Ability System (kann fehlen)
             AbilitySystem = GetComponent<IAbilitySystem>();
-
-            // Network Role (NetworkPlayer, Pflicht in Network-Only Architektur)
-            NetworkRole = GetComponent<INetworkRole>();
-            if (NetworkRole == null)
-                Debug.LogError($"[PlayerController] FEHLER auf '{gameObject.name}': " +
-                    "INetworkRole (NetworkPlayer) fehlt! Network-Only Architektur erfordert NetworkPlayer.");
         }
 
         private void InitializeStateMachine()
@@ -298,7 +288,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             {
                 lookDir = _orientationProvider != null
                     ? _orientationProvider.GetMovementForward()
-                    : GetCameraForward(); // Fallback auf Legacy
+                    : transform.forward;
             }
 
             // Facing: Wie soll Character rotieren?
@@ -307,8 +297,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             Vector3 facingDir = _facingProvider?.GetFacingDirection()
                 ?? Vector3.zero;
 
-            bool isSteerMode = _orbitProvider != null && _orbitProvider.IsSteerMode;
-
             var input = new LocomotionInput
             {
                 MoveDirection = ReusableData.MoveInput,
@@ -316,7 +304,6 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
                 SpeedModifier = ReusableData.MovementSpeedModifier,
                 StepDetectionEnabled = ReusableData.StepDetectionEnabled,
                 DecelerationOverride = ReusableData.DecelerationOverride,
-                IsSteerMode = isSteerMode,
                 FacingMode = facingMode,
                 FacingDirection = facingDir,
             };
@@ -329,28 +316,9 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
         }
 
         /// <summary>
-        /// Ermittelt die Forward-Richtung der Kamera.
-        /// </summary>
-        private Vector3 GetCameraForward()
-        {
-            if (_orbitProvider != null)
-                return _orbitProvider.Forward;
-
-            var mainCamera = Camera.main;
-            if (mainCamera != null)
-            {
-                Vector3 cameraForward = mainCamera.transform.forward;
-                cameraForward.y = 0f;
-                if (cameraForward.sqrMagnitude > 0.01f)
-                    return cameraForward.normalized;
-            }
-            return transform.forward;
-        }
-
-        /// <summary>
-        /// Löst Orientation-, Facing- und OrbitProvider auf.
-        /// IOrientationProvider/IFacingProvider sind die bevorzugten Interfaces (Phase 29).
-        /// ICameraOrbitProvider bleibt als Fallback für IsSteerMode.
+        /// Löst Orientation- und Facing-Provider auf.
+        /// IOrientationProvider liefert den Movement-Frame (Camera/Character Forward).
+        /// IFacingProvider liefert den Rotationsmodus (MovementDirection/CameraForward).
         ///
         /// Im Netzwerk-Modus wird dies von NetworkPlayer.EnableLocalPlayer() aufgerufen,
         /// NACHDEM die Kamera eingerichtet ist (OnLocalPlayerReady → NetworkCameraSetup).
@@ -360,17 +328,13 @@ namespace Wiesenwischer.GameKit.CharacterController.Core
             var mainCamera = Camera.main;
             if (mainCamera == null) return;
 
-            // Neue Provider vom CameraBrain-Hierarchy auflösen
             _orientationProvider = mainCamera.GetComponentInParent<IOrientationProvider>();
             _facingProvider = mainCamera.GetComponentInParent<IFacingProvider>();
 
             if (_orientationProvider == null || _facingProvider == null)
                 Debug.LogWarning($"[PlayerController] IOrientationProvider/IFacingProvider nicht gefunden! " +
                     "CameraOrientationProvider auf dem CameraBrain-GameObject hinzufügen. " +
-                    "Fallback: Camera-Forward für alle Modi.");
-
-            // Legacy OrbitProvider (für IsSteerMode Fallback)
-            _orbitProvider = mainCamera.GetComponentInParent<ICameraOrbitProvider>();
+                    "Fallback: transform.forward für alle Modi.");
         }
 
         #endregion
