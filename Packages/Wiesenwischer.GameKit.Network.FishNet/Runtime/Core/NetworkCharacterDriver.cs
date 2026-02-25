@@ -75,10 +75,6 @@ namespace Wiesenwischer.GameKit.Network
             // CustomInterpolationUpdate kaempft sonst gegen den Smoother (Doppel-Korrektur).
             CharacterMotorSystem.Settings.Interpolate = false;
 
-            // GroundingSmoother: Muss auf dem Prefab deaktiviert oder entfernt sein.
-            // Kaempft mit NetworkTickSmoother (localPosition nach DetachOnStart = kaputt).
-            // NetworkTickSmoother interpoliert Step-Ups bereits smooth.
-
             if (_debugLog)
             {
                 bool isDedicatedServer = IsServerStarted && !IsClientStarted;

@@ -15,7 +15,7 @@ namespace Wiesenwischer.GameKit.CharacterController.Core.StateMachine.States
         /// <summary>
         /// Ob der Jump-Impulse vom Motor bestätigt wurde (VerticalVelocity > 0).
         /// Verhindert vorzeitige IsFalling-Transition durch Sync-Back-Lag
-        /// zwischen Intent-System (TickSystem 60Hz) und Motor (FixedUpdate ~50Hz).
+        /// zwischen Intent-System und Motor-Simulation.
         /// </summary>
         private bool _jumpImpulseConfirmed;
 

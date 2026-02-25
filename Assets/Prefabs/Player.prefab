@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 7502026868393329347}
   - component: {fileID: 9157576268301152565}
   - component: {fileID: 6295564969561625998}
-  - component: {fileID: 5277379329298640385}
   - component: {fileID: 1451132715118849710}
   - component: {fileID: 5418001182027524095}
   - component: {fileID: 641039203131886702}
@@ -136,23 +135,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _inputActions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   _actionMapName: Player
---- !u!114 &5277379329298640385
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4445859613425674575}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f9a41cb817472ec4b81b3f080c349eb1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _modelTransform: {fileID: 4227970265863571323}
-  _smoothTime: 0.075
-  _maxStepDelta: 0.5
-  _onlyWhenGrounded: 1
-  _debugLog: 0
 --- !u!114 &1451132715118849710
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -369,7 +351,6 @@ MonoBehaviour:
   _transitionConfig: {fileID: 11400000, guid: c7443605cb6fc854e914e59430181d78, type: 2}
   _speedDampTime: 0.1
   _verticalVelocityDampTime: 0.05
-  _stairAnimSpeedMultiplier: 1.5
 --- !u!114 &4190190277415511767
 MonoBehaviour:
   m_ObjectHideFlags: 0
