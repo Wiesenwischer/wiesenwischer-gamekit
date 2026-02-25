@@ -12,7 +12,7 @@ namespace Wiesenwischer.GameKit.Network
     /// Wraps PlayerController und stellt Network-Authority-Kontext bereit.
     /// </summary>
     [RequireComponent(typeof(PlayerController))]
-    public class NetworkPlayer : NetworkBehaviour, INetworkRole
+    public class NetworkPlayer : NetworkBehaviour
     {
         /// <summary>Wird gefeuert wenn der lokale Spieler bereit ist. Parameter: Player Transform.</summary>
         public static event System.Action<Transform> OnLocalPlayerReady;
@@ -31,8 +31,6 @@ namespace Wiesenwischer.GameKit.Network
         public Transform VisualRoot => _visualRoot;
         private Transform _visualRoot;
 
-        // INetworkRole Implementation — delegates to FishNet NetworkBehaviour
-        bool INetworkRole.IsOwner => base.IsOwner;
         public bool IsServer => base.IsServerStarted;
         public bool IsClient => base.IsClientStarted;
         public bool IsNetworkActive => IsSpawned;
